@@ -1,0 +1,53 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 5
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: ./backend/ai-interview-be
+      dockerfile: Dockerfile
+    container_name: ai_interview_backend
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: ./frontend/ai-interview-fe
+      dockerfile: Dockerfile
+    container_name: ai_interview_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - app_network
+
+volumes:
+  mysql_data:
+
+networks:
+  app_network:
