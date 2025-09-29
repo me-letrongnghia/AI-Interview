@@ -3,9 +3,9 @@ spring:
     name: ai-interview-be
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ai_interview?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:2404}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -13,4 +13,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
-
+openrouter:
+  api-key: ${OPENROUTER_API_KEY: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}
+  api-url: ${OPENROUTER_API_URL:https://openrouter.ai/api/v1/chat/completions}
+  model: ${OPENROUTER_MODEL:qwen/qwen-2.5-72b-instruct:free}
+  site-url: ${OPENROUTER_SITE_URL:http://localhost:8080}
+  app-name: ${OPENROUTER_APP_NAME:AI Interview System}
