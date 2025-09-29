@@ -22,6 +22,7 @@ public class InterviewService {
     private final InterviewQuestionRepository questionRepository;
     private final InterviewAnswerRepository answerRepository;
     private final AIService aiService;
+    private final ConversationService conversationService;
     
     @Transactional
     public SubmitAnswerResponse submitAnswer(Long sessionId, SubmitAnswerRequest request) {
@@ -51,10 +52,19 @@ public class InterviewService {
         InterviewAnswer savedAnswer = answerRepository.save(answer);
         log.info("Answer saved with ID: {}", savedAnswer.getId());
         
-        // 5. Generate next question using AI
-        String nextQuestionContent = aiService.generateNextQuestion(
+        // 4.1. Update conversation entry with answer and feedback
+        conversationService.updateConversationEntry(
+            request.getQuestionId(), 
+            request.getContent(), 
+            feedback
+        );
+        
+        // 5. Generate next question using AI with conversation context
+        String conversationContext = conversationService.buildConversationContext(sessionId);
+        String nextQuestionContent = aiService.generateNextQuestionWithContext(
             session.getDomain(), 
             session.getLevel(), 
+            conversationContext,
             question.getContent(), 
             request.getContent()
         );
@@ -64,6 +74,15 @@ public class InterviewService {
         nextQuestion.setSessionId(sessionId);
         nextQuestion.setContent(nextQuestionContent);
         InterviewQuestion savedNextQuestion = questionRepository.save(nextQuestion);
+        
+        log.info("Next question generated with ID: {}", savedNextQuestion.getId());
+        
+        // 6.1. Create new conversation entry for next question
+        conversationService.createConversationEntry(
+            sessionId, 
+            savedNextQuestion.getId(), 
+            nextQuestionContent
+        );
         
         log.info("Next question generated with ID: {}", savedNextQuestion.getId());
         

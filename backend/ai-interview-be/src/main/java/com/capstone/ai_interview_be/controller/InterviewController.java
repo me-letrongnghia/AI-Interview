@@ -4,8 +4,10 @@ import com.capstone.ai_interview_be.dto.request.CreateInterviewSessionRequest;
 import com.capstone.ai_interview_be.dto.request.SubmitAnswerRequest;
 import com.capstone.ai_interview_be.dto.response.CreateInterviewSessionResponse;
 import com.capstone.ai_interview_be.dto.response.SubmitAnswerResponse;
+import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
+import com.capstone.ai_interview_be.service.ConversationService;
 import com.capstone.ai_interview_be.service.InterviewSessionService;
 import com.capstone.ai_interview_be.service.InterviewService;
 import jakarta.validation.Valid;
@@ -24,6 +26,7 @@ public class InterviewController {
     
     private final InterviewSessionService sessionService;
     private final InterviewService interviewService;
+    private final ConversationService conversationService;
     private final InterviewQuestionRepository questionRepository;
     
     @PostMapping
@@ -49,6 +52,14 @@ public class InterviewController {
         
         SubmitAnswerResponse response = interviewService.submitAnswer(sessionId, request);
         return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{sessionId}/conversation")
+    public ResponseEntity<List<ConversationEntry>> getSessionConversation(
+            @PathVariable Long sessionId) {
+        
+        List<ConversationEntry> conversation = conversationService.getSessionConversation(sessionId);
+        return ResponseEntity.ok(conversation);
     }
     
     // Debug endpoint

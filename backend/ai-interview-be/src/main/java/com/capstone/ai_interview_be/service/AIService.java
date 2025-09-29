@@ -44,6 +44,17 @@ public class AIService {
         }
     }
     
+    public String generateNextQuestionWithContext(String sessionDomain, String sessionLevel, String conversationContext, String previousQuestion, String previousAnswer) {
+        log.info("Generating next question with context using OpenRouter for domain: {}, level: {}", sessionDomain, sessionLevel);
+        
+        try {
+            return openRouterService.generateNextQuestionWithContext(sessionDomain, sessionLevel, conversationContext, previousQuestion, previousAnswer);
+        } catch (Exception e) {
+            log.error("Error generating next question with context with OpenRouter AI, falling back to regular generation", e);
+            return generateNextQuestion(sessionDomain, sessionLevel, previousQuestion, previousAnswer);
+        }
+    }
+    
     private String generateMockFeedback(String answer) {
         if (answer.length() < 10) {
             return "Your answer is too short. Please provide more detailed explanation.";

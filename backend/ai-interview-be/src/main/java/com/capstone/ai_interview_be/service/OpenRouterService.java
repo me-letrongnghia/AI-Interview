@@ -120,4 +120,22 @@ public class OpenRouterService {
         
         return generateResponse(messages);
     }
+    
+    public String generateNextQuestionWithContext(String domain, String level, String conversationContext, String previousQuestion, String previousAnswer) {
+        List<OpenRouterRequest.Message> messages = Arrays.asList(
+            new OpenRouterRequest.Message("system", 
+                "You are a technical interviewer conducting a " + level + " level " + domain + " interview. " +
+                "Based on the full conversation context and the candidate's most recent answer, generate an appropriate follow-up question that: " +
+                "1) Considers the entire interview flow and avoids repetitive topics " +
+                "2) Builds upon their responses or explores new relevant concepts " +
+                "3) Maintains appropriate difficulty progression for their level " +
+                "4) Tests deeper understanding or practical application. " +
+                "Only return the question, no additional text."),
+            new OpenRouterRequest.Message("user", 
+                String.format("Full Conversation Context:\n%s\n\nMost Recent Question: %s\n\nCandidate's Answer: %s\n\nGenerate the next interview question for this %s level %s developer.", 
+                    conversationContext, previousQuestion, previousAnswer, level, domain))
+        );
+        
+        return generateResponse(messages);
+    }
 }

@@ -19,6 +19,7 @@ public class InterviewSessionService {
     private final InterviewSessionRepository sessionRepository;
     private final InterviewQuestionRepository questionRepository;
     private final AIService aiService;
+    private final ConversationService conversationService;
     
     @Transactional
     public CreateInterviewSessionResponse createSession(CreateInterviewSessionRequest request) {
@@ -47,6 +48,13 @@ public class InterviewSessionService {
         InterviewQuestion savedQuestion = questionRepository.save(firstQuestion);
         
         log.info("First question created with ID: {} for session: {}", savedQuestion.getId(), savedSession.getId());
+        
+        // 4. Create first conversation entry
+        conversationService.createConversationEntry(
+            savedSession.getId(),
+            savedQuestion.getId(),
+            firstQuestionContent
+        );
         
         return new CreateInterviewSessionResponse(savedSession.getId());
     }
