@@ -1,12 +1,11 @@
-
 function App() {
-
   return (
     <>
       <h1 className="text-gray-200 ">
         Hello world!
         <div className="text-blue-700 ">
           xin chao cac ban
+          <div></div>
         </div>
       </h1>
       <div className="">
@@ -19,7 +18,7 @@ function App() {
         </ul>
       </div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
