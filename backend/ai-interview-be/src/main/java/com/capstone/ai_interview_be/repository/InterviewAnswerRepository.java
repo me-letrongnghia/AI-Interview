@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer, Long> {
+    // Lấy tất cả câu trả lời của một câu hỏi, sắp xếp theo thời gian tạo (từ cũ đến mới)
     List<InterviewAnswer> findByQuestionIdOrderByCreatedAtAsc(Long questionId);
 }

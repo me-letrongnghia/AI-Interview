@@ -8,6 +8,9 @@ import java.util.List;
 
 @Repository
 public interface InterviewQuestionRepository extends JpaRepository<InterviewQuestion, Long> {
+    // Lấy tất cả câu hỏi của một session phỏng vấn, sắp xếp theo thời gian tạo (từ cũ đến mới)
     List<InterviewQuestion> findBySessionIdOrderByCreatedAtAsc(Long sessionId);
+    
+    // Đếm tổng số câu hỏi trong một session phỏng vấn
     long countBySessionId(Long sessionId);
 }

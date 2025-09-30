@@ -11,8 +11,9 @@ public class AIService {
     
     private final OpenRouterService openRouterService;
     
+    // Tạo feedback AI cho câu trả lời của ứng viên
     public String generateFeedback(String question, String answer) {
-        log.info("Generating AI feedback using OpenRouter");
+        log.info("Generating AI feedback using OpenRouter for question: {}", question);
         
         try {
             return openRouterService.generateFeedback(question, answer);
@@ -22,6 +23,7 @@ public class AIService {
         }
     }
     
+    // Tạo câu hỏi đầu tiên cho phiên phỏng vấn dựa trên domain và level
     public String generateFirstQuestion(String domain, String level) {
         log.info("Generating first question using OpenRouter for domain: {}, level: {}", domain, level);
         
@@ -33,28 +35,22 @@ public class AIService {
         }
     }
     
-    public String generateNextQuestion(String sessionDomain, String sessionLevel, String previousQuestion, String previousAnswer) {
-        log.info("Generating next question using OpenRouter for domain: {}, level: {}", sessionDomain, sessionLevel);
+    // Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
+    public String generateNextQuestion(String sessionDomain, String sessionLevel, 
+                                     String previousQuestion, String previousAnswer) {
+        log.info("Generating next question using OpenRouter for domain: {}, level: {}", 
+                sessionDomain, sessionLevel);
         
         try {
-            return openRouterService.generateNextQuestion(sessionDomain, sessionLevel, previousQuestion, previousAnswer);
+            return openRouterService.generateNextQuestion(sessionDomain, sessionLevel, 
+                                                        previousQuestion, previousAnswer);
         } catch (Exception e) {
             log.error("Error generating next question with OpenRouter AI, falling back to mock", e);
-            return generateMockNextQuestion();
+            return "Can you explain more about your technical experience?";
         }
     }
     
-    public String generateNextQuestionWithContext(String sessionDomain, String sessionLevel, String conversationContext, String previousQuestion, String previousAnswer) {
-        log.info("Generating next question with context using OpenRouter for domain: {}, level: {}", sessionDomain, sessionLevel);
-        
-        try {
-            return openRouterService.generateNextQuestionWithContext(sessionDomain, sessionLevel, conversationContext, previousQuestion, previousAnswer);
-        } catch (Exception e) {
-            log.error("Error generating next question with context with OpenRouter AI, falling back to regular generation", e);
-            return generateNextQuestion(sessionDomain, sessionLevel, previousQuestion, previousAnswer);
-        }
-    }
-    
+    // Tạo feedback giả lập khi AI service không khả dụng (fallback mechanism)
     private String generateMockFeedback(String answer) {
         if (answer.length() < 10) {
             return "Your answer is too short. Please provide more detailed explanation.";
@@ -65,36 +61,8 @@ public class AIService {
         }
     }
     
+    // Tạo câu hỏi đầu tiên giả lập khi AI service không khả dụng (fallback mechanism)
     private String generateMockFirstQuestion(String domain, String level) {
-        if ("Java".equalsIgnoreCase(domain)) {
-            if ("Junior".equalsIgnoreCase(level)) {
-                return "What is the difference between JDK, JRE, and JVM?";
-            } else if ("Senior".equalsIgnoreCase(level)) {
-                return "Explain the concept of multithreading in Java and how you would handle thread safety.";
-            } else {
-                return "Can you explain what Object-Oriented Programming is and its main principles?";
-            }
-        } else if ("Python".equalsIgnoreCase(domain)) {
-            if ("Junior".equalsIgnoreCase(level)) {
-                return "What are the differences between list and tuple in Python?";
-            } else {
-                return "Explain Python's GIL and its impact on multithreading.";
-            }
-        }
-        return "Tell me about yourself and your experience in software development.";
-    }
-    
-    private String generateMockNextQuestion() {
-        String[] questions = {
-            "Can you explain the difference between abstract classes and interfaces?",
-            "How would you implement a singleton pattern in Java?",
-            "What are the principles of SOLID design?",
-            "Explain the concept of dependency injection.",
-            "How do you handle exceptions in Java applications?",
-            "What is the difference between ArrayList and LinkedList?",
-            "Explain the concept of Java collections framework.",
-            "What is Spring Framework and why is it popular?"
-        };
-        return questions[(int) (Math.random() * questions.length)];
+        return "Tell me about yourself and your experience in " + domain + " development.";
     }
 }
