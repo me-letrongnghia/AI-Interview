@@ -62,9 +62,5 @@ public class InterviewController {
         return ResponseEntity.ok(conversation);
     }
     
-    // Debug endpoint
-    @GetMapping("/test")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("Interview API is working!");
-    }
+    
 }
