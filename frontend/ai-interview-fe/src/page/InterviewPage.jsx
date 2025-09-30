@@ -138,95 +138,59 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
       minutes: initialMinutes,
       seconds: initialSeconds,
     });
-    // eslint-disable-next-line
   }, [initialMinutes, initialSeconds]);
 
   return display;
 }
-
-export default function InterviewInterface() {
-  const [step, setStep] = useState("check"); // "check" | "interview"
-  const [isRunning, setIsRunning] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [messages] = useState([
-    { text: "Chào bé, luyện tập cùng anh nào!!!", time: "9:15", sender: "bot" },
-    { text: "Dạ", time: "9:17", sender: "user" },
-  ]);
-
-  const streamRef = useRef(null);
-  const [analyser, setAnalyser] = useState(null);
-
-  // Timer logic using custom hook
-  const initialMinutes = 44;
-  const initialSeconds = 28;
-  const timerDisplay = useTimer(
-    initialMinutes,
-    initialSeconds,
-    step === "interview" && isRunning,
-    useCallback(() => setIsRunning(false), [])
-  );
-
-  const handleStop = () => setIsRunning((prev) => !prev);
-  const handleMicClick = () => setIsRecording((prev) => !prev);
-
-  // init camera + mic
-  useEffect(() => {
-    let audioContext, analyserNode;
-
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((s) => {
-        streamRef.current = s;
-
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyserNode = audioContext.createAnalyser();
-        const microphone = audioContext.createMediaStreamSource(s);
-        analyserNode.fftSize = 64;
-        microphone.connect(analyserNode);
-
-        setAnalyser(analyserNode);
-      });
-
-    return () => {
-      if (audioContext) audioContext.close();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, []);
-
-  // ==== Step 1: Check mic + camera ====
-  const DeviceCheck = () => (
-    <div className="h-screen flex flex-col items-center justify-center bg-white">
-      <img src={pandaImage2} alt="Logo" className="h-16 mb-6" />
-      <h2 className="text-xl font-semibold mb-2">Check audio and video</h2>
-      <p className="text-gray-500 mb-6 text-sm">
-        Before you begin, please make sure your audio and video devices are set
-        up correctly
-      </p>
-      {/* Audio check */}
-      <label className="mb-2">Audio check</label>
-      <VolumeBar analyser={analyser} />
-      {/* Video preview */}
-      <label className="mb-2">Video check</label>
-      <div className="w-72 h-52 border rounded-lg mb-6 overflow-hidden">
-        {streamRef.current && <VideoStream streamRef={streamRef} muted />}
-      </div>
-      {/* Continue */}
-      <button
-        onClick={() => setStep("interview")}
-        className="bg-green-500 text-white px-8 py-2 rounded-full font-medium hover:bg-green-600 transition"
-      >
-        CONTINUE
-      </button>
+const DeviceCheck = memo(({ pandaImage2, analyser, streamRef, onContinue }) => (
+  <div className="h-screen flex flex-col items-center justify-center bg-white">
+    <img src={pandaImage2} alt="Logo" className="h-16 mb-6" />
+    <h2 className="text-xl font-semibold mb-2">Check audio and video</h2>
+    <p className="text-gray-500 mb-6 text-sm">
+      Before you begin, please make sure your audio and video devices are set up
+      correctly
+    </p>
+    {/* Audio check */}
+    <label className="mb-2">Audio check</label>
+    <VolumeBar analyser={analyser} />
+    {/* Video preview */}
+    <label className="mb-2">Video check</label>
+    <div className="w-72 h-52 border rounded-lg mb-6 overflow-hidden">
+      {streamRef.current && <VideoStream streamRef={streamRef} muted />}
     </div>
-  );
+    {/* Continue */}
+    <button
+      onClick={onContinue}
+      className="bg-green-500 text-white px-8 py-2 rounded-full font-medium hover:bg-green-600 transition"
+    >
+      CONTINUE
+    </button>
+  </div>
+));
 
-  // ==== Step 2: Interview ====
-  const InterviewUI = () => (
+// ===== Interview UI (hoisted) =====
+const InterviewUI = memo(
+  ({
+    imgBG,
+    pandaImage2,
+    HeaderComponent,
+    streamRef,
+    analyser,
+    timerDisplay,
+    handleStop,
+    isRunning,
+    isRecording,
+    handleMicClick,
+    messages,
+    messagesRef,
+    chatInput,
+    setChatInput,
+    sendMessage,
+    setIsRecording,
+  }) => (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
-      <Header img={pandaImage2} />
+      <HeaderComponent img={pandaImage2} />
 
       {/* Main */}
       <div className="flex-1 flex gap-3 p-3 bg-gray-100 overflow-hidden">
@@ -270,7 +234,10 @@ export default function InterviewInterface() {
 
         {/* Chat Sidebar */}
         <div className="w-96 bg-white shadow-xl flex flex-col border-l border-gray-200">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div
+            ref={messagesRef}
+            className="flex-1 overflow-y-auto p-6 space-y-4"
+          >
             {messages.map((msg, index) => (
               <div
                 key={index}
@@ -295,31 +262,194 @@ export default function InterviewInterface() {
           </div>
 
           {/* Voice Input */}
-          <div className="p-6 border-t border-gray-200">
-            <div className="flex flex-col items-center gap-4">
-              {isRecording && <VolumeBar analyser={analyser} />}
+          <div className="p-4 border-t border-gray-200">
+            {/* Chat text input row with small mic icon */}
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Viết tin nhắn..."
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+
+              {/* Small mic icon next to input - toggles expanded recording */}
               <button
                 onClick={handleMicClick}
-                className={`relative p-6 rounded-full transition-all transform hover:scale-110 ${
+                aria-label="microphone"
+                className={`p-2 rounded-md transition-colors ${
                   isRecording
-                    ? "bg-red-500 shadow-lg shadow-red-500/50"
-                    : "bg-green-500 hover:bg-green-600 shadow-lg"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-green-50 text-green-600"
                 }`}
               >
-                <Mic size={32} className="text-white" />
-                {isRecording && (
-                  <span className="absolute inset-0 rounded-full border-4 border-red-400 animate-ping"></span>
-                )}
+                <Mic size={18} />
               </button>
-              <p className="text-sm text-gray-500">
-                {isRecording ? "Đang ghi âm..." : "Nhấn để bắt đầu"}
-              </p>
+
+              {/* Send button */}
+              <button
+                onClick={sendMessage}
+                className="ml-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md"
+              >
+                Gửi
+              </button>
             </div>
+
+            {/* Expanded recording area shown when isRecording is true */}
+            {isRecording && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-full bg-red-500 text-white">
+                      <Mic size={20} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">
+                        Đang ghi âm...
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Phát hiện giọng nói và hiển thị sóng âm
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Close (X) button to revert back to input + small mic */}
+                  <button
+                    onClick={() => setIsRecording(false)}
+                    aria-label="close recording"
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Volume bar under expanded area */}
+                <div className="mt-3">
+                  <VolumeBar analyser={analyser} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
+  )
+);
+
+export default function InterviewInterface() {
+  const [step, setStep] = useState("check"); // "check" | "interview"
+  const [isRunning, setIsRunning] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [messages, setMessages] = useState([
+    { text: "Chào bé, luyện tập cùng anh nào!!!", time: "9:15", sender: "bot" },
+    { text: "Dạ", time: "9:17", sender: "user" },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const messagesRef = useRef(null);
+
+  // Auto-scroll to bottom when messages update
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const streamRef = useRef(null);
+  const [analyser, setAnalyser] = useState(null);
+
+  // Timer logic using custom hook
+  const initialMinutes = 44;
+  const initialSeconds = 28;
+  const timerDisplay = useTimer(
+    initialMinutes,
+    initialSeconds,
+    step === "interview" && isRunning,
+    useCallback(() => setIsRunning(false), [setIsRunning])
   );
 
-  return step === "check" ? <DeviceCheck /> : <InterviewUI />;
+  const handleStop = useCallback(
+    () => setIsRunning((prev) => !prev),
+    [setIsRunning]
+  );
+  const handleMicClick = useCallback(
+    () => setIsRecording((prev) => !prev),
+    [setIsRecording]
+  );
+
+  // Send chat message locally
+  const sendMessage = useCallback(() => {
+    const text = chatInput.trim();
+    if (!text) return;
+    const now = new Date();
+    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(
+      2,
+      "0"
+    )}`;
+    const newMsg = { text, time, sender: "user" };
+    setMessages((prev) => [...prev, newMsg]);
+    setChatInput("");
+    // TODO: optionally send to backend via ApiInterviews
+  }, [chatInput, setMessages, setChatInput]);
+
+  // init camera + mic
+  useEffect(() => {
+    let audioContext, analyserNode;
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((s) => {
+        streamRef.current = s;
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyserNode = audioContext.createAnalyser();
+        const microphone = audioContext.createMediaStreamSource(s);
+        analyserNode.fftSize = 64;
+        microphone.connect(analyserNode);
+
+        setAnalyser(analyserNode);
+      });
+
+    return () => {
+      if (audioContext) audioContext.close();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  // nothing here — UI hoisted above
+
+  return step === "check" ? (
+    <DeviceCheck
+      pandaImage2={pandaImage2}
+      analyser={analyser}
+      streamRef={streamRef}
+      onContinue={() => setStep("interview")}
+    />
+  ) : (
+    <InterviewUI
+      imgBG={imgBG}
+      pandaImage2={pandaImage2}
+      HeaderComponent={Header}
+      streamRef={streamRef}
+      analyser={analyser}
+      timerDisplay={timerDisplay}
+      handleStop={handleStop}
+      isRunning={isRunning}
+      isRecording={isRecording}
+      handleMicClick={handleMicClick}
+      messages={messages}
+      messagesRef={messagesRef}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      sendMessage={sendMessage}
+      setIsRecording={setIsRecording}
+    />
+  );
 }
