@@ -2,6 +2,9 @@ import React from "react";
 import pandaImage from "../assets/main.png";
 import pandaImage2 from "../assets/pandahome.png";
 import pandaQuestion from "../assets/chamhoi.png";
+import duyTanLogo from "../assets/logoDTU.jpeg";
+import techzenLogo from "../assets/techzen.jpg";
+import partechLogo from "../assets/Partech-logo.png";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -111,42 +114,393 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center justify-items-center">
             {/* Duy Tan University Logo */}
-            <div className="flex items-center justify-center">
-              <div className="border-4 border-red-600 p-2 w-16 h-16 flex items-center justify-center">
-                <span className="text-red-600 font-bold text-2xl">ĐT</span>
-              </div>
-              <div className="ml-3">
-                <div className="text-red-600 font-bold text-xl">DUY TÂN</div>
-                <div className="text-red-600 text-sm">UNIVERSITY</div>
-              </div>
+            <div className="flex items-center justify-center w-[222px]">
+              <img
+                src={duyTanLogo}
+                className="w-full h-auto"
+                alt="Duy Tan University Logo"
+              />
             </div>
 
             {/* Techvify Logo */}
-            <div className="flex flex-col items-center">
-              <div className="relative w-20 h-20 mb-2">
-                <div className="absolute inset-0 bg-red-600 transform skew-y-12 rounded-lg"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white font-bold text-3xl relative z-10">
-                    T
-                  </span>
-                </div>
-              </div>
-              <span className="text-red-600 font-bold text-xl">TECHVIFY</span>
+            <div className="flex flex-col items-center w-[150px]">
+              <img
+                src={techzenLogo}
+                alt="Techzen Company"
+                className="w-full h-auto"
+              />
             </div>
 
             {/* Partech Logo */}
-            <div className="flex items-center">
-              <div className="flex space-x-1 mr-3">
-                <div className="w-2 h-8 bg-gray-800 transform -skew-x-12"></div>
-                <div className="w-2 h-8 bg-gray-800 transform -skew-x-12"></div>
-                <div className="w-2 h-8 bg-gray-800 transform -skew-x-12"></div>
-              </div>
-              <span className="text-gray-800 font-bold text-2xl">partech</span>
+            <div className="flex items-center w-[320px]">
+              <img src={partechLogo} className="w-full h-auto" alt="" />
             </div>
           </div>
         </div>
       </section>
 
+      <section className="bg-gray-100 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              What makes Pandaprep the best choice?
+            </h2>
+            <p className="text-gray-600 max-w-3xl mx-auto">
+              A place that makes your interviews feel like a walk in the
+              park—easy, confident, and successful
+            </p>
+            <div className="w-20 h-1 bg-green-500 mx-auto mt-4"></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* AI Intelligence Feature */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center">
+                  <svg
+                    className="w-12 h-12 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">
+                Smart AI
+              </h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Using advanced AI technology to generate realistic and
+                position-specific interview questions.
+              </p>
+            </div>
+
+            {/* Feedback Feature */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center relative">
+                  <svg
+                    className="w-12 h-12 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  <svg
+                    className="w-8 h-8 text-green-500 absolute -bottom-1 -right-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle cx="12" cy="12" r="10" strokeWidth={1.5} />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M21 21l-6-6"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">
+                Feed Back
+              </h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Using advanced AI technology to generate realistic and
+                position-specific interview questions.
+              </p>
+            </div>
+
+            {/* Real Time Feature */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center relative border-4 border-green-500">
+                  <div className="text-green-500 font-bold text-xs text-center">
+                    <div>REAL</div>
+                    <div>TIME</div>
+                  </div>
+                  <svg
+                    className="w-6 h-6 text-green-500 absolute top-1 right-1"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">
+                Real Time
+              </h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Using advanced AI technology to generate realistic and
+                position-specific interview questions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Testimonials Section */}
+      <section className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-gray-500 text-sm uppercase tracking-wide mb-2">
+              Testimonials
+            </p>
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              Loved by HR. <span className="inline-block">❤️</span> Trusted by
+              Candidates.
+            </h2>
+            <p className="text-gray-600 max-w-4xl mx-auto">
+              Flowmingo makes hiring simple, fair, and effective—giving HR
+              faster, better hiring decisions and candidates a personalized,
+              consistent experience that leads to great outcomes.
+            </p>
+          </div>
+
+          {/* Testimonials Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {/* Testimonial Card 1 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card 2 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card 3 */}
+            <div className="bg-gray-50 bg-[#dad9d9] rounded-xl p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Second Row - 2 Larger Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Testimonial Card 4 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "Flowmingo AI is fantastic. It's such a refreshing change from
+                traditional interviews, and I can already see how it will
+                greatly benefit hiring teams, companies, and talent acquisition
+                departments. It's smart, efficient, and incredibly useful."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Trang Truong</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card 5 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "Flowmingo AI is fantastic. It's such a refreshing change from
+                traditional interviews, and I can already see how it will
+                greatly benefit hiring teams, companies, and talent acquisition
+                departments. It's smart, efficient, and incredibly useful."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Trang Truong</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Third Row - 3 Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Testimonial Card 6 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card 7 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card 8 */}
+            <div className="bg-gray-50 rounded-xl bg-[#dad9d9] p-6 hover:shadow-lg transition-shadow">
+              <p className="text-gray-700 text-sm leading-relaxed mb-6">
+                "I really appreciate this innovative approach to recruitment.
+                With AI conducting the interviews, there are no scheduling
+                conflicts, making the process smoother and more convenient than
+                traditional methods."
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800">Mohammed Hannan</p>
+                  <p className="text-sm text-gray-500">Ali</p>
+                </div>
+                <div className="flex text-orange-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       {/* FAQ Section */}
       <section className="bg-gray-50 py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
