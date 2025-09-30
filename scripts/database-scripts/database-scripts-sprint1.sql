@@ -39,6 +39,29 @@ CREATE TABLE interview_chunk (
     CONSTRAINT fk_chunk_question FOREIGN KEY (question_id) REFERENCES interview_question(id) ON DELETE CASCADE
 );
 
+-- Bảng lưu trữ các mục hội thoại trong buổi phỏng vấn
+CREATE TABLE IF NOT EXISTS conversation_entry (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id BIGINT NOT NULL,
+    question_id BIGINT NOT NULL,
+    answer_id BIGINT NULL,
+    question_content TEXT NOT NULL,
+    answer_content TEXT NULL,
+    ai_feedback TEXT NULL,
+    sequence_number INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Indexes for better performance
+    INDEX idx_session_id (session_id),
+    INDEX idx_question_id (question_id),
+    INDEX idx_sequence (session_id, sequence_number),
+    
+    -- Foreign key constraints
+    FOREIGN KEY (session_id) REFERENCES interview_session(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES interview_question(id) ON DELETE CASCADE
+);
+
 -- Index tối ưu truy vấn
 CREATE INDEX idx_question_session ON interview_question(session_id);
 CREATE INDEX idx_answer_question ON interview_answer(question_id);
