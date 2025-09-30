@@ -1,5 +1,5 @@
 // InterviewInterface.jsx
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { Mic, MoreVertical } from "lucide-react";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
@@ -28,7 +28,7 @@ const VideoStream = memo(({ streamRef, muted }) => {
 });
 
 // ===== Timer =====
-const Timer = ({ minutes, seconds, onToggle, isRunning }) => (
+const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
   <div className="mb-4">
     <div className="flex items-center justify-center gap-4 mb-1">
       <span className="text-gray-500 text-xs">Minutes</span>
@@ -52,7 +52,7 @@ const Timer = ({ minutes, seconds, onToggle, isRunning }) => (
       </button>
     </div>
   </div>
-);
+));
 
 // ===== VolumeBar =====
 const VolumeBar = ({ analyser }) => {
@@ -92,10 +92,60 @@ const VolumeBar = ({ analyser }) => {
   );
 };
 
+// Custom hook to handle timer without causing re-render every second
+function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
+  const [display, setDisplay] = useState({
+    minutes: initialMinutes,
+    seconds: initialSeconds,
+  });
+  const minutesRef = useRef(initialMinutes);
+  const secondsRef = useRef(initialSeconds);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (!isActive) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      if (secondsRef.current > 0) {
+        secondsRef.current -= 1;
+      } else if (minutesRef.current > 0) {
+        minutesRef.current -= 1;
+        secondsRef.current = 59;
+      } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (onFinish) onFinish();
+        return;
+      }
+      setDisplay({
+        minutes: minutesRef.current,
+        seconds: secondsRef.current,
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+    // eslint-disable-next-line
+  }, [isActive]);
+
+  // Reset timer when initial values change (e.g. on step change)
+  useEffect(() => {
+    minutesRef.current = initialMinutes;
+    secondsRef.current = initialSeconds;
+    setDisplay({
+      minutes: initialMinutes,
+      seconds: initialSeconds,
+    });
+    // eslint-disable-next-line
+  }, [initialMinutes, initialSeconds]);
+
+  return display;
+}
+
 export default function InterviewInterface() {
   const [step, setStep] = useState("check"); // "check" | "interview"
-  const [minutes, setMinutes] = useState(44);
-  const [seconds, setSeconds] = useState(28);
   const [isRunning, setIsRunning] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [messages] = useState([
@@ -103,30 +153,21 @@ export default function InterviewInterface() {
     { text: "Dạ", time: "9:17", sender: "user" },
   ]);
 
-  const streamRef = useRef(null); // giữ stream ở ref
+  const streamRef = useRef(null);
   const [analyser, setAnalyser] = useState(null);
 
-  // countdown
-  useEffect(() => {
-    let interval;
-    if (step === "interview" && isRunning) {
-      interval = setInterval(() => {
-        setSeconds((s) => {
-          if (s > 0) return s - 1;
-          if (minutes > 0) {
-            setMinutes((m) => m - 1);
-            return 59;
-          }
-          setIsRunning(false);
-          return 0;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [minutes, isRunning, step]);
+  // Timer logic using custom hook
+  const initialMinutes = 44;
+  const initialSeconds = 28;
+  const timerDisplay = useTimer(
+    initialMinutes,
+    initialSeconds,
+    step === "interview" && isRunning,
+    useCallback(() => setIsRunning(false), [])
+  );
 
-  const handleStop = () => setIsRunning(!isRunning);
-  const handleMicClick = () => setIsRecording(!isRecording);
+  const handleStop = () => setIsRunning((prev) => !prev);
+  const handleMicClick = () => setIsRecording((prev) => !prev);
 
   // init camera + mic
   useEffect(() => {
@@ -202,8 +243,8 @@ export default function InterviewInterface() {
 
             {/* Timer */}
             <Timer
-              minutes={minutes}
-              seconds={seconds}
+              minutes={timerDisplay.minutes}
+              seconds={timerDisplay.seconds}
               onToggle={handleStop}
               isRunning={isRunning}
             />
