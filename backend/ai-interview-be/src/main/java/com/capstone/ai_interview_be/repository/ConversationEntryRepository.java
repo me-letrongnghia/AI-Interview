@@ -10,17 +10,21 @@ import java.util.List;
 
 @Repository
 public interface ConversationEntryRepository extends JpaRepository<ConversationEntry, Long> {
-    
+    // Lấy tất cả conversation entries của một session, sắp xếp theo thứ tự sequence
     List<ConversationEntry> findBySessionIdOrderBySequenceNumberAsc(Long sessionId);
-    
+
+     // Tìm sequence number lớn nhất trong một session để tạo sequence tiếp theo
     @Query("SELECT MAX(c.sequenceNumber) FROM ConversationEntry c WHERE c.sessionId = :sessionId")
     Integer findMaxSequenceNumberBySessionId(@Param("sessionId") Long sessionId);
-    
+
+    // Lấy các entries đã có câu trả lời (answer content không null), sắp xếp ngược để lấy mới nhất
     @Query("SELECT c FROM ConversationEntry c WHERE c.sessionId = :sessionId AND c.answerContent IS NOT NULL ORDER BY c.sequenceNumber DESC")
     List<ConversationEntry> findAnsweredEntriesBySessionId(@Param("sessionId") Long sessionId);
     
+    // Đếm tổng số conversation entries trong một session
     long countBySessionId(Long sessionId);
     
+    // Tìm conversation entry theo question ID (mỗi question chỉ có 1 entry)
     @Query("SELECT c FROM ConversationEntry c WHERE c.questionId = :questionId")
     ConversationEntry findByQuestionId(@Param("questionId") Long questionId);
 }

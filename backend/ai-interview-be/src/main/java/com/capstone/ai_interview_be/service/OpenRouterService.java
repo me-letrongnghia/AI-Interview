@@ -17,12 +17,16 @@ import java.util.List;
 @Slf4j
 public class OpenRouterService {
     
+    private static final String DEFAULT_ERROR_MESSAGE = "Sorry, I couldn't generate a response at the moment.";
+    private static final String API_ERROR_MESSAGE = "Sorry, there was an error with the AI service.";
+    
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
     private final String siteUrl;
     private final String appName;
     
+    // Khởi tạo OpenRouter service với cấu hình API và WebClient
     public OpenRouterService(@Value("${openrouter.api-key}") String apiKey,
                            @Value("${openrouter.api-url}") String apiUrl,
                            @Value("${openrouter.model}") String model,
@@ -33,6 +37,7 @@ public class OpenRouterService {
         this.siteUrl = siteUrl;
         this.appName = appName;
         
+        // Cấu hình WebClient với headers mặc định cho OpenRouter API
         this.webClient = WebClient.builder()
                 .baseUrl(apiUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -42,8 +47,10 @@ public class OpenRouterService {
                 .build();
     }
     
+    // Gửi request tới OpenRouter API và xử lý response
     public String generateResponse(List<OpenRouterRequest.Message> messages) {
         try {
+            // Chuẩn bị request payload cho OpenRouter API
             OpenRouterRequest request = new OpenRouterRequest();
             request.setModel(model);
             request.setMessages(messages);
@@ -52,30 +59,36 @@ public class OpenRouterService {
             
             log.info("Sending request to OpenRouter with model: {} and {} messages", model, messages.size());
             
+            // Gửi request và nhận response từ OpenRouter
             OpenRouterResponse response = webClient.post()
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(OpenRouterResponse.class)
                     .block();
             
+            // Xử lý response và trích xuất nội dung AI trả về
             if (response != null && !response.getChoices().isEmpty()) {
                 String content = response.getChoices().get(0).getMessage().getContent();
                 log.info("Received response from OpenRouter: {}", content.substring(0, Math.min(100, content.length())));
                 return content.trim();
             }
             
+            // Trường hợp response rỗng
             log.warn("Empty response from OpenRouter");
-            return "Sorry, I couldn't generate a response at the moment.";
+            return DEFAULT_ERROR_MESSAGE;
             
         } catch (WebClientResponseException e) {
+            // Xử lý lỗi HTTP từ OpenRouter API
             log.error("OpenRouter API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            return "Sorry, there was an error with the AI service.";
+            return API_ERROR_MESSAGE;
         } catch (Exception e) {
+            // Xử lý các lỗi khác (network, timeout, etc.)
             log.error("Unexpected error calling OpenRouter API", e);
-            return "Sorry, I couldn't generate a response at the moment.";
+            return DEFAULT_ERROR_MESSAGE;
         }
     }
     
+    // Tạo câu hỏi đầu tiên cho phiên phỏng vấn dựa trên domain và level
     public String generateFirstQuestion(String domain, String level) {
         List<OpenRouterRequest.Message> messages = Arrays.asList(
             new OpenRouterRequest.Message("system", 
@@ -90,6 +103,7 @@ public class OpenRouterService {
         return generateResponse(messages);
     }
     
+    // Tạo feedback cho câu trả lời của ứng viên
     public String generateFeedback(String question, String answer) {
         List<OpenRouterRequest.Message> messages = Arrays.asList(
             new OpenRouterRequest.Message("system", 
@@ -104,6 +118,7 @@ public class OpenRouterService {
         return generateResponse(messages);
     }
     
+    // Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
     public String generateNextQuestion(String domain, String level, String previousQuestion, String previousAnswer) {
         List<OpenRouterRequest.Message> messages = Arrays.asList(
             new OpenRouterRequest.Message("system", 
@@ -116,24 +131,6 @@ public class OpenRouterService {
             new OpenRouterRequest.Message("user", 
                 String.format("Previous Question: %s\n\nCandidate's Answer: %s\n\nGenerate the next interview question for this %s level %s developer.", 
                     previousQuestion, previousAnswer, level, domain))
-        );
-        
-        return generateResponse(messages);
-    }
-    
-    public String generateNextQuestionWithContext(String domain, String level, String conversationContext, String previousQuestion, String previousAnswer) {
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-            new OpenRouterRequest.Message("system", 
-                "You are a technical interviewer conducting a " + level + " level " + domain + " interview. " +
-                "Based on the full conversation context and the candidate's most recent answer, generate an appropriate follow-up question that: " +
-                "1) Considers the entire interview flow and avoids repetitive topics " +
-                "2) Builds upon their responses or explores new relevant concepts " +
-                "3) Maintains appropriate difficulty progression for their level " +
-                "4) Tests deeper understanding or practical application. " +
-                "Only return the question, no additional text."),
-            new OpenRouterRequest.Message("user", 
-                String.format("Full Conversation Context:\n%s\n\nMost Recent Question: %s\n\nCandidate's Answer: %s\n\nGenerate the next interview question for this %s level %s developer.", 
-                    conversationContext, previousQuestion, previousAnswer, level, domain))
         );
         
         return generateResponse(messages);

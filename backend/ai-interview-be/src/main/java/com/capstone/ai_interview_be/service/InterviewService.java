@@ -24,15 +24,16 @@ public class InterviewService {
     private final AIService aiService;
     private final ConversationService conversationService;
     
+    // Xử lý việc submit câu trả lời và tạo câu hỏi tiếp theo
     @Transactional
     public SubmitAnswerResponse submitAnswer(Long sessionId, SubmitAnswerRequest request) {
         log.info("Processing answer submission for session: {}", sessionId);
         
-        // 1. Verify session exists
+        // Kiểm tra session có tồn tại không
         InterviewSession session = sessionRepository.findById(sessionId)
             .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
         
-        // 2. Verify question belongs to session
+        // Kiểm tra question có thuộc về session này không
         InterviewQuestion question = questionRepository.findById(request.getQuestionId())
             .orElseThrow(() -> new RuntimeException("Question not found with id: " + request.getQuestionId()));
         
@@ -40,53 +41,46 @@ public class InterviewService {
             throw new RuntimeException("Question does not belong to this session");
         }
         
-        // 3. Save the answer
+        // Lưu câu trả lời vào database
         InterviewAnswer answer = new InterviewAnswer();
         answer.setQuestionId(request.getQuestionId());
         answer.setContent(request.getContent());
         
-        // 4. Generate feedback using AI
+        // Tạo feedback bằng AI cho câu trả lời
         String feedback = aiService.generateFeedback(question.getContent(), request.getContent());
         answer.setFeedback(feedback);
         
         InterviewAnswer savedAnswer = answerRepository.save(answer);
-        log.info("Answer saved with ID: {}", savedAnswer.getId());
         
-        // 4.1. Update conversation entry with answer and feedback
+        // Cập nhật conversation entry với answer và feedback
         conversationService.updateConversationEntry(
             request.getQuestionId(), 
             request.getContent(), 
             feedback
         );
         
-        // 5. Generate next question using AI with conversation context
-        String conversationContext = conversationService.buildConversationContext(sessionId);
-        String nextQuestionContent = aiService.generateNextQuestionWithContext(
+        // Tạo câu hỏi tiếp theo bằng AI
+        String nextQuestionContent = aiService.generateNextQuestion(
             session.getDomain(), 
             session.getLevel(), 
-            conversationContext,
             question.getContent(), 
             request.getContent()
         );
         
-        // 6. Save next question
+        // Lưu câu hỏi tiếp theo vào database
         InterviewQuestion nextQuestion = new InterviewQuestion();
         nextQuestion.setSessionId(sessionId);
         nextQuestion.setContent(nextQuestionContent);
         InterviewQuestion savedNextQuestion = questionRepository.save(nextQuestion);
         
-        log.info("Next question generated with ID: {}", savedNextQuestion.getId());
-        
-        // 6.1. Create new conversation entry for next question
+        // Tạo conversation entry mới cho câu hỏi tiếp theo
         conversationService.createConversationEntry(
             sessionId, 
             savedNextQuestion.getId(), 
             nextQuestionContent
         );
         
-        log.info("Next question generated with ID: {}", savedNextQuestion.getId());
-        
-        // 7. Prepare response
+        // Chuẩn bị response trả về cho client
         SubmitAnswerResponse.NextQuestion nextQuestionDto = new SubmitAnswerResponse.NextQuestion(
             savedNextQuestion.getId(),
             savedNextQuestion.getContent()

@@ -21,11 +21,12 @@ public class InterviewSessionService {
     private final AIService aiService;
     private final ConversationService conversationService;
     
+    // Tạo phiên phỏng vấn mới và câu hỏi đầu tiên
     @Transactional
     public CreateInterviewSessionResponse createSession(CreateInterviewSessionRequest request) {
         log.info("Creating new interview session for user: {}", request.getUserId());
         
-        // 1. Create session
+        // Tạo và lưu interview session mới
         InterviewSession session = new InterviewSession();
         session.setUserId(request.getUserId());
         session.setTitle(request.getTitle());
@@ -35,13 +36,13 @@ public class InterviewSessionService {
         InterviewSession savedSession = sessionRepository.save(session);
         log.info("Session created with ID: {}", savedSession.getId());
         
-        // 2. Generate first question using AI
+        // Tạo câu hỏi đầu tiên bằng AI dựa trên domain và level
         String firstQuestionContent = aiService.generateFirstQuestion(
             request.getDomain(), 
             request.getLevel()
         );
         
-        // 3. Save first question
+        // Lưu câu hỏi đầu tiên vào database
         InterviewQuestion firstQuestion = new InterviewQuestion();
         firstQuestion.setSessionId(savedSession.getId());
         firstQuestion.setContent(firstQuestionContent);
@@ -49,7 +50,7 @@ public class InterviewSessionService {
         
         log.info("First question created with ID: {} for session: {}", savedQuestion.getId(), savedSession.getId());
         
-        // 4. Create first conversation entry
+        // Tạo conversation entry đầu tiên để theo dõi cuộc hội thoại
         conversationService.createConversationEntry(
             savedSession.getId(),
             savedQuestion.getId(),
