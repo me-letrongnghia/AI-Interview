@@ -13,11 +13,13 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     
+    // Xử lý lỗi validation từ @Valid annotation trong request body
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         
         Map<String, String> errors = new HashMap<>();
+        
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
