@@ -26,7 +26,7 @@ public class ConversationEntry {
     @Column(name = "question_id", nullable = false)
     private Long questionId;
     
-    @Column(name = "answer_id")
+    @Column(name = "answer_id", nullable = true)
     private Long answerId;
     
     @Column(name = "question_content", nullable = false, columnDefinition = "TEXT")
