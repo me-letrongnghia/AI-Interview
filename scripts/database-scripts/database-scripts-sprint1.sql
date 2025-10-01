@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS conversation_entry (
     
     -- Foreign key constraints
     FOREIGN KEY (session_id) REFERENCES interview_session(id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES interview_question(id) ON DELETE CASCADE
+    FOREIGN KEY (question_id) REFERENCES interview_question(id) ON DELETE CASCADE,
+    FOREIGN KEY (answer_id) REFERENCES interview_answer(id) ON DELETE CASCADE
 );
 
 -- Index tối ưu truy vấn

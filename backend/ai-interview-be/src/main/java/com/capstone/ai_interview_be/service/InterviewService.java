@@ -54,8 +54,9 @@ public class InterviewService {
         
         // Cập nhật conversation entry với answer và feedback
         conversationService.updateConversationEntry(
-            request.getQuestionId(), 
-            request.getContent(), 
+            request.getQuestionId(),
+            savedAnswer.getId(), 
+            request.getContent(),
             feedback
         );
         
