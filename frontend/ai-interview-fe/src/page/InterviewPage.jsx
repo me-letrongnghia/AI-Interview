@@ -1,5 +1,6 @@
 // InterviewInterface.jsx
 import { useState, useEffect, useRef, memo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Mic, MoreVertical } from "lucide-react";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
@@ -144,7 +145,13 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
 }
 const DeviceCheck = memo(({ pandaImage2, analyser, streamRef, onContinue }) => (
   <div className="h-screen flex flex-col items-center justify-center bg-white">
-    <img src={pandaImage2} alt="Logo" className="h-16 mb-6" />
+    <Link to="/" className="mb-6">
+      <img
+        src={pandaImage2}
+        alt="Logo"
+        className="h-16 hover:opacity-80 transition-opacity"
+      />
+    </Link>
     <h2 className="text-xl font-semibold mb-2">Check audio and video</h2>
     <p className="text-gray-500 mb-6 text-sm">
       Before you begin, please make sure your audio and video devices are set up
@@ -173,7 +180,6 @@ const InterviewUI = memo(
   ({
     imgBG,
     pandaImage2,
-    HeaderComponent,
     streamRef,
     analyser,
     timerDisplay,

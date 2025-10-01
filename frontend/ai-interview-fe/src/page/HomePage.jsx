@@ -1,56 +1,27 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import pandaImage from "../assets/main.png";
 import pandaImage2 from "../assets/pandahome.png";
 import pandaQuestion from "../assets/chamhoi.png";
 import duyTanLogo from "../assets/logoDTU.jpeg";
 import techzenLogo from "../assets/techzen.jpg";
 import partechLogo from "../assets/Partech-logo.png";
+import Header from "../components/Header";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center w-[100px] py-5 h-[126px]">
-              <img className="w-[100%]" src={pandaImage2} alt="" />
-            </div>
+            <Link to="/" className="flex items-center w-[100px] py-5 h-[126px]">
+              <img
+                className="w-[100%] hover:opacity-80 transition-opacity"
+                src={pandaImage2}
+                alt="PandaPrep AI Logo"
+              />
+            </Link>
 
-            {/* Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#home" className="text-gray-700 hover:text-gray-900">
-                Home
-              </a>
-              <a
-                href="#services"
-                className="text-gray-700 hover:text-gray-900 flex items-center"
-              >
-                Services
-                <svg
-                  className="w-4 h-4 ml-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </a>
-              <a href="#blog" className="text-gray-700 hover:text-gray-900">
-                Blog
-              </a>
-              <a href="#help" className="text-gray-700 hover:text-gray-900">
-                Help Center
-              </a>
-              <a href="#about" className="text-gray-700 hover:text-gray-900">
-                About
-              </a>
-            </div>
+            <Header />
 
             {/* Auth Buttons */}
             <div className="flex items-center space-x-4">
@@ -87,9 +58,12 @@ export default function HomePage() {
               and IT professionals.
             </p>
 
-            <button className="px-8 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors shadow-lg">
+            <Link
+              to="/options"
+              className="inline-block px-8 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors shadow-lg"
+            >
               Try Demo Interview Now
-            </button>
+            </Link>
           </div>
 
           {/* Right Content - Panda Illustration */}
