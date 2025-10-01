@@ -36,7 +36,7 @@ public class DotenvConfig {
             // Fallback: thử với absolute path
             try {
                 Dotenv dotenv = Dotenv.configure()
-                        .directory("D:/Projects/NCKH")
+                        .directory("D:/WorkSpace/capstone-project/AI-Interview")
                         .filename("local.env")
                         .load();
                 
