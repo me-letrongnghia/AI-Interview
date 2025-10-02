@@ -1,15 +1,12 @@
 package com.capstone.ai_interview_be.controller;
 
 import com.capstone.ai_interview_be.dto.request.CreateInterviewSessionRequest;
-import com.capstone.ai_interview_be.dto.request.SubmitAnswerRequest;
 import com.capstone.ai_interview_be.dto.response.CreateInterviewSessionResponse;
-import com.capstone.ai_interview_be.dto.response.SubmitAnswerResponse;
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.service.ConversationService;
 import com.capstone.ai_interview_be.service.InterviewSessionService;
-import com.capstone.ai_interview_be.service.InterviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,10 +22,9 @@ import java.util.List;
 public class InterviewController {
     
     private final InterviewSessionService sessionService;
-    private final InterviewService interviewService;
     private final ConversationService conversationService;
-    private final InterviewQuestionRepository questionRepository;
     
+    // Endpoint to get all interview questions
     @PostMapping
     public ResponseEntity<CreateInterviewSessionResponse> createInterviewSession(
             @Valid @RequestBody CreateInterviewSessionRequest request) {
@@ -37,8 +33,7 @@ public class InterviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
-    
-    
+    // Endpoint to get all interview questions
     @GetMapping("/{sessionId}/conversation")
     public ResponseEntity<List<ConversationEntry>> getSessionConversation(
             @PathVariable Long sessionId) {
