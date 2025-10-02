@@ -1,6 +1,5 @@
-import './App.css'
-import InterviewFlow from './components/InterviewFlow'
-
+import { RouterProvider } from "react-router-dom";
+import { router } from "./router";
 export default function App() {
-  return <InterviewFlow />
+  return <RouterProvider router={router} />;
 }
