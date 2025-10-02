@@ -37,22 +37,7 @@ public class InterviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
-    @GetMapping("/{sessionId}/questions")
-    public ResponseEntity<List<InterviewQuestion>> getSessionQuestions(
-            @PathVariable Long sessionId) {
-        
-        List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
-        return ResponseEntity.ok(questions);
-    }
     
-    @PostMapping("/{sessionId}/answers")
-    public ResponseEntity<SubmitAnswerResponse> submitAnswer(
-            @PathVariable Long sessionId,
-            @Valid @RequestBody SubmitAnswerRequest request) {
-        
-        SubmitAnswerResponse response = interviewService.submitAnswer(sessionId, request);
-        return ResponseEntity.ok(response);
-    }
     
     @GetMapping("/{sessionId}/conversation")
     public ResponseEntity<List<ConversationEntry>> getSessionConversation(
