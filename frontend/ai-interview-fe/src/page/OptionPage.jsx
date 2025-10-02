@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Upload, FileText, Code, CheckCircle, ArrowLeft } from "lucide-react";
 import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
+import Https from "../access/Https";
+import { ApiInterviews } from "../api/ApiInterviews";
+import { useNavigate } from "react-router-dom";
 export default function ITInterviewSetup() {
   const [formData, setFormData] = useState({
     position: "",
@@ -11,9 +14,7 @@ export default function ITInterviewSetup() {
   });
 
   const [cvFileName, setCvFileName] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [interviewData, setInterviewData] = useState(null);
-
+  const navigate = useNavigate();
   const positions = [
     "Frontend Developer",
     "Backend Developer",
@@ -99,7 +100,7 @@ export default function ITInterviewSetup() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.position) {
       alert("Vui lòng chọn vị trí ứng tuyển!");
       return;
@@ -112,137 +113,30 @@ export default function ITInterviewSetup() {
       alert("Vui lòng chọn ít nhất 3 kỹ năng!");
       return;
     }
-    if (!formData.cv) {
-      alert("Vui lòng upload CV của bạn!");
-      return;
-    }
-
-    // Giả lập dữ liệu trả về từ server
-    const selectedExp = experienceLevels.find(
-      (exp) => exp.value === formData.experience
-    );
     const mockResponseData = {
-      interviewId: "IV-" + Date.now(),
-      position: formData.position,
-      experience: selectedExp.label,
-      duration: selectedExp.time,
-      skills: formData.skills,
-      cvFile: formData.cv.name,
-      timestamp: new Date().toISOString(),
-      status: "ready",
+      title: "Practice " + formData.skills.join(" "),
+      domain: formData.position + " " + formData.skills.join(", "),
+      level: formData.experience,
+      userId: 1,
     };
+    console.log("Dữ liệu gửi đi:", mockResponseData);
+    navigate(`/interview/${123456}`);
 
-    setInterviewData(mockResponseData);
-    setSubmitted(true);
+    // try {
+    //   const response = await ApiInterviews.Post_Interview(mockResponseData);
+    //   console.log("Phản hồi từ server:", response.data);
+    //   if (response.status === 200 || response.status === 201) {
+    //     const interviewId = 123; // Giả sử ID phỏng vấn là 123
+    //     navigate(`/interview/${interviewId}`);
+    //   }
+
+    // } catch (error) {
+    //   console.error("Lỗi khi gửi dữ liệu:", error);
+    // }
   };
-
-  const handleStartInterview = () => {
-    // TODO: Navigate to interview interface
-    console.log("Bắt đầu phỏng vấn với dữ liệu:", interviewData);
-    // Ví dụ: window.location.href = '/interview';
-  };
-
-  const handleReset = () => {
-    setSubmitted(false);
-    setInterviewData(null);
-    setFormData({
-      position: "",
-      experience: "",
-      skills: [],
-      cv: null,
-    });
-    setCvFileName("");
-  };
-
-  if (submitted && interviewData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header isLogin={false} img={pandaImage2} />
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl w-full">
-            <div className="text-center mb-8">
-              <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-4" />
-              <h2 className="text-4xl font-bold text-gray-800 mb-3">
-                Thiết lập hoàn tất!
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Hệ thống đã chuẩn bị sẵn sàng cho buổi phỏng vấn của bạn
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 mb-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                <span className="text-gray-600 font-medium">Mã phỏng vấn:</span>
-                <span className="text-gray-900 font-bold">
-                  {interviewData.interviewId}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                <span className="text-gray-600 font-medium">Vị trí:</span>
-                <span className="text-gray-900 font-semibold">
-                  {interviewData.position}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                <span className="text-gray-600 font-medium">Cấp độ:</span>
-                <span className="text-gray-900 font-semibold">
-                  {interviewData.experience}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                <span className="text-gray-600 font-medium">
-                  Thời gian dự kiến:
-                </span>
-                <span className="text-green-600 font-bold text-xl">
-                  {interviewData.duration}
-                </span>
-              </div>
-
-              <div className="pt-2">
-                <span className="text-gray-600 font-medium block mb-2">
-                  Kỹ năng được đánh giá:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {interviewData.skills.map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-white text-green-700 rounded-full text-sm font-medium border border-green-200"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={handleReset}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2"
-              >
-                <ArrowLeft size={20} />
-                Thiết lập lại
-              </button>
-              <button
-                onClick={handleStartInterview}
-                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl"
-              >
-                Bắt đầu phỏng vấn
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header img={pandaImage2} />
-
+      <Header img={pandaImage2} isLogin={true} />
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl">
           <div className="bg-gradient-to-r from-green-500 to-green-600 p-8 text-white rounded-t-2xl">
