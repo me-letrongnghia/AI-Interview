@@ -119,20 +119,18 @@ export default function ITInterviewSetup() {
       level: formData.experience,
       userId: 1,
     };
-    console.log("Dữ liệu gửi đi:", mockResponseData);
-    navigate(`/interview/${123456}`);
 
-    // try {
-    //   const response = await ApiInterviews.Post_Interview(mockResponseData);
-    //   console.log("Phản hồi từ server:", response.data);
-    //   if (response.status === 200 || response.status === 201) {
-    //     const interviewId = 123; // Giả sử ID phỏng vấn là 123
-    //     navigate(`/interview/${interviewId}`);
-    //   }
+    try {
+      const response = await ApiInterviews.Post_Interview(mockResponseData);
+      console.log("Phản hồi từ server:", response.data);
+      if (response.status === 200 || response.status === 201) {
+        const interviewId = response.data.sessionId; // Giả sử ID phỏng vấn là 123
+        navigate(`/interviewdemo/${interviewId}`);
+      }
 
-    // } catch (error) {
-    //   console.error("Lỗi khi gửi dữ liệu:", error);
-    // }
+    } catch (error) {
+      console.error("Lỗi khi gửi dữ liệu:", error);
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
