@@ -36,10 +36,9 @@ public class DotenvConfig {
             // Fallback: thử với absolute path
             try {
                 Dotenv dotenv = Dotenv.configure()
-                        .directory("D:/WorkSpace/capstone-project/AI-Interview")
+                        .directory("T:/ProjectStudy/AI-Interview")
                         .filename("local.env")
                         .load();
-                
                 dotenv.entries().forEach(entry -> {
                     System.setProperty(entry.getKey(), entry.getValue());
                 });
