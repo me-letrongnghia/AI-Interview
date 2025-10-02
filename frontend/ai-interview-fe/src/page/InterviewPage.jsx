@@ -1,6 +1,6 @@
 // InterviewInterface.jsx
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Mic, MoreVertical } from "lucide-react";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
@@ -196,7 +196,7 @@ const InterviewUI = memo(
   }) => (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
-      <HeaderComponent img={pandaImage2} />
+      <Header img={pandaImage2} isLogin={true} />
 
       {/* Main */}
       <div className="flex-1 flex gap-3 p-3 bg-gray-100 overflow-hidden">
@@ -349,6 +349,8 @@ const InterviewUI = memo(
 );
 
 export default function InterviewInterface() {
+  const {sessionId} = useParams();
+  console.log("Session ID:", sessionId);
   const [step, setStep] = useState("check"); // "check" | "interview"
   const [isRunning, setIsRunning] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
@@ -442,7 +444,6 @@ export default function InterviewInterface() {
     <InterviewUI
       imgBG={imgBG}
       pandaImage2={pandaImage2}
-      HeaderComponent={Header}
       streamRef={streamRef}
       analyser={analyser}
       timerDisplay={timerDisplay}

@@ -10,7 +10,7 @@ export const router = createBrowserRouter([
     element: <HomePage />,
   },
   {
-    path: "/interview",
+    path: "/interview/:sessionId",
     element: <InterviewPage />,
   },
   {
