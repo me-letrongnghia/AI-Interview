@@ -23,6 +23,7 @@ public class InterviewController {
     
     private final InterviewSessionService sessionService;
     private final ConversationService conversationService;
+    private final InterviewQuestionRepository questionRepository;
     
     // Endpoint to get all interview questions
     @PostMapping
@@ -32,7 +33,15 @@ public class InterviewController {
         CreateInterviewSessionResponse response = sessionService.createSession(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
+
+    // Endpoint to get the latest interview question for a session
+    @GetMapping("/{sessionId}/question")
+    public ResponseEntity<InterviewQuestion> getSessionQuestions(
+            @PathVariable Long sessionId) {
+        InterviewQuestion questions = questionRepository.findTopBySessionIdOrderByCreatedAtDesc(sessionId);
+        return ResponseEntity.ok(questions);
+    }
+
     // Endpoint to get all interview questions
     @GetMapping("/{sessionId}/conversation")
     public ResponseEntity<List<ConversationEntry>> getSessionConversation(
