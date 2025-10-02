@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Upload, FileText, Code, CheckCircle, ArrowLeft } from "lucide-react";
 import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
-import Https from "../access/Https";
 import { ApiInterviews } from "../api/ApiInterviews";
 import { useNavigate } from "react-router-dom";
 export default function ITInterviewSetup() {
