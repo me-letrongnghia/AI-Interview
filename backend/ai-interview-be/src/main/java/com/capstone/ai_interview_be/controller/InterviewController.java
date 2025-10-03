@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/interviews")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5000")
 public class InterviewController {
     
     private final InterviewSessionService sessionService;
@@ -35,7 +35,7 @@ public class InterviewController {
     }
 
     // Endpoint to get the latest interview question for a session
-    @GetMapping("/{sessionId}/question")
+    @GetMapping("/{sessionId}/questions")
     public ResponseEntity<InterviewQuestion> getSessionQuestions(
             @PathVariable Long sessionId) {
         InterviewQuestion questions = questionRepository.findTopBySessionIdOrderByCreatedAtDesc(sessionId);
