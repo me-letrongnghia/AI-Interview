@@ -15,6 +15,7 @@ function InterviewPage() {
   const [chatHistory, setChatHistory] = useState([]);
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const chatContainerRef = useRef(null);
+  const processedMessagesRef = useRef(new Set()); // Track processed messages
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -36,49 +37,57 @@ function InterviewPage() {
         // Cập nhật để xử lý structure mới: data có content, id, sessionId
         if (data && data.data) {
           setCurrentQuestionId(data.data.id);
-          setChatHistory([
-            {
-              type: "ai",
-              text: data.data.content,
-              time: new Date().toLocaleTimeString(),
-            },
-          ]);
+          const initialMessage = {
+            type: "ai",
+            text: data.data.content,
+            time: new Date().toLocaleTimeString(),
+            id: `initial-${data.data.id}`, // Add unique ID
+          };
+          setChatHistory([initialMessage]);
+          // Mark as processed
+          processedMessagesRef.current.add(`initial-${data.data.id}`);
         }
       })
       .catch((err) => {
         console.error(err);
         // Fallback message khi API lỗi
-        setChatHistory([
-          {
-            type: "ai",
-            text: "Chào bạn! Hãy bắt đầu cuộc phỏng vấn nhé.",
-            time: new Date().toLocaleTimeString(),
-          },
-        ]);
+        const fallbackMessage = {
+          type: "ai",
+          text: "Chào bạn! Hãy bắt đầu cuộc phỏng vấn nhé.",
+          time: new Date().toLocaleTimeString(),
+          id: "fallback-initial",
+        };
+        setChatHistory([fallbackMessage]);
+        processedMessagesRef.current.add("fallback-initial");
         setCurrentQuestionId("default-question-id");
       });
 
-    return () => disconnectSocket();
+    return () => {
+      disconnectSocket();
+      processedMessagesRef.current.clear(); // Clear on unmount
+    };
   }, [sessionId]);
 
-  //Nhận message từ server 
+  //Nhận message từ server
   const handleSocketMessage = (msg) => {
     if (!msg) return;
+
+    // Create unique message ID based on content and timestamp
+    const messageId = `${msg.type}-${
+      msg.timestamp || Date.now()
+    }-${JSON.stringify(msg).substring(0, 50)}`;
+
+    // Check if message already processed
+    if (processedMessagesRef.current.has(messageId)) {
+      console.log("Duplicate message ignored:", messageId);
+      return;
+    }
+
+    // Mark message as processed
+    processedMessagesRef.current.add(messageId);
+
     // Xử lý theo type của message từ server
     switch (msg.type) {
-      case "feedback":
-        if (msg.feedback) {
-          setChatHistory((prev) => [
-            ...prev,
-            {
-              type: "ai",
-              text: msg.feedback,
-              time: new Date().toLocaleTimeString(),
-            },
-          ]);
-        }
-        break;
-
       case "question":
         if (msg.nextQuestion) {
           const q = msg.nextQuestion;
@@ -89,6 +98,7 @@ function InterviewPage() {
               type: "ai",
               text: q.content,
               time: new Date().toLocaleTimeString(),
+              id: messageId,
             },
           ]);
         }
@@ -102,6 +112,7 @@ function InterviewPage() {
             type: "ai",
             text: "Interview completed. Thank you!",
             time: new Date().toLocaleTimeString(),
+            id: messageId,
           },
         ]);
         break;
@@ -113,6 +124,7 @@ function InterviewPage() {
             type: "ai",
             text: msg.feedback || "Đã có lỗi xảy ra, vui lòng thử lại.",
             time: new Date().toLocaleTimeString(),
+            id: messageId,
           },
         ]);
         break;
@@ -127,6 +139,7 @@ function InterviewPage() {
               type: "ai",
               text: msg.content,
               time: new Date().toLocaleTimeString(),
+              id: messageId,
             },
           ]);
         } else {
@@ -140,26 +153,29 @@ function InterviewPage() {
   const handleSendMessage = () => {
     // Kiểm tra chỉ message có nội dung
     if (!message.trim()) return;
+
+    const userMessageId = `user-${Date.now()}-${Math.random()}`;
     const userMessage = {
       type: "user",
       text: message.trim(),
       time: new Date().toLocaleTimeString(),
+      id: userMessageId,
     };
 
-    // Hiển thị tin nhắn user ngay lập tức - KHÔNG phụ thuộc vào currentQuestionId
+    // Hiển thị tin nhắn user ngay lập tức
     setChatHistory((prev) => [...prev, userMessage]);
 
     // Reset input ngay lập tức
     const messageToSend = message.trim();
     setMessage("");
 
-    // 3️⃣ Gửi lên server qua WebSocket - chỉ cần sessionId
+    // Gửi lên server qua WebSocket
     const payload = {
-      questionId: currentQuestionId || "unknown", // Gửi dù có hay không có questionId
+      questionId: currentQuestionId || "unknown",
       content: messageToSend,
       timestamp: new Date().toISOString(),
     };
-    // Sử dụng sendAnswer từ SocketService
+
     sendAnswer(sessionId, payload);
   };
 
@@ -223,7 +239,7 @@ function InterviewPage() {
               >
                 {chatHistory.map((chat, index) => (
                   <div
-                    key={index}
+                    key={chat.id || index} // Use unique ID as key
                     className={`mb-4 ${
                       chat.type === "user" ? "text-right" : "text-left"
                     }`}
