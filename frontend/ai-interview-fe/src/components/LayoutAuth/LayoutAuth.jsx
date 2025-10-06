@@ -1,7 +1,8 @@
-import React from 'react'
+import React from "react";
 import LinhVat from "../../assets/main.png";
+import { Outlet } from "react-router-dom";
 
-export const LayoutAuth = ({children}) => {
+export const LayoutAuth = () => {
   return (
     <div className="h-screen bg-white overflow-hidden flex flex-col">
       <div className="flex-1 overflow-auto">
@@ -13,7 +14,7 @@ export const LayoutAuth = ({children}) => {
               className="fixed bottom-0 left-0 w-[700px] h-[700px] object-contain translate-x-[-30%] translate-y-[50%] opacity-20 pointer-events-none select-none hidden md:block"
             />
             {/* ==== LOGIN ==== */}
-            {children}
+            <Outlet />
             {/* ==== PANDA ==== */}
             <div className="hidden lg:flex flex-1 items-center justify-center relative translate-x-[20%]">
               <img
@@ -26,5 +27,5 @@ export const LayoutAuth = ({children}) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

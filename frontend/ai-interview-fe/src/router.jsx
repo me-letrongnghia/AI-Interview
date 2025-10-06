@@ -6,6 +6,8 @@ import OptionPage from "./page/OptionPage";
 import InterviewPageDemo from "./page/InterviewPageDemo";
 import LoginPage from "./page/auth/LoginPage";
 import RegisterPage from "./page/auth/RegisterPage";
+import ForgotPassword from "./page/auth/ForgotPassword";
+import { LayoutAuth } from "./components/LayoutAuth/LayoutAuth";
 
 export const router = createBrowserRouter([
   {
@@ -25,12 +27,22 @@ export const router = createBrowserRouter([
     element: <OptionPage />,
   },
   {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/register",
-    element: <RegisterPage />,
+    path: "/auth",
+    element: <LayoutAuth />,
+    children: [
+      {
+        path: "login",
+        element: <LoginPage />,
+      },
+      {
+        path: "register",
+        element: <RegisterPage />,
+      },
+      {
+        path: "forgot-password",
+        element: <ForgotPassword />,
+      },
+    ],
   },
   {
     path: "*",
