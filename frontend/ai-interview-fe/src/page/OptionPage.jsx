@@ -12,7 +12,7 @@ export default function ITInterviewSetup() {
     skills: [],
     cv: null,
   });
-
+  const [disabled, setDisabled] = useState(false);
   const [cvFileName, setCvFileName] = useState("");
   const navigate = useNavigate();
   const positions = [
@@ -121,6 +121,7 @@ export default function ITInterviewSetup() {
     };
 
     try {
+      setDisabled(true);
       const response = await ApiInterviews.Post_Interview(mockResponseData);
       console.log("Phản hồi từ server:", response.data);
       if (response.status === 200 || response.status === 201) {
@@ -264,7 +265,10 @@ export default function ITInterviewSetup() {
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl"
+              disabled={disabled}
+              className={`w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl ${
+                disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               Xác nhận và tiếp tục
             </button>
