@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubmitAnswerResponse {
+public class ProcessAnswerResponse {
     private Long answerId;
     private String feedback;
     private NextQuestion nextQuestion;

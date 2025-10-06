@@ -267,7 +267,10 @@ export default function ITInterviewSetup() {
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl"
+              disabled={disabled}
+              className={`w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl ${
+                disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               Xác nhận và tiếp tục
             </button>
