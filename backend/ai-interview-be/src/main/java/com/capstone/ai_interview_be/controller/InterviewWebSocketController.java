@@ -33,11 +33,11 @@ public class InterviewWebSocketController {
             var response = interviewService.processAnswerAndGenerateNext(sessionId, answerMessage);
 
             // Gửi feedback ngay
-            FeedbackMessage feedback = new FeedbackMessage();
-            feedback.setType("feedback");
-            feedback.setFeedback(response.getFeedback());
-            feedback.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            messagingTemplate.convertAndSend("/topic/interview/" + sessionId, feedback);
+            // FeedbackMessage feedback = new FeedbackMessage();
+            // feedback.setType("feedback");
+            // feedback.setFeedback(response.getFeedback());
+            // feedback.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            // messagingTemplate.convertAndSend("/topic/interview/" + sessionId, feedback);
 
             // Nếu có câu hỏi tiếp theo, gửi luôn
             if (response.getNextQuestion() != null) {

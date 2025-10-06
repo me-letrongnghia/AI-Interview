@@ -46,8 +46,8 @@ public class InterviewService {
         answer.setContent(answerMessage.getContent());
         
         // Tạo feedback bằng AI cho câu trả lời
-        String feedback = aiService.generateFeedback(question.getContent(), answerMessage.getContent());
-        answer.setFeedback(feedback);
+        // String feedback = aiService.generateFeedback(question.getContent(), answerMessage.getContent());
+        // answer.setFeedback(feedback);
         
         InterviewAnswer savedAnswer = answerRepository.save(answer);
         
@@ -55,8 +55,8 @@ public class InterviewService {
         conversationService.updateConversationEntry(
             answerMessage.getQuestionId(),
             savedAnswer.getId(), 
-            answerMessage.getContent(),
-            feedback
+            answerMessage.getContent()
+            // feedback
         );
         
         // Tạo câu hỏi tiếp theo bằng AI
