@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import React, { useState } from "react";
 
 export const ResetPassword = () => {
