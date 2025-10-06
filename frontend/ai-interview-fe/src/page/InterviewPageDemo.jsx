@@ -15,6 +15,7 @@ function InterviewPage() {
   const [chatHistory, setChatHistory] = useState([]);
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const chatContainerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -66,18 +67,18 @@ function InterviewPage() {
     if (!msg) return;
     // Xử lý theo type của message từ server
     switch (msg.type) {
-      case "feedback":
-        if (msg.feedback) {
-          setChatHistory((prev) => [
-            ...prev,
-            {
-              type: "ai",
-              text: msg.feedback,
-              time: new Date().toLocaleTimeString(),
-            },
-          ]);
-        }
-        break;
+      // case "feedback":
+      //   if (msg.feedback) {
+      //     setChatHistory((prev) => [
+      //       ...prev,
+      //       {
+      //         type: "ai",
+      //         text: msg.feedback,
+      //         time: new Date().toLocaleTimeString(),
+      //       },
+      //     ]);
+      //   }
+      //   break;
 
       case "question":
         if (msg.nextQuestion) {
@@ -92,6 +93,7 @@ function InterviewPage() {
             },
           ]);
         }
+        setIsLoading(false);
         break;
 
       case "end":
@@ -140,6 +142,7 @@ function InterviewPage() {
   const handleSendMessage = () => {
     // Kiểm tra chỉ message có nội dung
     if (!message.trim()) return;
+    setIsLoading(true);
     const userMessage = {
       type: "user",
       text: message.trim(),
@@ -242,6 +245,30 @@ function InterviewPage() {
                     </div>
                   </div>
                 ))}
+                {isLoading && (
+                  <div className="flex justify-start mb-2 ml-1">
+                    <div className="flex space-x-1 text-green-800 text-lg">
+                      <span
+                        className="animate-bounce"
+                        style={{ animationDelay: "0s" }}
+                      >
+                        .
+                      </span>
+                      <span
+                        className="animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      >
+                        .
+                      </span>
+                      <span
+                        className="animate-bounce"
+                        style={{ animationDelay: "0.4s" }}
+                      >
+                        .
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center space-x-2">
