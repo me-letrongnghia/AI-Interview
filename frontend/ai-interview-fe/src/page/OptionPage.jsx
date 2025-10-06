@@ -62,11 +62,11 @@ export default function ITInterviewSetup() {
   ];
 
   const experienceLevels = [
-    { value: "intern", label: "Intern", time: "15 phút" },
-    { value: "fresher", label: "Fresher (0-1 năm)", time: "20 phút" },
-    { value: "junior", label: "Junior (1-3 năm)", time: "30 phút" },
-    { value: "middle", label: "Middle (3-5 năm)", time: "45 phút" },
-    { value: "senior", label: "Senior (5+ năm)", time: "60 phút" },
+    { value: "intern", label: "Intern" },
+    { value: "fresher", label: "Fresher (0-1 năm)" },
+    { value: "junior", label: "Junior (1-3 năm)" },
+    { value: "middle", label: "Middle (3-5 năm)" },
+    { value: "senior", label: "Senior (5+ năm)" },
   ];
 
   const handleFileUpload = (e) => {
@@ -127,7 +127,6 @@ export default function ITInterviewSetup() {
         const interviewId = response.data.sessionId; // Giả sử ID phỏng vấn là 123
         navigate(`/interviewdemo/${interviewId}`);
       }
-
     } catch (error) {
       console.error("Lỗi khi gửi dữ liệu:", error);
     }
@@ -266,7 +265,9 @@ export default function ITInterviewSetup() {
               type="button"
               onClick={handleSubmit}
               disabled={disabled}
-              className={`w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 rounded-xl font-bold text-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl ${
+                disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               Xác nhận và tiếp tục
             </button>
