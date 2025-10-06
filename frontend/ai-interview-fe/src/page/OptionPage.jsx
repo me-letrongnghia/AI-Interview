@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Upload, FileText, Code, CheckCircle, ArrowLeft } from "lucide-react";
 import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
+import Https from "../access/Https";
 import { ApiInterviews } from "../api/ApiInterviews";
 import { useNavigate } from "react-router-dom";
 export default function ITInterviewSetup() {
@@ -11,7 +12,7 @@ export default function ITInterviewSetup() {
     skills: [],
     cv: null,
   });
-  const [disabled,setDisabled] = useState(false);
+
   const [cvFileName, setCvFileName] = useState("");
   const navigate = useNavigate();
   const positions = [
@@ -62,11 +63,11 @@ export default function ITInterviewSetup() {
   ];
 
   const experienceLevels = [
-    { value: "intern", label: "Intern" },
-    { value: "fresher", label: "Fresher (0-1 năm)" },
-    { value: "junior", label: "Junior (1-3 năm)" },
-    { value: "middle", label: "Middle (3-5 năm)" },
-    { value: "senior", label: "Senior (5+ năm)" },
+    { value: "intern", label: "Intern", time: "15 phút" },
+    { value: "fresher", label: "Fresher (0-1 năm)", time: "20 phút" },
+    { value: "junior", label: "Junior (1-3 năm)", time: "30 phút" },
+    { value: "middle", label: "Middle (3-5 năm)", time: "45 phút" },
+    { value: "senior", label: "Senior (5+ năm)", time: "60 phút" },
   ];
 
   const handleFileUpload = (e) => {
@@ -118,18 +119,20 @@ export default function ITInterviewSetup() {
       level: formData.experience,
       userId: 1,
     };
+    console.log("Dữ liệu gửi đi:", mockResponseData);
+    navigate(`/interview/${123456}`);
 
-    try {
-      setDisabled(true);
-      const response = await ApiInterviews.Post_Interview(mockResponseData);
-      console.log("Phản hồi từ server:", response.data);
-      if (response.status === 200 || response.status === 201) {
-        const interviewId = response.data.sessionId; // Giả sử ID phỏng vấn là 123
-        navigate(`/interviewdemo/${interviewId}`);
-      }
-    } catch (error) {
-      console.error("Lỗi khi gửi dữ liệu:", error);
-    }
+    // try {
+    //   const response = await ApiInterviews.Post_Interview(mockResponseData);
+    //   console.log("Phản hồi từ server:", response.data);
+    //   if (response.status === 200 || response.status === 201) {
+    //     const interviewId = 123; // Giả sử ID phỏng vấn là 123
+    //     navigate(`/interview/${interviewId}`);
+    //   }
+
+    // } catch (error) {
+    //   console.error("Lỗi khi gửi dữ liệu:", error);
+    // }
   };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
