@@ -1,7 +1,7 @@
 package com.capstone.ai_interview_be.service;
 
-import com.capstone.ai_interview_be.dto.request.SubmitAnswerRequest;
-import com.capstone.ai_interview_be.dto.response.SubmitAnswerResponse;
+import com.capstone.ai_interview_be.dto.response.ProcessAnswerResponse;
+import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
 import com.capstone.ai_interview_be.model.InterviewAnswer;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
 import com.capstone.ai_interview_be.model.InterviewSession;
@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -24,9 +23,9 @@ public class InterviewService {
     private final AIService aiService;
     private final ConversationService conversationService;
     
-    // Xử lý việc submit câu trả lời và tạo câu hỏi tiếp theo
+    // Xử lý việc submit câu trả lời qua WebSocket và tạo câu hỏi tiếp theo
     @Transactional
-    public SubmitAnswerResponse submitAnswer(Long sessionId, SubmitAnswerRequest request) {
+    public ProcessAnswerResponse processAnswerAndGenerateNext(Long sessionId, AnswerMessage answerMessage) {
         log.info("Processing answer submission for session: {}", sessionId);
         
         // Kiểm tra session có tồn tại không
@@ -34,8 +33,8 @@ public class InterviewService {
             .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
         
         // Kiểm tra question có thuộc về session này không
-        InterviewQuestion question = questionRepository.findById(request.getQuestionId())
-            .orElseThrow(() -> new RuntimeException("Question not found with id: " + request.getQuestionId()));
+        InterviewQuestion question = questionRepository.findById(answerMessage.getQuestionId())
+            .orElseThrow(() -> new RuntimeException("Question not found with id: " + answerMessage.getQuestionId()));
         
         if (!question.getSessionId().equals(sessionId)) {
             throw new RuntimeException("Question does not belong to this session");
@@ -43,21 +42,21 @@ public class InterviewService {
         
         // Lưu câu trả lời vào database
         InterviewAnswer answer = new InterviewAnswer();
-        answer.setQuestionId(request.getQuestionId());
-        answer.setContent(request.getContent());
+        answer.setQuestionId(answerMessage.getQuestionId());
+        answer.setContent(answerMessage.getContent());
         
         // Tạo feedback bằng AI cho câu trả lời
-        String feedback = aiService.generateFeedback(question.getContent(), request.getContent());
-        answer.setFeedback(feedback);
+        // String feedback = aiService.generateFeedback(question.getContent(), answerMessage.getContent());
+        // answer.setFeedback(feedback);
         
         InterviewAnswer savedAnswer = answerRepository.save(answer);
         
         // Cập nhật conversation entry với answer và feedback
         conversationService.updateConversationEntry(
-            request.getQuestionId(),
+            answerMessage.getQuestionId(),
             savedAnswer.getId(), 
-            request.getContent(),
-            feedback
+            answerMessage.getContent()
+            // feedback
         );
         
         // Tạo câu hỏi tiếp theo bằng AI
@@ -65,7 +64,7 @@ public class InterviewService {
             session.getDomain(), 
             session.getLevel(), 
             question.getContent(), 
-            request.getContent()
+            answerMessage.getContent()
         );
         
         // Lưu câu hỏi tiếp theo vào database
@@ -81,13 +80,13 @@ public class InterviewService {
             nextQuestionContent
         );
         
-        // Chuẩn bị response trả về cho client
-        SubmitAnswerResponse.NextQuestion nextQuestionDto = new SubmitAnswerResponse.NextQuestion(
+        // Chuẩn bị response trả về cho WebSocket
+        ProcessAnswerResponse.NextQuestion nextQuestionDto = new ProcessAnswerResponse.NextQuestion(
             savedNextQuestion.getId(),
             savedNextQuestion.getContent()
         );
         
-        return new SubmitAnswerResponse(
+        return new ProcessAnswerResponse(
             savedAnswer.getId(),
             savedAnswer.getFeedback(),
             nextQuestionDto

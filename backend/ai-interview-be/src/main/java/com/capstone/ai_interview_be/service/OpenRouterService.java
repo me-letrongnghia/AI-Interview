@@ -54,7 +54,7 @@ public class OpenRouterService {
             OpenRouterRequest request = new OpenRouterRequest();
             request.setModel(model);
             request.setMessages(messages);
-            request.setMaxTokens(500);
+            request.setMaxTokens(100);
             request.setTemperature(0.7);
             
             log.info("Sending request to OpenRouter with model: {} and {} messages", model, messages.size());
