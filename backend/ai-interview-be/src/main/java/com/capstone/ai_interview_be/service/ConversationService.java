@@ -35,7 +35,7 @@ public class ConversationService {
     }
     
     // Cập nhật conversation entry khi có câu trả lời và feedback
-    public ConversationEntry updateConversationEntry(Long questionId, Long answerId, String answerContent, String aiFeedback) {
+    public ConversationEntry updateConversationEntry(Long questionId, Long answerId, String answerContent) {
         // Tìm conversation entry dựa trên question ID
         ConversationEntry entry = conversationRepository.findByQuestionId(questionId);
         if (entry == null) {
@@ -45,7 +45,7 @@ public class ConversationService {
         // Cập nhật thông tin câu trả lời và feedback từ AI
         entry.setAnswerId(answerId);
         entry.setAnswerContent(answerContent);
-        entry.setAiFeedback(aiFeedback);
+        //entry.setAiFeedback(aiFeedback);
         entry.setUpdatedAt(LocalDateTime.now());
         
         return conversationRepository.save(entry);

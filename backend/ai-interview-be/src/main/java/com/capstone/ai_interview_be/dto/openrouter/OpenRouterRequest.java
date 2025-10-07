@@ -15,7 +15,7 @@ public class OpenRouterRequest {
     private List<Message> messages;
     
     @JsonProperty("max_tokens")
-    private Integer maxTokens = 500;
+    private Integer maxTokens;
     
     private Double temperature = 0.7;
     
