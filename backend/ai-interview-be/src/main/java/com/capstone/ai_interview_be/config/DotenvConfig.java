@@ -8,44 +8,43 @@ import org.springframework.core.annotation.Order;
 import java.io.File;
 
 @Configuration
-@Order(-1000) // Load sớm nhất
+@Order(-1000) 
 @Slf4j
 public class DotenvConfig {
-    
+
     static {
-        // Load trong static block để chạy trước khi Spring khởi tạo
         loadEnvironmentVariables();
     }
-    
     private static void loadEnvironmentVariables() {
         try {
-            // Tìm file local.env ở root project (2 levels up)
-            File currentDir = new File("").getAbsoluteFile();
-            File projectRoot = currentDir.getParentFile().getParentFile();
+            File envFile = findEnvFile();
             
-            Dotenv dotenv = Dotenv.configure()
-                    .directory(projectRoot.getAbsolutePath())
-                    .filename("local.env")
-                    .load();
-            
-            dotenv.entries().forEach(entry -> {
-                System.setProperty(entry.getKey(), entry.getValue());
-            });
-            
-        } catch (Exception e) {
-            // Fallback: thử với absolute path
-            try {
+            if (envFile != null) {
                 Dotenv dotenv = Dotenv.configure()
-                        .directory("T:/ProjectStudy/AI-Interview")
+                        .directory(envFile.getParent())
                         .filename("local.env")
                         .load();
                 dotenv.entries().forEach(entry -> {
                     System.setProperty(entry.getKey(), entry.getValue());
                 });
                 
-            } catch (Exception ex) {
-                // Silent fail
+                log.info("Environment variables loaded from: {}", envFile.getAbsolutePath());
+            } else {
+                log.warn("local.env file not found");
             }
+        } catch (Exception e) {
+            log.error("Failed to load environment variables", e);
         }
+    }
+    private static File findEnvFile() {
+        File currentDir = new File("").getAbsoluteFile();
+        while (currentDir != null) {
+            File envFile = new File(currentDir, "local.env");
+            if (envFile.exists() && envFile.isFile()) {
+                return envFile;
+            }
+            currentDir = currentDir.getParentFile();
+        }
+        return null;
     }
 }
