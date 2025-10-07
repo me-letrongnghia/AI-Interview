@@ -19,3 +19,7 @@ openrouter:
   model: ${OPENROUTER_MODEL}
   site-url: ${OPENROUTER_SITE_URL}
   app-name: ${OPENROUTER_APP_NAME}
+
+opentts:
+  api-url: ${OPENTTS_API_URL}
+  default-voice: ${OPENTTS_DEFAULT_VOICE}
