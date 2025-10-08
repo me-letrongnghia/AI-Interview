@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import pandaImage from "../assets/main.png";
+import pandaImage from "../assets/LinhVat.png";
 import pandaImage2 from "../assets/pandahome.png";
 import pandaQuestion from "../assets/chamhoi.png";
 import duyTanLogo from "../assets/logoDTU.jpeg";

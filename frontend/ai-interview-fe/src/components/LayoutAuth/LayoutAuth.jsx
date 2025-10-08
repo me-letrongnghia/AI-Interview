@@ -1,6 +1,5 @@
 import React from "react";
-import LinhVat from "../../assets/main.png";
-import { Outlet } from "react-router-dom";
+import LinhVat from "../../assets/LinhVat.png";
 
 export const LayoutAuth = () => {
   return (
