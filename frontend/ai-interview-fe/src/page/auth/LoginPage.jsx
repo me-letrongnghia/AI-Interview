@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
-import LinhVat from "../../assets/LinhVat.png";
-import { LayoutAuth } from "../../components/LayoutAuth/LayoutAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Auth } from "../../api/AuthApi";
 import { UseAppContext } from "../../context/AppContext";
 
 export default function LoginPage() {
-  const {} = UseAppContext();
-
+  const {setUserProfile,setIsLogin} = UseAppContext();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const Navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     const requestLogin = {
@@ -20,8 +19,13 @@ export default function LoginPage() {
     };
     try {
       const response = await Auth.Login(requestLogin);
-      if (response.status === 201) {
+      if(response.status === 201) {
+        setUserProfile(response.data.user);
+        setIsLogin(true)
         localStorage.setItem("access_token", response.data.accessToken);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        localStorage.setItem("isLogin",JSON.stringify(true))
+        Navigate("/");
       }
       console.log("Response:", response);
     } catch (error) {
