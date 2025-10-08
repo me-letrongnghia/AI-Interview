@@ -1,5 +1,9 @@
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider, githubProvider } from "../config/firebaseConfig";
+import {
+  auth,
+  googleProvider,
+  githubProvider,
+} from "../fireconfig/FireBaseConfig";
 
 //Google Login
 export const signInWithGoogle = async () => {
