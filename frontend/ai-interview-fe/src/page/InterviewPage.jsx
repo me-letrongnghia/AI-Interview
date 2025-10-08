@@ -779,11 +779,8 @@ export default function InterviewInterface() {
         });
         streamRef.current = null;
       }
-
-      // Stop speech recognition
-      stopListening();
     };
-  }, [stopListening]);
+  }, []); // Empty dependency - chỉ chạy khi mount/unmount
 
   return step === "check" ? (
     <DeviceCheck
