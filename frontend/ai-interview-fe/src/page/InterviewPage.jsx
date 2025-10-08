@@ -1,32 +1,18 @@
-// InterviewInterface.jsx
+// InterviewPage.jsx
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Mic, MoreVertical } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { Mic, MoreVertical, Volume2, VolumeOff } from "lucide-react";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
+import interviewImg from "../assets/interview.jpg";
 import Header from "../components/Header";
-
-// ===== VideoStream (chỉ render 1 lần, không giật) =====
-const VideoStream = memo(({ streamRef, muted }) => {
-  console.log("VideoStream re-render", streamRef.current);
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    if (videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    }
-  }, [streamRef]); // chỉ chạy 1 lần
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted={muted}
-      className="w-full h-full object-cover"
-    />
-  );
-});
+import {
+  connectSocket,
+  disconnectSocket,
+  sendAnswer,
+} from "../socket/SocketService";
+import { ApiInterviews } from "../api/ApiInterviews";
+import { VideoStream, VolumeBar } from "../components/Interview/Interview";
 
 // ===== Timer =====
 const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
@@ -55,45 +41,7 @@ const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
   </div>
 ));
 
-// ===== VolumeBar =====
-const VolumeBar = ({ analyser }) => {
-  const barsRef = useRef([]);
-
-  useEffect(() => {
-    if (!analyser) return;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    const update = () => {
-      analyser.getByteFrequencyData(dataArray);
-      let values = 0;
-      for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
-      const avg = values / dataArray.length;
-
-      barsRef.current.forEach((bar, i) => {
-        if (bar) {
-          bar.style.backgroundColor = avg / 10 > i ? "#22c55e" : "#d1d5db";
-        }
-      });
-
-      requestAnimationFrame(update);
-    };
-    update();
-  }, [analyser]);
-
-  return (
-    <div className="flex items-center gap-1 h-2">
-      {[...Array(10)].map((_, i) => (
-        <div
-          key={i}
-          ref={(el) => (barsRef.current[i] = el)}
-          className="w-4 h-2 rounded-sm bg-gray-300"
-        />
-      ))}
-    </div>
-  );
-};
-
-// Custom hook to handle timer without causing re-render every second
+// ===== Custom hook timer =====
 function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
   const [display, setDisplay] = useState({
     minutes: initialMinutes,
@@ -128,54 +76,18 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-    // eslint-disable-next-line
-  }, [isActive]);
+  }, [isActive, onFinish]);
 
-  // Reset timer when initial values change (e.g. on step change)
   useEffect(() => {
     minutesRef.current = initialMinutes;
     secondsRef.current = initialSeconds;
-    setDisplay({
-      minutes: initialMinutes,
-      seconds: initialSeconds,
-    });
+    setDisplay({ minutes: initialMinutes, seconds: initialSeconds });
   }, [initialMinutes, initialSeconds]);
 
   return display;
 }
-const DeviceCheck = memo(({ pandaImage2, analyser, streamRef, onContinue }) => (
-  <div className="h-screen flex flex-col items-center justify-center bg-white">
-    <Link to="/" className="mb-6">
-      <img
-        src={pandaImage2}
-        alt="Logo"
-        className="h-16 hover:opacity-80 transition-opacity"
-      />
-    </Link>
-    <h2 className="text-xl font-semibold mb-2">Check audio and video</h2>
-    <p className="text-gray-500 mb-6 text-sm">
-      Before you begin, please make sure your audio and video devices are set up
-      correctly
-    </p>
-    {/* Audio check */}
-    <label className="mb-2">Audio check</label>
-    <VolumeBar analyser={analyser} />
-    {/* Video preview */}
-    <label className="mb-2">Video check</label>
-    <div className="w-72 h-52 border rounded-lg mb-6 overflow-hidden">
-      {streamRef.current && <VideoStream streamRef={streamRef} muted />}
-    </div>
-    {/* Continue */}
-    <button
-      onClick={onContinue}
-      className="bg-green-500 text-white px-8 py-2 rounded-full font-medium hover:bg-green-600 transition"
-    >
-      CONTINUE
-    </button>
-  </div>
-));
 
-// ===== Interview UI (hoisted) =====
+// ===== Interview UI =====
 const InterviewUI = memo(
   ({
     imgBG,
@@ -193,13 +105,13 @@ const InterviewUI = memo(
     setChatInput,
     sendMessage,
     setIsRecording,
+    isMuted,
+    toggleMute,
+    isLoading,
   }) => (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
+    <div className="min-h-screen flex flex-col bg-white">
       <Header img={pandaImage2} isLogin={true} />
-
-      {/* Main */}
-      <div className="flex-1 flex gap-3 p-3 bg-gray-100 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-3 p-3 bg-gray-100 overflow-hidden">
         <div className="flex-1 relative rounded-2xl overflow-hidden shadow-lg">
           <img
             src={imgBG}
@@ -207,39 +119,43 @@ const InterviewUI = memo(
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="relative h-full flex flex-col items-center justify-center p-6">
-            <h1 className="text-2xl font-bold text-green-600 mb-4 tracking-wide">
+            <h1 className="text-2xl font-bold text-green-600 mb-4 tracking-wide text-center">
               INTERVIEWING...
             </h1>
-
-            {/* Timer */}
             <Timer
               minutes={timerDisplay.minutes}
               seconds={timerDisplay.seconds}
               onToggle={handleStop}
               isRunning={isRunning}
             />
-
-            {/* Cameras */}
-            <div className="flex gap-8">
-              <div className="relative w-[500px] h-[340px] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex flex-col md:flex-row gap-6 w-full max-w-6xl mt-4">
+              <div className="relative w-full md:w-1/2 aspect-video bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
                 {streamRef.current && (
                   <VideoStream streamRef={streamRef} muted />
                 )}
+                <button
+                  onClick={toggleMute}
+                  className="absolute bottom-3 left-3 bg-black/50 text-white px-3 py-1 rounded-lg text-sm hover:bg-black/70"
+                >
+                  {isMuted ? <Volume2 size={20} /> : <VolumeOff size={20} />}
+                </button>
                 <button className="absolute top-3 right-3 text-white hover:text-gray-300">
                   <MoreVertical size={20} />
                 </button>
               </div>
-              <div className="relative w-[500px] h-[340px] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex items-center justify-center">
-                {streamRef.current && (
-                  <VideoStream streamRef={streamRef} muted />
-                )}
+              <div className="hidden md:flex relative w-full md:w-1/2 aspect-video bg-gray-900 rounded-2xl shadow-2xl overflow-hidden items-center justify-center">
+                <img
+                  src={interviewImg}
+                  alt="Interviewer"
+                  className="w-260 h-full object-cover"
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Chat Sidebar */}
-        <div className="w-96 bg-white shadow-xl flex flex-col border-l border-gray-200">
+        <div className="w-full md:w-96 bg-white shadow-xl flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
           <div
             ref={messagesRef}
             className="flex-1 overflow-y-auto p-6 space-y-4"
@@ -265,11 +181,28 @@ const InterviewUI = memo(
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start mb-2 ml-1">
+                <div className="flex space-x-1 text-green-800 text-lg">
+                  <span className="animate-bounce">.</span>
+                  <span
+                    className="animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  >
+                    .
+                  </span>
+                  <span
+                    className="animate-bounce"
+                    style={{ animationDelay: "0.4s" }}
+                  >
+                    .
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Voice Input */}
           <div className="p-4 border-t border-gray-200">
-            {/* Chat text input row with small mic icon */}
             <div className="flex items-center gap-3">
               <input
                 type="text"
@@ -284,8 +217,6 @@ const InterviewUI = memo(
                   }
                 }}
               />
-
-              {/* Small mic icon next to input - toggles expanded recording */}
               <button
                 onClick={handleMicClick}
                 aria-label="microphone"
@@ -297,8 +228,6 @@ const InterviewUI = memo(
               >
                 <Mic size={18} />
               </button>
-
-              {/* Send button */}
               <button
                 onClick={sendMessage}
                 className="ml-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md"
@@ -306,8 +235,6 @@ const InterviewUI = memo(
                 Gửi
               </button>
             </div>
-
-            {/* Expanded recording area shown when isRecording is true */}
             {isRecording && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <div className="flex items-start justify-between">
@@ -324,18 +251,13 @@ const InterviewUI = memo(
                       </div>
                     </div>
                   </div>
-
-                  {/* Close (X) button to revert back to input + small mic */}
                   <button
                     onClick={() => setIsRecording(false)}
-                    aria-label="close recording"
                     className="text-gray-500 hover:text-gray-700"
                   >
                     ✕
                   </button>
                 </div>
-
-                {/* Volume bar under expanded area */}
                 <div className="mt-3">
                   <VolumeBar analyser={analyser} />
                 </div>
@@ -348,81 +270,176 @@ const InterviewUI = memo(
   )
 );
 
+// ===== Main component =====
 export default function InterviewInterface() {
-  const {sessionId} = useParams();
-  console.log("Session ID:", sessionId);
-  const [step, setStep] = useState("check"); // "check" | "interview"
-  const [isRunning, setIsRunning] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [messages, setMessages] = useState([
-    { text: "Chào bé, luyện tập cùng anh nào!!!", time: "9:15", sender: "bot" },
-    { text: "Dạ", time: "9:17", sender: "user" },
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const messagesRef = useRef(null);
+  const { sessionId } = useParams();
 
-  // Auto-scroll to bottom when messages update
+  const [isRunning, setIsRunning] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [currentQuestionId, setCurrentQuestionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const processedMessagesRef = useRef(new Set());
+  const messagesRef = useRef(null);
+  const streamRef = useRef(null);
+  const [analyser, setAnalyser] = useState(null);
+
+  const toggleMute = useCallback(() => {
+    if (streamRef.current) {
+      const audioTracks = streamRef.current.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const current = audioTracks[0].enabled;
+        audioTracks[0].enabled = !current;
+        setIsMuted(!current);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const streamRef = useRef(null);
-  const [analyser, setAnalyser] = useState(null);
-
-  // Timer logic using custom hook
   const initialMinutes = 44;
   const initialSeconds = 28;
   const timerDisplay = useTimer(
     initialMinutes,
     initialSeconds,
-    step === "interview" && isRunning,
-    useCallback(() => setIsRunning(false), [setIsRunning])
+    isRunning,
+    useCallback(() => setIsRunning(false), [])
   );
 
-  const handleStop = useCallback(
-    () => setIsRunning((prev) => !prev),
-    [setIsRunning]
-  );
-  const handleMicClick = useCallback(
-    () => setIsRecording((prev) => !prev),
-    [setIsRecording]
-  );
+  const handleStop = useCallback(() => setIsRunning((p) => !p), []);
+  const handleMicClick = useCallback(() => setIsRecording((p) => !p), []);
 
-  // Send chat message locally
+  // Handle socket messages
+  const handleSocketMessage = useCallback((msg) => {
+    if (!msg) return;
+    const messageId = `${msg.type}-${msg.timestamp || Date.now()}`;
+    if (processedMessagesRef.current.has(messageId)) return;
+    processedMessagesRef.current.add(messageId);
+
+    switch (msg.type) {
+      case "question":
+        if (msg.nextQuestion) {
+          const q = msg.nextQuestion;
+          setCurrentQuestionId(q.questionId);
+          setMessages((prev) => [
+            ...prev,
+            {
+              text: q.content,
+              time: new Date().toLocaleTimeString(),
+              sender: "bot",
+            },
+          ]);
+        }
+        setIsLoading(false);
+        break;
+      case "end":
+        setCurrentQuestionId(null);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: "Interview completed. Thank you!",
+            time: new Date().toLocaleTimeString(),
+            sender: "bot",
+          },
+        ]);
+        break;
+      case "error":
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: msg.feedback || "Đã có lỗi xảy ra.",
+            time: new Date().toLocaleTimeString(),
+            sender: "bot",
+          },
+        ]);
+        break;
+      default:
+        if (msg.content && msg.id) {
+          setCurrentQuestionId(msg.id);
+          setMessages((prev) => [
+            ...prev,
+            {
+              text: msg.content,
+              time: new Date().toLocaleTimeString(),
+              sender: "bot",
+            },
+          ]);
+        }
+        break;
+    }
+  }, []);
+
   const sendMessage = useCallback(() => {
     const text = chatInput.trim();
     if (!text) return;
     const now = new Date();
-    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(
-      2,
-      "0"
-    )}`;
-    const newMsg = { text, time, sender: "user" };
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => [
+      ...prev,
+      { text, time: now.toLocaleTimeString(), sender: "user" },
+    ]);
     setChatInput("");
-    // TODO: optionally send to backend via ApiInterviews
-  }, [chatInput, setMessages, setChatInput]);
+    setIsLoading(true);
 
-  // init camera + mic
+    const payload = {
+      questionId: currentQuestionId || "unknown",
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    sendAnswer(sessionId, payload);
+  }, [chatInput, currentQuestionId, sessionId]);
+
+  // Init socket + first question
+  useEffect(() => {
+    if (!sessionId) return;
+    connectSocket(sessionId, handleSocketMessage);
+    ApiInterviews.Get_Interview(sessionId)
+      .then((data) => {
+        if (data && data.data) {
+          setCurrentQuestionId(data.data.id);
+          setMessages([
+            {
+              text: data.data.content,
+              time: new Date().toLocaleTimeString(),
+              sender: "bot",
+            },
+          ]);
+        }
+      })
+      .catch(() => {
+        setMessages([
+          {
+            text: "Chào bạn! Hãy bắt đầu cuộc phỏng vấn nhé.",
+            time: new Date().toLocaleTimeString(),
+            sender: "bot",
+          },
+        ]);
+        setCurrentQuestionId("default-question-id");
+      });
+    return () => disconnectSocket();
+  }, [sessionId, handleSocketMessage]);
+
+  // Init camera + mic
   useEffect(() => {
     let audioContext, analyserNode;
-
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((s) => {
         streamRef.current = s;
-
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyserNode = audioContext.createAnalyser();
         const microphone = audioContext.createMediaStreamSource(s);
         analyserNode.fftSize = 64;
         microphone.connect(analyserNode);
-
         setAnalyser(analyserNode);
-      });
-
+      })
+      .catch((err) => console.error("getUserMedia error:", err));
     return () => {
       if (audioContext) audioContext.close();
       if (streamRef.current) {
@@ -431,16 +448,7 @@ export default function InterviewInterface() {
     };
   }, []);
 
-  // nothing here — UI hoisted above
-
-  return step === "check" ? (
-    <DeviceCheck
-      pandaImage2={pandaImage2}
-      analyser={analyser}
-      streamRef={streamRef}
-      onContinue={() => setStep("interview")}
-    />
-  ) : (
+  return (
     <InterviewUI
       imgBG={imgBG}
       pandaImage2={pandaImage2}
@@ -457,6 +465,9 @@ export default function InterviewInterface() {
       setChatInput={setChatInput}
       sendMessage={sendMessage}
       setIsRecording={setIsRecording}
+      isMuted={isMuted}
+      toggleMute={toggleMute}
+      isLoading={isLoading}
     />
   );
 }
