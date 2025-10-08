@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speechRate] = useState(1.0); // Tốc độ đọc (0.1 - 10, mặc định 1.0)
   const utteranceRef = useRef(null);
 
   // Cleanup on unmount
@@ -23,7 +24,7 @@ const useTextToSpeech = () => {
 
     // Cấu hình cho tiếng Anh
     utterance.lang = 'en-US';
-    utterance.rate = 1.0;   // Tốc độ bình thường
+    utterance.rate = speechRate;   // Tốc độ đọc
     utterance.pitch = 1.0;  // Cao độ bình thường
     utterance.volume = 1.0; // Âm lượng tối đa
 
@@ -43,7 +44,7 @@ const useTextToSpeech = () => {
 
     // Start speaking
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [speechRate]);
 
   // Stop speech
   const stop = useCallback(() => {
@@ -55,6 +56,7 @@ const useTextToSpeech = () => {
     speak,
     stop,
     isSpeaking,
+    speechRate, // Export tốc độ để sync với typing
   };
 };
 
