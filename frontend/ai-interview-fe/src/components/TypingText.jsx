@@ -5,8 +5,8 @@ const TypingText = ({ text, speed, speechRate = 1.0, onComplete }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const calculateSpeed = () => {
     if (speed) return speed;
-    
-    const baseSpeed = 50;
+
+    const baseSpeed = 45;
     
     const adjustedSpeed = baseSpeed / speechRate;
     
@@ -34,14 +34,7 @@ const TypingText = ({ text, speed, speechRate = 1.0, onComplete }) => {
     setCurrentIndex(0);
   }, [text]);
 
-  return (
-    <span>
-      {displayedText}
-      {currentIndex < text.length && (
-        <span className="inline-block w-1 h-4 bg-gray-600 ml-0.5 animate-pulse" />
-      )}
-    </span>
-  );
+  return <span>{displayedText}</span>;
 };
 
 export default TypingText;
