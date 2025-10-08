@@ -113,24 +113,12 @@ export default function ITInterviewSetup() {
       alert("Vui lòng chọn ít nhất 3 kỹ năng!");
       return;
     }
-    const mockResponseData = {
-      title: "Practice " + formData.skills.join(" "),
-      domain: formData.position + " " + formData.skills.join(", "),
-      level: formData.experience,
-      userId: 1,
-    };
+    // if (!formData.cv) {
+    //   alert("Vui lòng upload CV của bạn!");
+    //   return;
+    // }
 
-    try {
-      setDisabled(true);
-      const response = await ApiInterviews.Post_Interview(mockResponseData);
-      console.log("Phản hồi từ server:", response.data);
-      if (response.status === 200 || response.status === 201) {
-        const interviewId = response.data.sessionId; // Giả sử ID phỏng vấn là 123
-        navigate(`/interview/${interviewId}`);
-      }
-    } catch (error) {
-      console.error("Lỗi khi gửi dữ liệu:", error);
-    }
+    navigate("/device-check", { state: formData });
   };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
