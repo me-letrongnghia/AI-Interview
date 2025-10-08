@@ -4,6 +4,7 @@ import { Mic, MoreVertical } from "lucide-react";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
+import TypingText from "../components/TypingText";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import useTextToSpeech from "../hooks/useTextToSpeech";
 import { ApiInterviews } from "../api/ApiInterviews";
@@ -206,6 +207,9 @@ const InterviewUI = memo(
     interimTranscript,
     speechError,
     isLoading,
+    typingMessageId,
+    setTypingMessageId,
+    speechRate,
   }) => (
     <div className="h-screen flex flex-col bg-white">
       <Header img={pandaImage2} isLogin={true} />
@@ -263,7 +267,17 @@ const InterviewUI = memo(
                       : "bg-green-100 text-gray-800"
                   } rounded-2xl px-4 py-3 shadow-sm`}
                 >
-                  <p className="text-sm">{chat.text}</p>
+                  <p className="text-sm">
+                    {chat.type === "ai" && chat.id === typingMessageId ? (
+                      <TypingText
+                        text={chat.text}
+                        speechRate={speechRate}
+                        onComplete={() => setTypingMessageId(null)}
+                      />
+                    ) : (
+                      chat.text
+                    )}
+                  </p>
                   <span className="text-xs text-gray-500 mt-1 block">
                     {chat.time}
                   </span>
@@ -403,6 +417,7 @@ export default function InterviewInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState("");
+  const [typingMessageId, setTypingMessageId] = useState(null);
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const messagesRef = useRef(null);
   const streamRef = useRef(null);
@@ -421,7 +436,7 @@ export default function InterviewInterface() {
   } = useSpeechToText();
 
   // Text-to-Speech
-  const { speak, stop: stopSpeaking } = useTextToSpeech();
+  const { speak, stop: stopSpeaking, speechRate } = useTextToSpeech();
 
   // Auto-update chatInput when transcript changes
   useEffect(() => {
@@ -450,9 +465,24 @@ export default function InterviewInterface() {
 
   const handleStop = useCallback(() => setIsRunning((prev) => !prev), []);
 
+  // Auto disable mic khi AI đang generate câu hỏi
+  useEffect(() => {
+    if (typingMessageId && isRecording) {
+      console.log('AI is generating question, stopping microphone...');
+      setIsRecording(false);
+      stopListening();
+    }
+  }, [typingMessageId, isRecording, stopListening]);
+
   // Mic click handler - IMPROVED VERSION
   const handleMicClick = useCallback(() => {
     console.log('Mic button clicked, current recording state:', isRecording);
+    
+    // Không cho bật mic khi AI đang generate câu hỏi
+    if (typingMessageId && !isRecording) {
+      console.log('AI is still generating question, microphone disabled');
+      return;
+    }
     
     // Kiểm tra stream trước khi toggle recording
     if (streamRef.current) {
@@ -507,7 +537,7 @@ export default function InterviewInterface() {
       setIsRecording(false);
       stopListening();
     }
-  }, [isRecording, startListening, stopListening]);
+  }, [isRecording, startListening, stopListening, typingMessageId]);
 
   // WebSocket message handler
   const handleSocketMessage = useCallback(
@@ -539,6 +569,8 @@ export default function InterviewInterface() {
                 id: messageId,
               },
             ]);
+            setTypingMessageId(messageId);
+            // Đọc ngay, typing animation chạy song song
             speak(q.content);
           }
           setIsLoading(false);
@@ -556,6 +588,8 @@ export default function InterviewInterface() {
               id: messageId,
             },
           ]);
+          setTypingMessageId(messageId);
+          // Đọc ngay, typing animation chạy song song
           speak(endMessage);
           setIsLoading(false);
           break;
@@ -572,6 +606,8 @@ export default function InterviewInterface() {
               id: messageId,
             },
           ]);
+          setTypingMessageId(messageId);
+          // Đọc ngay, typing animation chạy song song
           speak(errorMsg);
           setIsLoading(false);
           break;
@@ -589,6 +625,8 @@ export default function InterviewInterface() {
                 id: messageId,
               },
             ]);
+            setTypingMessageId(messageId);
+            // Đọc ngay, typing animation chạy song song
             speak(msg.content);
           }
           setIsLoading(false);
@@ -622,6 +660,8 @@ export default function InterviewInterface() {
           };
           setChatHistory([initialMessage]);
           processedMessagesRef.current.add(`initial-${data.data.id}`);
+          setTypingMessageId(`initial-${data.data.id}`);
+          // Đọc ngay, typing animation chạy song song
           speak(data.data.content);
         }
       })
@@ -636,12 +676,15 @@ export default function InterviewInterface() {
         setChatHistory([fallbackMessage]);
         processedMessagesRef.current.add("fallback-initial");
         setCurrentQuestionId("default-question-id");
+        setTypingMessageId("fallback-initial");
+        // Đọc ngay, typing animation chạy song song
         speak("Hello! Let's start the interview.");
       });
 
+    const processedMessages = processedMessagesRef.current;
+    
     return () => {
       disconnectSocket();
-      const processedMessages = processedMessagesRef.current;
       if (processedMessages) {
         processedMessages.clear();
       }
@@ -809,6 +852,9 @@ export default function InterviewInterface() {
       interimTranscript={interimTranscript}
       speechError={speechError}
       isLoading={isLoading}
+      typingMessageId={typingMessageId}
+      setTypingMessageId={setTypingMessageId}
+      speechRate={speechRate}
     />
   );
 }
