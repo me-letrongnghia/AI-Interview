@@ -16,7 +16,7 @@ function InterviewPage() {
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const chatContainerRef = useRef(null);
   const processedMessagesRef = useRef(new Set()); // Track processed messages
-
+  const [isLoading, setIsLoading] = useState(false);
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     if (chatContainerRef.current) {
