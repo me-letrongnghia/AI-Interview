@@ -18,7 +18,11 @@ public class CustomUserDetails implements UserDetails {
     public UserEntity getUser() {
         return user;
     }
-
+    public String getPicture() {
+        return user.getPicture();
+    }
+   
+    
     @Transactional
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -54,6 +58,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.isEnabled();
     }
 }

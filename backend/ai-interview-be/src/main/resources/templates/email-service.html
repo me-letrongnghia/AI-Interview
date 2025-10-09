@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xác nhận đặt lại mật khẩu</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 520px;
+            margin: 40px auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #0078d7;
+            color: #ffffff;
+            text-align: center;
+            padding: 16px 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 24px;
+        }
+        .content p {
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        .code-box {
+            background-color: #f5faff;
+            border: 1px solid #0078d7;
+            color: #0078d7;
+            font-weight: bold;
+            font-size: 22px;
+            text-align: center;
+            padding: 14px 0;
+            border-radius: 6px;
+            letter-spacing: 3px;
+            margin: 18px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0078d7;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 15px;
+        }
+        .footer {
+            background-color: #f2f2f2;
+            text-align: center;
+            padding: 12px;
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">Xác nhận đặt lại mật khẩu</div>
+    <div class="content">
+        <p>Xin chào <strong th:text="${name}">Người dùng</strong>,</p>
+        <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản của mình. Dưới đây là mã xác nhận của bạn:</p>
+
+        <div class="code-box" th:text="${code}">123456</div>
+
+        <p>Hoặc bạn có thể nhấn vào nút bên dưới để truy cập trực tiếp trang đặt lại mật khẩu:</p>
+
+        <a th:href="${resetLink}" class="button" target="_blank">Đặt lại mật khẩu</a>
+
+        <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Mã xác nhận sẽ hết hạn sau 10 phút.</p>
+    </div>
+    <div class="footer">
+        © 2025 AI Interview Support System — Bảo mật thông tin người dùng là ưu tiên hàng đầu của chúng tôi.
+    </div>
+</div>
+</body>
+</html>
