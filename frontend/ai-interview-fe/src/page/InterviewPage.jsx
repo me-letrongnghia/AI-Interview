@@ -1,473 +1,256 @@
-// InterviewPage.jsx
-import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { Mic, MoreVertical, Volume2, VolumeOff } from "lucide-react";
-import imgBG from "../assets/backgroundI.png";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import pandaImage2 from "../assets/pandahome.png";
-import interviewImg from "../assets/interview.jpg";
-import Header from "../components/Header";
-import {
-  connectSocket,
-  disconnectSocket,
-  sendAnswer,
-} from "../socket/SocketService";
-import { ApiInterviews } from "../api/ApiInterviews";
 import { VideoStream, VolumeBar } from "../components/Interview/Interview";
+import { ApiInterviews } from "../api/ApiInterviews";
 
-// ===== Timer =====
-const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
-  <div className="mb-4">
-    <div className="flex items-center justify-center gap-4 mb-1">
-      <span className="text-gray-500 text-xs">Minutes</span>
-      <span className="text-gray-500 text-xs ml-10">Seconds</span>
-    </div>
-    <div className="flex items-center justify-center gap-2">
-      <span className="text-3xl font-bold text-gray-800">
-        {String(minutes).padStart(2, "0")}
-      </span>
-      <span className="text-3xl font-bold text-gray-800">:</span>
-      <span className="text-3xl font-bold text-gray-800">
-        {String(seconds).padStart(2, "0")}
-      </span>
-    </div>
-    <div className="text-center mt-3">
-      <button
-        onClick={onToggle}
-        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full font-medium transition-colors shadow-lg text-sm"
-      >
-        {isRunning ? "Stop" : "Start"}
-      </button>
-    </div>
-  </div>
-));
+export default function DeviceCheckPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const formData = location.state;
 
-// ===== Custom hook timer =====
-function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
-  const [display, setDisplay] = useState({
-    minutes: initialMinutes,
-    seconds: initialSeconds,
-  });
-  const minutesRef = useRef(initialMinutes);
-  const secondsRef = useRef(initialSeconds);
-  const intervalRef = useRef(null);
+  const streamRef = useRef(null);
+  const [analyser, setAnalyser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [devices, setDevices] = useState({ audioInputs: [], videoInputs: [] });
+  const [selectedAudio, setSelectedAudio] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState("");
+
+  const loadDevices = async () => {
+    try {
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      setDevices({
+        audioInputs: allDevices.filter((d) => d.kind === "audioinput"),
+        videoInputs: allDevices.filter((d) => d.kind === "videoinput"),
+      });
+    } catch (err) {
+      console.error("Lỗi lấy danh sách thiết bị:", err);
+    }
+  };
+
+  const initMedia = async (audioDeviceId, videoDeviceId) => {
+    let audioContext, analyserNode;
+    try {
+      const constraints = {
+        audio: audioDeviceId ? { deviceId: audioDeviceId } : true,
+        video: videoDeviceId ? { deviceId: videoDeviceId } : true,
+      };
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
+
+      streamRef.current = s;
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyserNode = audioContext.createAnalyser();
+      const mic = audioContext.createMediaStreamSource(s);
+      analyserNode.fftSize = 64;
+      mic.connect(analyserNode);
+      setAnalyser(analyserNode);
+    } catch (err) {
+      console.error("getUserMedia error:", err);
+    }
+    return () => {
+      if (audioContext) audioContext.close();
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  };
 
   useEffect(() => {
-    if (!isActive) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    initMedia();
+    loadDevices();
+  }, []);
+
+  useEffect(() => {
+    if (selectedAudio || selectedVideo) {
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      initMedia(selectedAudio, selectedVideo);
+    }
+  }, [selectedAudio, selectedVideo]);
+
+  const handleContinue = async () => {
+    if (!formData) {
+      alert("Không có dữ liệu phỏng vấn!");
       return;
     }
-    intervalRef.current = setInterval(() => {
-      if (secondsRef.current > 0) {
-        secondsRef.current -= 1;
-      } else if (minutesRef.current > 0) {
-        minutesRef.current -= 1;
-        secondsRef.current = 59;
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        if (onFinish) onFinish();
-        return;
-      }
-      setDisplay({
-        minutes: minutesRef.current,
-        seconds: secondsRef.current,
-      });
-    }, 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    const payload = {
+      title: "Practice " + formData.skills.join(" "),
+      domain: formData.position + " " + formData.skills.join(", "),
+      level: formData.experience,
+      userId: 1,
     };
-  }, [isActive, onFinish]);
 
-  useEffect(() => {
-    minutesRef.current = initialMinutes;
-    secondsRef.current = initialSeconds;
-    setDisplay({ minutes: initialMinutes, seconds: initialSeconds });
-  }, [initialMinutes, initialSeconds]);
+    try {
+      setLoading(true);
+      const response = await ApiInterviews.Post_Interview(payload);
+      if (response.status === 200 || response.status === 201) {
+        const interviewId = response.data.sessionId;
+        navigate(`/interview/${interviewId}`);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tạo session:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  return display;
-}
-
-// ===== Interview UI =====
-const InterviewUI = memo(
-  ({
-    imgBG,
-    pandaImage2,
-    streamRef,
-    analyser,
-    timerDisplay,
-    handleStop,
-    isRunning,
-    isRecording,
-    handleMicClick,
-    messages,
-    messagesRef,
-    chatInput,
-    setChatInput,
-    sendMessage,
-    setIsRecording,
-    isMuted,
-    toggleMute,
-    isLoading,
-  }) => (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Header img={pandaImage2} isLogin={true} />
-      <div className="flex-1 flex flex-col md:flex-row gap-3 p-3 bg-gray-100 overflow-hidden">
-        <div className="flex-1 relative rounded-2xl overflow-hidden shadow-lg">
-          <img
-            src={imgBG}
-            alt="Background"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="relative h-full flex flex-col items-center justify-center p-6">
-            <h1 className="text-2xl font-bold text-green-600 mb-4 tracking-wide text-center">
-              INTERVIEWING...
-            </h1>
-            <Timer
-              minutes={timerDisplay.minutes}
-              seconds={timerDisplay.seconds}
-              onToggle={handleStop}
-              isRunning={isRunning}
+  return (
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-50 overflow-hidden">
+      {/* Header */}
+      <div className="text-center mb-4">
+        <div className="flex justify-center mb-4">
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-200">
+            <img
+              src={pandaImage2}
+              alt="logo"
+              className="h-16 w-16 object-contain"
             />
-            <div className="flex flex-col md:flex-row gap-6 w-full max-w-6xl mt-4">
-              <div className="relative w-full md:w-1/2 aspect-video bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-                {streamRef.current && (
-                  <VideoStream streamRef={streamRef} muted />
-                )}
-                <button
-                  onClick={toggleMute}
-                  className="absolute bottom-3 left-3 bg-black/50 text-white px-3 py-1 rounded-lg text-sm hover:bg-black/70"
-                >
-                  {isMuted ? <Volume2 size={20} /> : <VolumeOff size={20} />}
-                </button>
-                <button className="absolute top-3 right-3 text-white hover:text-gray-300">
-                  <MoreVertical size={20} />
-                </button>
-              </div>
-              <div className="hidden md:flex relative w-full md:w-1/2 aspect-video bg-gray-900 rounded-2xl shadow-2xl overflow-hidden items-center justify-center">
-                <img
-                  src={interviewImg}
-                  alt="Interviewer"
-                  className="w-260 h-full object-cover"
-                />
-              </div>
-            </div>
           </div>
         </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          Kiểm tra thiết bị
+        </h2>
+        <p className="text-gray-600 text-sm max-w-md">
+          Đảm bảo micro và camera của bạn hoạt động tốt trước khi bắt đầu phỏng
+          vấn
+        </p>
+      </div>
 
-        {/* Chat Sidebar */}
-        <div className="w-full md:w-96 bg-white shadow-xl flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
-          <div
-            ref={messagesRef}
-            className="flex-1 overflow-y-auto p-6 space-y-4"
-          >
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-xs ${
-                    msg.sender === "user"
-                      ? "bg-gray-100 text-gray-800"
-                      : "bg-green-100 text-gray-800"
-                  } rounded-2xl px-4 py-3 shadow-sm`}
-                >
-                  <p className="text-sm">{msg.text}</p>
-                  <span className="text-xs text-gray-500 mt-1 block">
-                    {msg.time}
-                  </span>
+      {/* Main Content */}
+      <div className="flex flex-1 items-center justify-center max-h-[600px] w-full max-w-5xl px-8 mb-6">
+        <div className="flex gap-8 w-full h-full">
+          {/* Video Preview Section */}
+          <div className="flex-1 flex flex-col">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <h3 className="font-semibold text-gray-800">Video Preview</h3>
+              </div>
+
+              <div className="flex-1 relative rounded-xl overflow-hidden bg-black border border-gray-300 mb-4">
+                {streamRef.current && (
+                  <VideoStream
+                    streamRef={streamRef}
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                  📹 Live
                 </div>
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start mb-2 ml-1">
-                <div className="flex space-x-1 text-green-800 text-lg">
-                  <span className="animate-bounce">.</span>
-                  <span
-                    className="animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  >
-                    .
-                  </span>
-                  <span
-                    className="animate-bounce"
-                    style={{ animationDelay: "0.4s" }}
-                  >
-                    .
-                  </span>
+
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-700 text-sm flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    Mic Level
+                  </h4>
+                  <span className="text-xs text-gray-500">Real-time</span>
                 </div>
+                <VolumeBar analyser={analyser} />
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Viết tin nhắn..."
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-              />
-              <button
-                onClick={handleMicClick}
-                aria-label="microphone"
-                className={`p-2 rounded-md transition-colors ${
-                  isRecording
-                    ? "bg-red-100 text-red-600"
-                    : "bg-green-50 text-green-600"
-                }`}
-              >
-                <Mic size={18} />
-              </button>
-              <button
-                onClick={sendMessage}
-                className="ml-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md"
-              >
-                Gửi
-              </button>
+          {/* Device Selection Section */}
+          <div className="flex-1 flex flex-col">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full flex flex-col">
+              <div className="mb-6"></div>
+              <h3 className="font-semibold text-gray-800 text-lg mb-1">
+                Cài đặt thiết bị
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Chọn thiết bị microphone và camera bạn muốn sử dụng
+              </p>
             </div>
-            {isRecording && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-full bg-red-500 text-white">
-                      <Mic size={20} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-800">
-                        Đang ghi âm...
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Phát hiện giọng nói và hiển thị sóng âm
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsRecording(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="mt-3">
-                  <VolumeBar analyser={analyser} />
-                </div>
+
+            <div className="space-y-6 flex-1">
+              {/* Audio Input */}
+              <div>
+                <label className="block font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="text-gray-600">🎤</span>
+                  Microphone
+                </label>
+                <select
+                  value={selectedAudio}
+                  onChange={(e) => setSelectedAudio(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors"
+                >
+                  {devices.audioInputs.length === 0 && (
+                    <option value="">Không tìm thấy microphone</option>
+                  )}
+                  {devices.audioInputs.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label ||
+                        `Microphone ${device.deviceId.slice(0, 8)}...`}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              {/* Video Input */}
+              <div>
+                <label className="block font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="text-gray-600">📷</span>
+                  Camera
+                </label>
+                <select
+                  value={selectedVideo}
+                  onChange={(e) => setSelectedVideo(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors"
+                >
+                  {devices.videoInputs.length === 0 && (
+                    <option value="">Không tìm thấy camera</option>
+                  )}
+                  {devices.videoInputs.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label ||
+                        `Camera ${device.deviceId.slice(0, 8)}...`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={handleContinue}
+                disabled={loading}
+                className="w-full bg-green-500 text-white py-3 rounded-xl font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Đang tạo session...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Bắt đầu phỏng vấn</span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-xs text-gray-500 mt-3">
+                Nhấn để bắt đầu buổi phỏng vấn thực hành
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  )
-);
-
-// ===== Main component =====
-export default function InterviewInterface() {
-  const { sessionId } = useParams();
-
-  const [isRunning, setIsRunning] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
-  const [currentQuestionId, setCurrentQuestionId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const processedMessagesRef = useRef(new Set());
-  const messagesRef = useRef(null);
-  const streamRef = useRef(null);
-  const [analyser, setAnalyser] = useState(null);
-
-  const toggleMute = useCallback(() => {
-    if (streamRef.current) {
-      const audioTracks = streamRef.current.getAudioTracks();
-      if (audioTracks.length > 0) {
-        const current = audioTracks[0].enabled;
-        audioTracks[0].enabled = !current;
-        setIsMuted(!current);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const initialMinutes = 44;
-  const initialSeconds = 28;
-  const timerDisplay = useTimer(
-    initialMinutes,
-    initialSeconds,
-    isRunning,
-    useCallback(() => setIsRunning(false), [])
-  );
-
-  const handleStop = useCallback(() => setIsRunning((p) => !p), []);
-  const handleMicClick = useCallback(() => setIsRecording((p) => !p), []);
-
-  // Handle socket messages
-  const handleSocketMessage = useCallback((msg) => {
-    if (!msg) return;
-    const messageId = `${msg.type}-${msg.timestamp || Date.now()}`;
-    if (processedMessagesRef.current.has(messageId)) return;
-    processedMessagesRef.current.add(messageId);
-
-    switch (msg.type) {
-      case "question":
-        if (msg.nextQuestion) {
-          const q = msg.nextQuestion;
-          setCurrentQuestionId(q.questionId);
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: q.content,
-              time: new Date().toLocaleTimeString(),
-              sender: "bot",
-            },
-          ]);
-        }
-        setIsLoading(false);
-        break;
-      case "end":
-        setCurrentQuestionId(null);
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: "Interview completed. Thank you!",
-            time: new Date().toLocaleTimeString(),
-            sender: "bot",
-          },
-        ]);
-        break;
-      case "error":
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: msg.feedback || "Đã có lỗi xảy ra.",
-            time: new Date().toLocaleTimeString(),
-            sender: "bot",
-          },
-        ]);
-        break;
-      default:
-        if (msg.content && msg.id) {
-          setCurrentQuestionId(msg.id);
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: msg.content,
-              time: new Date().toLocaleTimeString(),
-              sender: "bot",
-            },
-          ]);
-        }
-        break;
-    }
-  }, []);
-
-  const sendMessage = useCallback(() => {
-    const text = chatInput.trim();
-    if (!text) return;
-    const now = new Date();
-    setMessages((prev) => [
-      ...prev,
-      { text, time: now.toLocaleTimeString(), sender: "user" },
-    ]);
-    setChatInput("");
-    setIsLoading(true);
-
-    const payload = {
-      questionId: currentQuestionId || "unknown",
-      content: text,
-      timestamp: new Date().toISOString(),
-    };
-    sendAnswer(sessionId, payload);
-  }, [chatInput, currentQuestionId, sessionId]);
-
-  // Init socket + first question
-  useEffect(() => {
-    if (!sessionId) return;
-    connectSocket(sessionId, handleSocketMessage);
-    ApiInterviews.Get_Interview(sessionId)
-      .then((data) => {
-        if (data && data.data) {
-          setCurrentQuestionId(data.data.id);
-          setMessages([
-            {
-              text: data.data.content,
-              time: new Date().toLocaleTimeString(),
-              sender: "bot",
-            },
-          ]);
-        }
-      })
-      .catch(() => {
-        setMessages([
-          {
-            text: "Chào bạn! Hãy bắt đầu cuộc phỏng vấn nhé.",
-            time: new Date().toLocaleTimeString(),
-            sender: "bot",
-          },
-        ]);
-        setCurrentQuestionId("default-question-id");
-      });
-    return () => disconnectSocket();
-  }, [sessionId, handleSocketMessage]);
-
-  // Init camera + mic
-  useEffect(() => {
-    let audioContext, analyserNode;
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((s) => {
-        streamRef.current = s;
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyserNode = audioContext.createAnalyser();
-        const microphone = audioContext.createMediaStreamSource(s);
-        analyserNode.fftSize = 64;
-        microphone.connect(analyserNode);
-        setAnalyser(analyserNode);
-      })
-      .catch((err) => console.error("getUserMedia error:", err));
-    return () => {
-      if (audioContext) audioContext.close();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, []);
-
-  return (
-    <InterviewUI
-      imgBG={imgBG}
-      pandaImage2={pandaImage2}
-      streamRef={streamRef}
-      analyser={analyser}
-      timerDisplay={timerDisplay}
-      handleStop={handleStop}
-      isRunning={isRunning}
-      isRecording={isRecording}
-      handleMicClick={handleMicClick}
-      messages={messages}
-      messagesRef={messagesRef}
-      chatInput={chatInput}
-      setChatInput={setChatInput}
-      sendMessage={sendMessage}
-      setIsRecording={setIsRecording}
-      isMuted={isMuted}
-      toggleMute={toggleMute}
-      isLoading={isLoading}
-    />
   );
 }

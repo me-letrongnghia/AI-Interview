@@ -24,16 +24,18 @@ public class UserEntity {
     private String role;
     @Column(name = "picture")
     private String picture;
-
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = false; // false khi mới đăng ký
     public UserEntity() {
     }
-    public UserEntity(Long id, String email, String password, String fullName, String role, String picture) {
+    public UserEntity(Long id, String email, String password, String fullName, String role, String picture, boolean enabled) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.fullName = fullName;
         this.role = role;
         this.picture = picture;
+        this.enabled = enabled;
     }
     public String getPicture() {
         return picture;
@@ -71,5 +73,10 @@ public class UserEntity {
     public void setRole(String role) {
         this.role = role;
     }
-
+    public boolean isEnabled() {
+        return enabled;
+    }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 }

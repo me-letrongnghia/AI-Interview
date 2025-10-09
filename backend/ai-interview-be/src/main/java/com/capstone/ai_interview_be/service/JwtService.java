@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,15 +56,16 @@ public class JwtService {
     }
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        Date now = new Date();
+        Instant now = Instant.now();
+        Instant expiry = now.plus(Duration.ofHours(jwtExpiration));   
         return Jwts.builder()
                 .header()
-                .add("type","jwt")
+                .add("typ","jwt")
                 .and()
                 .subject(userDetails.getUsername())
                 .claims(claims)
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + jwtExpiration))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiry))
                 .signWith(getSecretKey())
                 .compact();
     }
