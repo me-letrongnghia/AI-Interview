@@ -1,13 +1,52 @@
 import React, { useState } from "react";
-import { LayoutAuth } from "../../components/LayoutAuth/LayoutAuth";
 import { ArrowRight } from "lucide-react";
+import { Auth } from "../../api/AuthApi";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [isCheckEmail, setIsCheckEmail] = useState(true);
-  const handleForgotPassword = () => {
-    setIsCheckEmail(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  const validateEmail = (value) => {
+    if (!value.trim()) {
+      return "Email is required.";
+    } else if (!value.endsWith("@gmail.com")) {
+      return "Email must end with @gmail.com.";
+    }
+    return "";
   };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    setEmailError(validateEmail(value));
+  };
+
+  const handleForgotPassword = async () => {
+    const error = validateEmail(email);
+    if (error) {
+      setEmailError(error);
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError("");
+
+    try {
+      await Auth.SendEmail(email);
+      setIsCheckEmail(false);
+    } catch (error) {
+      setApiError(
+        error.response?.data?.message ||
+          "Failed to send email. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div>
       {isCheckEmail ? (
@@ -18,7 +57,7 @@ const ForgotPassword = () => {
           <p className="mb-4 text-gray-400">
             Enter your registered email below
           </p>
-          <div className="flex-1 flex flex-col justify-center space-y-4 overflow-auto">
+          <div className="flex-1 flex flex-col mt-20 space-y-4 overflow-auto">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Email
@@ -26,16 +65,29 @@ const ForgotPassword = () => {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="username@gmail.com"
-                className="w-full h-10 px-4 border-2 border-green-300 rounded-lg"
+                className={`w-full h-10 px-4 border-2 rounded-lg ${
+                  emailError ? "border-red-300" : "border-green-300"
+                }`}
               />
+              {emailError && (
+                <p className="text-red-500 text-sm mt-1">{emailError}</p>
+              )}
             </div>
+            {apiError && (
+              <div className="text-red-500 text-sm text-center">{apiError}</div>
+            )}
             <button
               onClick={handleForgotPassword}
-              className="w-full h-10 bg-green-500 hover:bg-green-700 text-white rounded-lg"
+              disabled={isLoading}
+              className={`w-full h-10 text-white rounded-lg ${
+                isLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-700"
+              }`}
             >
-              Continue
+              {isLoading ? "Sending..." : "Continue"}
             </button>
           </div>
         </div>

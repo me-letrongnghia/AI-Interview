@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.capstone.ai_interview_be.dto.request.FireRequest;
 import com.capstone.ai_interview_be.dto.request.LoginRequest;
 import com.capstone.ai_interview_be.dto.request.RegisterRequest;
+import com.capstone.ai_interview_be.dto.request.ResetPasswordRequest;
 import com.capstone.ai_interview_be.dto.response.UserProfileResponse;
 import com.capstone.ai_interview_be.service.AuthService;
 import com.capstone.ai_interview_be.service.emailService.VerifyCodeService;
@@ -45,7 +46,7 @@ public class AuthController {
     }
     
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<String> register(@RequestBody RegisterRequest request) throws MessagingException {
         // Logic to register user
         String responseMessage = authService.register(request);
         return ResponseEntity.ok(responseMessage);
@@ -92,7 +93,13 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestParam("email") String email) throws MessagingException {
+    public ResponseEntity<String> resendVerification(@RequestParam("email") String email) throws MessagingException {
         return ResponseEntity.ok(verificationService.generateOrUpdateCode(email));
+    }
+    
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest newPassword ){
+        return ResponseEntity.ok(authService.resetPassword(newPassword));
+
     }
 }

@@ -11,7 +11,7 @@ export default function GgAuth({ onSuccess, onError }) {
     try {
       const result = await signInWithGoogle();
       if (result.success && result.data) {
-        onSuccess?.(result.data);
+        onSuccess?.(result.data.tokenFirebase);
       } else {
         onError?.(result.error || "Đăng nhập Google thất bại");
       }
@@ -28,7 +28,7 @@ export default function GgAuth({ onSuccess, onError }) {
       const result = await signInWithGithub();
       console.log("result", result);
       if (result.success && result.data) {
-        onSuccess?.(result.data);
+        onSuccess?.(result.data.tokenFirebase);
       } else {
         onError?.(result.error || "Đăng nhập Facebook thất bại");
       }

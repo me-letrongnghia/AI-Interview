@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Auth } from "../../api/AuthApi";
 import GgAuth from "../../components/Header/GgAuth";
-
+import { UseAppContext } from "../../context/AppContext";
+import { toast } from "react-toastify";
 const RegisterPage = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ const RegisterPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const { setUserProfile, setIsLogin } = UseAppContext();
   const Navigate = useNavigate();
   const validateField = (name, value, allValues = {}) => {
     const currentValues = {
@@ -133,17 +135,46 @@ const RegisterPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleSuccess = async (data) => {
+    const response = await Auth.LoginFirebase(data);
+    if (response.status === 200) {
+      toast.success("Login successful!", { position: "top-right" });
+     setUserProfile(response.data.user);
+      setIsLogin(true);
+      localStorage.setItem("access_token", response.data.access_token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email: response.data.email,
+          fullName: response.data.fullName,
+          picture: response.data.picture,
+        })
+      );
+      localStorage.setItem("isLogin", JSON.stringify(true));
+      Navigate("/");
+    }
+  };
+  const handleError = () => {
+    toast.error({
+      type: "error",
+      position: "top-right",
+      key: "Login failed",
+    });
+  };
   const handleRegister = async (e) => {
     e.preventDefault();
     if (validate()) {
       const userData = { fullName, email, password };
+
       try {
         const response = await Auth.Register(userData);
         console.log("Response:", response);
         if (response.status === 201) {
+          toast.success("Registration successful!", { position: "top-right" });
           Navigate("/auth/login");
         }
       } catch (error) {
+        toast.error("Registration failed. Please try again.", { position: "top-right" });
         console.log("Error:", error);
       }
     }
@@ -276,10 +307,8 @@ const RegisterPage = () => {
           Register
         </button>
 
-        
-
         {/* Social login */}
-        <GgAuth />
+        <GgAuth onSuccess={handleSuccess} onError={handleError} />
       </div>
 
       <div className="text-center text-sm text-gray-600 mt-6">

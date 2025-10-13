@@ -7,19 +7,23 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.capstone.ai_interview_be.dto.request.FireRequest;
 import com.capstone.ai_interview_be.dto.request.LoginRequest;
 import com.capstone.ai_interview_be.dto.request.RegisterRequest;
+import com.capstone.ai_interview_be.dto.request.ResetPasswordRequest;
 import com.capstone.ai_interview_be.dto.response.UserProfileResponse;
 import com.capstone.ai_interview_be.model.UserEntity;
 import com.capstone.ai_interview_be.repository.UserRepository;
+import com.capstone.ai_interview_be.service.emailService.VerifyCodeService;
 import com.capstone.ai_interview_be.service.userService.CustomUserDetails;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final PasswordEncoder passwordEncoder;
+    private final VerifyCodeService verificationService;
     public UserProfileResponse authenticate(LoginRequest request) {
          // xác thực user
         Authentication authentication = authenticationManager.authenticate(
@@ -53,7 +59,7 @@ public class AuthService {
         userProfileResponse.setPicture(userEntity.getPicture());
         return userProfileResponse;
     }
-    public String register(RegisterRequest request) {
+    public String register(RegisterRequest request) throws MessagingException {
         UserEntity userEntity = userRepository.findByEmail(request.getEmail());
         if (userEntity != null) {
             throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email đã tồn tại");
@@ -61,10 +67,11 @@ public class AuthService {
 
         UserEntity newUser = new UserEntity();
         newUser.setEmail(request.getEmail());
-        newUser.setPassword(null);
+        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
         newUser.setFullName(request.getFullName());
         newUser.setRole("USER");
         userRepository.save(newUser);
+        verificationService.generateOrUpdateCode(newUser.getEmail());
         return "Đăng ký thành công";
     }
     public UserProfileResponse loginWithFirebase(FireRequest fireRequest) {
@@ -91,6 +98,7 @@ public class AuthService {
             userEntity1.setFullName(fullName);
             userEntity1.setPicture(picture);
             userEntity1.setRole("USER");
+            userEntity1.setEnabled(true);
 
             userRepository.save(userEntity1);
             customUserDetails = new CustomUserDetails(userEntity1);
@@ -137,5 +145,14 @@ public class AuthService {
         userProfileResponse.setEmail(email);
         return userProfileResponse;
     }
-    
+    public String resetPassword(ResetPasswordRequest newPassword) {
+        UserEntity userEntity = userRepository.findByEmail(newPassword.getEmail());
+        if(userEntity == null) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Email không tồn tại");
+        }
+        userEntity.setPassword(passwordEncoder.encode(newPassword.getNewPassword()));
+        userRepository.save(userEntity);
+        return "Đặt lại mật khẩu thành công";
+    }
+
 }
