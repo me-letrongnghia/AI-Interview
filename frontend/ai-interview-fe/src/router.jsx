@@ -9,6 +9,7 @@ import RegisterPage from "./page/auth/RegisterPage";
 import ForgotPassword from "./page/auth/ForgotPassword";
 import { LayoutAuth } from "./components/LayoutAuth/LayoutAuth";
 import DeviceCheckPage from "./page/DeviceCheckPage";
+import ResetPassword from "./page/auth/ResetPassword";
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
         path: "forgot-password",
         element: <ForgotPassword />,
       },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
+      }
     ],
   },
   {

@@ -12,11 +12,6 @@ export const signInWithGoogle = async () => {
     const user = result.user;
     const tokenFirebase = await user.getIdToken();
 
-    console.log("Đăng nhập Google thành công:", {
-      email: user.email,
-      tokenFirebase,
-    });
-
     return { success: true, data: { email: user.email || "", tokenFirebase } };
   } catch (error) {
     console.error("Lỗi đăng nhập Google:", error);
@@ -30,11 +25,6 @@ export const signInWithGithub = async () => {
     const result = await signInWithPopup(auth, githubProvider);
     const user = result.user;
     const tokenFirebase = await user.getIdToken();
-
-    console.log("Đăng nhập GitHub thành công:", {
-      email: user.email,
-      tokenFirebase,
-    });
 
     return { success: true, data: { email: user.email || "", tokenFirebase } };
   } catch (error) {
