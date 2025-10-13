@@ -92,9 +92,10 @@ public class OpenRouterService {
     public String generateFirstQuestion(String domain, String level) {
         List<OpenRouterRequest.Message> messages = Arrays.asList(
             new OpenRouterRequest.Message("system", 
-                "You are an experienced technical interviewer. Generate a clear, focused interview question for a " + level + " level " + domain + " developer. " +
-                "The question should be appropriate for the experience level and test practical knowledge. " +
-                "Keep the question concise and specific. Only return the question, no additional text."),
+                "You are an expert technical interviewer. Ask ONE opening interview question in English.\n" +
+                "Role: " + domain + "\nLevel: " + level + "\nSkill focus: " + domain + "\n" +
+                "Constraints:\n- Output only ONE short question (<=20 words).\n- No numbering, no extra text.\n" +
+                "Opening Question:"),
             new OpenRouterRequest.Message("user", 
                 String.format("Create a technical interview question for a %s level %s developer.", 
                     level, domain))
@@ -102,6 +103,7 @@ public class OpenRouterService {
         
         return generateResponse(messages);
     }
+
     
     // Tạo feedback cho câu trả lời của ứng viên
     public String generateFeedback(String question, String answer) {
