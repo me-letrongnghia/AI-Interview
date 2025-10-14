@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Upload, FileText, Code, CheckCircle, ArrowLeft } from "lucide-react";
-import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
 import Https from "../access/Https";
 import { ApiInterviews } from "../api/ApiInterviews";
@@ -122,7 +121,7 @@ export default function ITInterviewSetup() {
   };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header img={pandaImage2} isLogin={true} />
+      <Header />
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl">
           <div className="bg-gradient-to-r from-green-500 to-green-600 p-8 text-white rounded-t-2xl">

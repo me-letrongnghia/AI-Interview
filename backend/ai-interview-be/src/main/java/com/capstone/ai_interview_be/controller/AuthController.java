@@ -94,7 +94,7 @@ public class AuthController {
 
     @PostMapping("/resend-verification")
     public ResponseEntity<String> resendVerification(@RequestParam("email") String email) throws MessagingException {
-        return ResponseEntity.ok(verificationService.generateOrUpdateCode(email));
+        return ResponseEntity.ok(verificationService.generateOrUpdateCodeForgotPassword(email));
     }
     
     @PostMapping("/reset-password")

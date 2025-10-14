@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
-
-function Header({ img, isLogin }) {
+import pandaLogo from "../../assets/pandahome.png";
+import { UseAppContext } from "../../context/AppContext";
+function Header() {
+  const { isLogin, userProfile } = UseAppContext();
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 h-20">
       <Link to="/" className="flex items-center w-[100px] h-full">
         <img
           className="w-full max-h-16 hover:opacity-80 transition-opacity"
-          src={img}
+          src={pandaLogo}
           alt="PandaPrep AI Logo"
         />
       </Link>
@@ -29,7 +31,7 @@ function Header({ img, isLogin }) {
       </nav>
       {isLogin ? (
         <img
-          src={img}
+          src={userProfile?.picture || " "}
           alt="User Avatar"
           className="w-10 h-10 rounded-full object-cover"
         />

@@ -139,7 +139,7 @@ const RegisterPage = () => {
     const response = await Auth.LoginFirebase(data);
     if (response.status === 200) {
       toast.success("Login successful!", { position: "top-right" });
-     setUserProfile(response.data.user);
+      setUserProfile(response.data.user);
       setIsLogin(true);
       localStorage.setItem("access_token", response.data.access_token);
       localStorage.setItem(
@@ -165,17 +165,16 @@ const RegisterPage = () => {
     e.preventDefault();
     if (validate()) {
       const userData = { fullName, email, password };
-
       try {
         const response = await Auth.Register(userData);
-        console.log("Response:", response);
-        if (response.status === 201) {
+        if (response.status === 200) {
           toast.success("Registration successful!", { position: "top-right" });
           Navigate("/auth/login");
         }
-      } catch (error) {
-        toast.error("Registration failed. Please try again.", { position: "top-right" });
-        console.log("Error:", error);
+      } catch {
+        toast.error("Registration failed. Please try again.", {
+          position: "top-right",
+        });
       }
     }
   };
