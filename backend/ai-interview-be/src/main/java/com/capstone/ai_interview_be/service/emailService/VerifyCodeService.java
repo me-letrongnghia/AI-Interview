@@ -19,7 +19,7 @@ public class VerifyCodeService {
     private final UserRepository userRepository;
     private final EmailService mailService;
     @Transactional
-    public String generateOrUpdateCode(String email) throws MessagingException {
+    public String generateOrUpdateCodeEmail(String email) throws MessagingException {
         String code = String.format("%06d", (int)(Math.random() * 1000000));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiry = now.plusMinutes(10);
@@ -44,25 +44,56 @@ public class VerifyCodeService {
 
         verificationCodeRepository.save(verificationCode);
         // link truy cập nhập mã
-        String resetLink = "http://localhost:5000/verify-email?code=" + code;
+        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code;
         // Gửi email
         mailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationCode.getCode(), resetLink);
-        return "Đã gửi mã xác nhận đến email của bạn.";
+        return "Verification code has been sent to your email.";
     }
 
+    @Transactional
+    public String generateOrUpdateCodeForgotPassword(String email) throws MessagingException {
+        String code = String.format("%06d", (int)(Math.random() * 1000000));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiry = now.plusMinutes(10);
+
+        UserEntity user = userRepository.findByEmail(email);
+
+        VerifyCodeEntity verificationCode = verificationCodeRepository.findByUser(user)
+                .map(existing -> {
+                    existing.setCode(code);
+                    existing.setCreatedAt(now);
+                    existing.setExpiresAt(expiry);
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    VerifyCodeEntity newCode = new VerifyCodeEntity();
+                    newCode.setUser(user);
+                    newCode.setCode(code);
+                    newCode.setCreatedAt(now);
+                    newCode.setExpiresAt(expiry);
+                    return newCode;
+                });
+
+        verificationCodeRepository.save(verificationCode);
+        // link truy cập nhập mã
+        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code;
+        // Gửi email
+        mailService.sendVerificationEmailForgotPassword(user.getEmail(), user.getFullName(), verificationCode.getCode(), resetLink);
+        return "Verification code has been sent to your email.";
+    }
     // Xác minh mã
     @Transactional
     public String verifyEmail(String code) {
         VerifyCodeEntity verificationCode = verificationCodeRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("Mã xác nhận không hợp lệ."));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid verification code."));
 
         if (verificationCode.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("Mã xác nhận đã hết hạn.");
+            throw new IllegalStateException("Verification code has expired.");
         }
         UserEntity user = verificationCode.getUser();
         user.setEnabled(true);
         userRepository.save(user);
         verificationCodeRepository.save(verificationCode);
-        return "Xác minh email thành công!";
+        return "Email verification successful!";
     }
 }

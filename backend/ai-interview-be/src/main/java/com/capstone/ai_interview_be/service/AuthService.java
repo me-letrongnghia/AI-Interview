@@ -44,7 +44,8 @@ public class AuthService {
         );
         CustomUserDetails userEntity = (CustomUserDetails) authentication.getPrincipal();
         if(userEntity.isEnabled() == false) {
-            throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Tài khoản đã bị khóa");
+            
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Account has been locked");
         }
         String email = userEntity.getUsername();
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -62,7 +63,7 @@ public class AuthService {
     public String register(RegisterRequest request) throws MessagingException {
         UserEntity userEntity = userRepository.findByEmail(request.getEmail());
         if (userEntity != null) {
-            throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email đã tồn tại");
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email already exists");
         }
 
         UserEntity newUser = new UserEntity();
@@ -71,8 +72,8 @@ public class AuthService {
         newUser.setFullName(request.getFullName());
         newUser.setRole("USER");
         userRepository.save(newUser);
-        verificationService.generateOrUpdateCode(newUser.getEmail());
-        return "Đăng ký thành công";
+        verificationService.generateOrUpdateCodeEmail(newUser.getEmail());
+        return "Registration successful";
     }
     public UserProfileResponse loginWithFirebase(FireRequest fireRequest) {
         String email = null;
@@ -148,11 +149,11 @@ public class AuthService {
     public String resetPassword(ResetPasswordRequest newPassword) {
         UserEntity userEntity = userRepository.findByEmail(newPassword.getEmail());
         if(userEntity == null) {
-            throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Email không tồn tại");
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Email does not exist");
         }
         userEntity.setPassword(passwordEncoder.encode(newPassword.getNewPassword()));
         userRepository.save(userEntity);
-        return "Đặt lại mật khẩu thành công";
+        return "Password reset successful";
     }
 
 }

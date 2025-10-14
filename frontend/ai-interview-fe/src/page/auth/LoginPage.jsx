@@ -35,16 +35,17 @@ export default function LoginPage() {
     const response = await Auth.LoginFirebase(data);
     console.log("response", response);
     if (response.status === 200) {
-      setUserProfile(response.data.user);
+      const user = {
+        email: response.data.email,
+        fullName: response.data.fullName,
+        picture: response.data.picture,
+      };
+      setUserProfile(user);
       setIsLogin(true);
       localStorage.setItem("access_token", response.data.access_token);
       localStorage.setItem(
         "user",
-        JSON.stringify({
-          email: response.data.email,
-          fullName: response.data.fullName,
-          picture: response.data.picture,
-        })
+        JSON.stringify(user)
       );
       localStorage.setItem("isLogin", JSON.stringify(true));
       Navigate("/");

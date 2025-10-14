@@ -11,4 +11,6 @@ export const Auth = {
     }),
   SendEmail: (email) =>
     Https.post("/api/auth/resend-verification", { params: { email } }),
+  VerifyOtp: (code) =>
+    Https.post("/api/auth/verify-email", null, { params: { code } }),
 };

@@ -10,6 +10,7 @@ import ForgotPassword from "./page/auth/ForgotPassword";
 import { LayoutAuth } from "./components/LayoutAuth/LayoutAuth";
 import DeviceCheckPage from "./page/DeviceCheckPage";
 import ResetPassword from "./page/auth/ResetPassword";
+import OtpPage from "./page/auth/OtpPage";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: "reset-password",
         element: <ResetPassword />,
+      },
+      {
+        path: "verify-email",
+        element: <OtpPage />,
       }
     ],
   },
