@@ -44,7 +44,7 @@ public class VerifyCodeService {
 
         verificationCodeRepository.save(verificationCode);
         // link truy cập nhập mã
-        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code;
+        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code + "&type=register";
         // Gửi email
         mailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationCode.getCode(), resetLink);
         return "Verification code has been sent to your email.";
@@ -76,7 +76,7 @@ public class VerifyCodeService {
 
         verificationCodeRepository.save(verificationCode);
         // link truy cập nhập mã
-        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code;
+        String resetLink = "http://localhost:5000/auth/verify-email?code=" + code + "&type=forgot-password";
         // Gửi email
         mailService.sendVerificationEmailForgotPassword(user.getEmail(), user.getFullName(), verificationCode.getCode(), resetLink);
         return "Verification code has been sent to your email.";

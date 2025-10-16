@@ -30,10 +30,12 @@ const RegisterPage = () => {
         return !value.trim() ? "Full name is required." : "";
 
       case "email":
+        // eslint-disable-next-line no-case-declarations
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!value.trim()) {
           return "Email is required.";
-        } else if (!value.endsWith("@gmail.com")) {
-          return "Email must end with @gmail.com.";
+        } else if (!emailRegex.test(value)) {
+          return "Please enter a valid email address.";
         }
         return "";
 
