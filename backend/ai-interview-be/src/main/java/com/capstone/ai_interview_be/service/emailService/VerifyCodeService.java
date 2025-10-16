@@ -25,6 +25,11 @@ public class VerifyCodeService {
         LocalDateTime expiry = now.plusMinutes(10);
 
         UserEntity user = userRepository.findByEmail(email);
+        
+        // Kiểm tra user có tồn tại không
+        if (user == null) {
+            throw new IllegalArgumentException("User not found.");
+        }
 
         VerifyCodeEntity verificationCode = verificationCodeRepository.findByUser(user)
                 .map(existing -> {
@@ -57,6 +62,11 @@ public class VerifyCodeService {
         LocalDateTime expiry = now.plusMinutes(10);
 
         UserEntity user = userRepository.findByEmail(email);
+        
+        // Kiểm tra user có tồn tại không
+        if (user == null) {
+            throw new IllegalArgumentException("Email not found. Please check your email or sign up.");
+        }
 
         VerifyCodeEntity verificationCode = verificationCodeRepository.findByUser(user)
                 .map(existing -> {

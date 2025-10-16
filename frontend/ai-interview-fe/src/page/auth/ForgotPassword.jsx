@@ -40,10 +40,14 @@ const ForgotPassword = () => {
       localStorage.setItem("resetPasswordEmail", email);
       setIsCheckEmail(false);
     } catch (error) {
-      setApiError(
-        error.response?.data?.message ||
-          "Failed to send email. Please try again."
-      );
+      const errorMessage = error.response?.data?.message || error.response?.data || "Failed to send email. Please try again.";
+      
+      // Kiểm tra các loại lỗi phổ biến
+      if (errorMessage.includes("not found") || errorMessage.includes("does not exist") || errorMessage.includes("cannot be null")) {
+        setApiError("This email is not registered. Please sign up first.");
+      } else {
+        setApiError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -99,8 +99,8 @@ export default function ResetPassword() {
     setEmailError(emailErr);
     setPasswordError(passwordErr);
     setConfirmPasswordError(confirmPasswordErr);
-    console.log(email,password)
-    if (!email && !password && !confirmPassword) {
+    
+    if (emailErr || passwordErr || confirmPasswordErr) {
       return;
     }
     setIsLoading(true);
@@ -111,8 +111,7 @@ export default function ResetPassword() {
         toast.success("Password reset successful!", { position: "top-right" });
         Navigate("/auth/login");
       }   
-    } catch (error) {
-      console.error("Error resetting password:", error);
+    } catch {
       toast.error("Failed to reset password. Please try again.", {
         position: "top-right",
       });

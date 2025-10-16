@@ -53,6 +53,7 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(authentication);
         // Tao and tra ve user profile
         UserProfileResponse userProfileResponse = new UserProfileResponse();
+        userProfileResponse.setId(userEntity.getId());
         userProfileResponse.setAccess_token(token);
         userProfileResponse.setRefresh_token(refreshToken);
         userProfileResponse.setEmail(email);
@@ -119,6 +120,7 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(auth);
         String refreshToken = jwtService.generateRefreshToken(auth);
         UserProfileResponse userProfileResponse = new UserProfileResponse();
+        userProfileResponse.setId(customUserDetails.getId());
         userProfileResponse.setAccess_token(accessToken);
         userProfileResponse.setRefresh_token(refreshToken);
         userProfileResponse.setEmail(email);

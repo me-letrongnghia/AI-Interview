@@ -11,6 +11,7 @@ import { LayoutAuth } from "./components/LayoutAuth/LayoutAuth";
 import DeviceCheckPage from "./page/DeviceCheckPage";
 import ResetPassword from "./page/auth/ResetPassword";
 import OtpPage from "./page/auth/OtpPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -19,7 +20,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/interview/:sessionId",
-    element: <InterviewPage />,
+    element: (
+      <ProtectedRoute>
+        <InterviewPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/interviewdemo/:sessionId",
@@ -27,7 +32,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/options",
-    element: <OptionPage />,
+    element: (
+      <ProtectedRoute>
+        <OptionPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/auth",
@@ -57,7 +66,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "device-check",
-    element: <DeviceCheckPage />,
+    element: (
+      <ProtectedRoute>
+        <DeviceCheckPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "*",
