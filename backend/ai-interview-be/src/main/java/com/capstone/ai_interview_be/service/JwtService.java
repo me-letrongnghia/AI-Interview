@@ -20,7 +20,9 @@ import java.util.Map;
 
 @Service
 public class JwtService {
-    private final String jwrSecret = "nlhasdhsahdsadjsadhasdhasdhasjasjdasdsadsđasad";
+    @Value("${JWT_SECRET}")
+    private String jwtSecret;
+    
     @Value("${setTime.accessToken}")
     private long jwtExpiration;
 
@@ -52,7 +54,7 @@ public class JwtService {
     }
     // validate token
     public boolean isValidateToken(String token) {
-        return extractAllClaims(token) == null;
+        return extractAllClaims(token) != null;
     }
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -80,20 +82,22 @@ public class JwtService {
     }
     
     private Claims extractAllClaims(String token) {
-        Claims claims = null;
-        try{
-            claims = Jwts.parser()
+        if (token == null || token.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Jwts.parser()
                     .verifyWith(getSecretKey())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        }catch (JwtException | IllegalArgumentException e) {
-            throw new RuntimeException(e);
+        } catch (JwtException | IllegalArgumentException e) {
+            // Log the exception if needed, but return null instead of throwing
+            return null;
         }
-        return claims;
     }
 
     private SecretKey getSecretKey() {
-        return Keys.hmacShaKeyFor(jwrSecret.getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 }
