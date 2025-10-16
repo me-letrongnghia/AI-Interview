@@ -83,13 +83,21 @@ const ForgotPassword = () => {
             <button
               onClick={handleForgotPassword}
               disabled={isLoading}
-              className={`w-full h-10 text-white rounded-lg ${
+              className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
                 isLoading
-                  ? "bg-gray-400 cursor-not-allowed"
+                  ? "bg-green-600 cursor-not-allowed"
                   : "bg-green-500 hover:bg-green-700"
               }`}
             >
-              {isLoading ? "Sending..." : "Continue"}
+              {isLoading ? (
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              ) : (
+                "Continue"
+              )}
             </button>
           </div>
         </div>
