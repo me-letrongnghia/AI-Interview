@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
   <div>
     <label className="block text-sm font-medium text-gray-700">Password</label>
@@ -106,6 +107,7 @@ export default function LoginPage() {
       return;
     }
     
+    setIsLoading(true);
     const requestLogin = {
       email,
       password,
@@ -130,6 +132,8 @@ export default function LoginPage() {
         position: "top-right",
       });
       console.log("Error:", error);
+    } finally {
+      setIsLoading(false);
     }
     console.log("Submit:", requestLogin);
   };
@@ -193,9 +197,20 @@ export default function LoginPage() {
 
           <button
             onClick={handleSubmit}
-            className="w-full h-10 bg-green-500 hover:bg-green-700 text-white rounded-lg"
+            disabled={isLoading}
+            className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
+              isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-700"
+            }`}
           >
-            Sign in
+            {isLoading ? (
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </div>
 

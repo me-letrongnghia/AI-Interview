@@ -23,6 +23,7 @@ export default function ResetPassword() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const Navigate = useNavigate();
   const validateField = (name, value, allValues = {}) => {
     const currentValues = {
@@ -102,6 +103,7 @@ export default function ResetPassword() {
     if (!email && !password && !confirmPassword) {
       return;
     }
+    setIsLoading(true);
     try {
       const response = await Auth.Reset_Password({ email, newPassword: password });
       if (response.status === 200) {
@@ -114,6 +116,8 @@ export default function ResetPassword() {
       toast.error("Failed to reset password. Please try again.", {
         position: "top-right",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   return (
@@ -194,9 +198,20 @@ export default function ResetPassword() {
         </div>
         <button
           onClick={handleSubmit}
-          className="w-full h-10 bg-green-500 hover:bg-green-700 text-white rounded-lg"
+          disabled={isLoading}
+          className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
+            isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-700"
+          }`}
         >
-          Confirm
+          {isLoading ? (
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          ) : (
+            "Confirm"
+          )}
         </button>
       </div>
     </div>

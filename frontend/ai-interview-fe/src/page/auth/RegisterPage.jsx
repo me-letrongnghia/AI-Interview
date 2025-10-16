@@ -14,6 +14,7 @@ const RegisterPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const { setUserProfile, setIsLogin } = UseAppContext();
   const Navigate = useNavigate();
   const validateField = (name, value, allValues = {}) => {
@@ -166,17 +167,23 @@ const RegisterPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (validate()) {
+      setIsLoading(true);
       const userData = { fullName, email, password };
       try {
         const response = await Auth.Register(userData);
         if (response.status === 200) {
-          toast.success("Registration successful!", { position: "top-right" });
+          toast.success("Registration successful! Please check your email to verify your account before logging in.", { 
+            position: "top-right",
+            autoClose: 5000
+          });
           Navigate("/auth/login");
         }
       } catch {
         toast.error("Registration failed. Please try again.", {
           position: "top-right",
         });
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -303,9 +310,20 @@ const RegisterPage = () => {
         {/* Submit button */}
         <button
           type="submit"
-          className="w-full h-10 bg-green-500 hover:bg-green-700 text-white rounded-lg"
+          disabled={isLoading}
+          className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
+            isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-700"
+          }`}
         >
-          Register
+          {isLoading ? (
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          ) : (
+            "Register"
+          )}
         </button>
 
         {/* Social login */}
