@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  
   <div>
     <label className="block text-sm font-medium text-gray-700">Password</label>
     <div className="relative">
@@ -31,6 +34,36 @@ export default function LoginPage() {
     </div>
   </div>;
   const Navigate = useNavigate();
+  
+  const validateEmail = (value) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!value.trim()) {
+      return "Email is required.";
+    } else if (!emailRegex.test(value)) {
+      return "Please enter a valid email address.";
+    }
+    return "";
+  };
+
+  const validatePassword = (value) => {
+    if (!value) {
+      return "Password is required.";
+    }
+    return "";
+  };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    setEmailError(validateEmail(value));
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    setPasswordError(validatePassword(value));
+  };
+
   const handleLoginSuccess = async (data) => {
     const response = await Auth.LoginFirebase(data);
     console.log("response", response);
@@ -61,6 +94,18 @@ export default function LoginPage() {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate trước khi submit
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+    
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+    
+    if (emailErr || passwordErr) {
+      return;
+    }
+    
     const requestLogin = {
       email,
       password,
@@ -81,6 +126,9 @@ export default function LoginPage() {
       }
       console.log("Response:", response);
     } catch (error) {
+      toast.error("Invalid email or password. Please try again.", {
+        position: "top-right",
+      });
       console.log("Error:", error);
     }
     console.log("Submit:", requestLogin);
@@ -99,10 +147,15 @@ export default function LoginPage() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={handleEmailChange}
             placeholder="username@gmail.com"
-            className="w-full h-10 px-4 border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
+            className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${
+              emailError ? "border-red-500" : "border-green-300 focus:border-green-500"
+            }`}
           />
+          {emailError && (
+            <p className="text-red-500 text-xs mt-1">{emailError}</p>
+          )}
         </div>
         <div>
           <div>
@@ -113,9 +166,11 @@ export default function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 placeholder="Password"
-                className="w-full h-10 px-4 border-2 border-green-300 rounded-lg pr-12"
+                className={`w-full h-10 px-4 border-2 rounded-lg pr-12 ${
+                  passwordError ? "border-red-500" : "border-green-300"
+                }`}
               />
               <button
                 type="button"
@@ -125,6 +180,9 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {passwordError && (
+              <p className="text-red-500 text-xs mt-1">{passwordError}</p>
+            )}
           </div>
 
           <div className="text-right">

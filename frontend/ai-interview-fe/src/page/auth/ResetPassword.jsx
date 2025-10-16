@@ -1,11 +1,19 @@
 import { Eye, EyeOff } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Auth } from "../../api/AuthApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { UseAppContext } from "../../context/AppContext";
 
 export default function ResetPassword() {
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("resetPasswordEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,10 +34,12 @@ export default function ResetPassword() {
 
     switch (name) {
       case "email":
+        // eslint-disable-next-line no-case-declarations
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!value.trim()) {
           return "Email is required.";
-        } else if (!value.endsWith("@gmail.com")) {
-          return "Email must end with @gmail.com.";
+        } else if (!emailRegex.test(value)) {
+          return "Please enter a valid email address.";
         }
         return "";
 
@@ -93,11 +103,12 @@ export default function ResetPassword() {
       return;
     }
     try {
-      const response = await Auth.Reset_Password({ email, password });
+      const response = await Auth.Reset_Password({ email, newPassword: password });
       if (response.status === 200) {
+        localStorage.removeItem("resetPasswordEmail");
         toast.success("Password reset successful!", { position: "top-right" });
         Navigate("/auth/login");
-      }
+      }   
     } catch (error) {
       console.error("Error resetting password:", error);
       toast.error("Failed to reset password. Please try again.", {
@@ -119,6 +130,7 @@ export default function ResetPassword() {
             type="email"
             value={email}
             onChange={handleEmailChange}
+            readOnly
             placeholder="username@gmail.com"
             className={`w-full h-10 px-4 border-2 rounded-lg ${
               emailError ? "border-red-300" : "border-green-300"

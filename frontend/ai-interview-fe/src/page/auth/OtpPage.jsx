@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 export default function OtpPage() {
   const [searchParams] = useSearchParams();
   const otpCode = searchParams.get("code");
+  const type = searchParams.get("type"); // "register" hoặc "forgot-password"
 
   // Initialize OTP state with code from URL or empty array
   const [otp, setOtp] = useState(() => {
@@ -45,7 +46,12 @@ export default function OtpPage() {
       const response = await Auth.VerifyOtp(otpRequest);
       if (response) {
         toast.success("OTP verified successfully!");
-        navigate("/auth/login");
+        // Phân biệt giữa register và forgot-password
+        if (type === "forgot-password") {
+          navigate("/auth/reset-password");
+        } else {
+          navigate("/auth/login");
+        }
       }
     } catch (error) {
       const message = error?.response?.data || "Error verifying OTP";
