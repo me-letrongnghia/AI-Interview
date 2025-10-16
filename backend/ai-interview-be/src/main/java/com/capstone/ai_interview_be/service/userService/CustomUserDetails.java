@@ -18,6 +18,11 @@ public class CustomUserDetails implements UserDetails {
     public UserEntity getUser() {
         return user;
     }
+    
+    public Long getId() {
+        return user.getId();
+    }
+    
     public String getPicture() {
         return user.getPicture();
     }

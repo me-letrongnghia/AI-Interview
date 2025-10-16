@@ -15,25 +15,6 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  <div>
-    <label className="block text-sm font-medium text-gray-700">Password</label>
-    <div className="relative">
-      <input
-        type={showPassword ? "text" : "password"}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        className="w-full h-10 px-4 border-2 border-green-300 rounded-lg pr-12"
-      />
-      <button
-        type="button"
-        onClick={() => setShowPassword(!showPassword)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-      >
-        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-      </button>
-    </div>
-  </div>;
   const Navigate = useNavigate();
   
   const validateEmail = (value) => {
@@ -67,9 +48,9 @@ export default function LoginPage() {
 
   const handleLoginSuccess = async (data) => {
     const response = await Auth.LoginFirebase(data);
-    console.log("response", response);
     if (response.status === 200) {
       const user = {
+        id: response.data.id,
         email: response.data.email,
         fullName: response.data.fullName,
         picture: response.data.picture,
@@ -77,10 +58,7 @@ export default function LoginPage() {
       setUserProfile(user);
       setIsLogin(true);
       localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify(user)
-      );
+      localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("isLogin", JSON.stringify(true));
       Navigate("/");
     }
@@ -91,7 +69,6 @@ export default function LoginPage() {
       position: "top-right",
       key: data,
     });
-    console.log("Login error:", data);
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -114,28 +91,30 @@ export default function LoginPage() {
     };
     try {
       const response = await Auth.Login(requestLogin);
-      console.log("response", response);
       if (response.status === 200) {
-        setUserProfile(response.data.user);
+        const user = {
+          id: response.data.id,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          picture: response.data.picture,
+        };
+        setUserProfile(user);
         toast.success("Login successful!", {
           position: "top-right",
         });
         setIsLogin(true);
-        localStorage.setItem("access_token", response.data.accessToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("isLogin", JSON.stringify(true));
         Navigate("/");
       }
-      console.log("Response:", response);
-    } catch (error) {
+    } catch {
       toast.error("Invalid email or password. Please try again.", {
         position: "top-right",
       });
-      console.log("Error:", error);
     } finally {
       setIsLoading(false);
     }
-    console.log("Submit:", requestLogin);
   };
 
   return (

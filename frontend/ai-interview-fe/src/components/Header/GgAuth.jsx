@@ -26,7 +26,6 @@ export default function GgAuth({ onSuccess, onError }) {
     setIsLoading((prev) => ({ ...prev, github: true }));
     try {
       const result = await signInWithGithub();
-      console.log("result", result);
       if (result.success && result.data) {
         onSuccess?.(result.data.tokenFirebase);
       } else {

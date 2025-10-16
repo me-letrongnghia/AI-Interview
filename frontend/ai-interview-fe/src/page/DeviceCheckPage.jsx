@@ -3,11 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import pandaImage2 from "../assets/pandahome.png";
 import { VideoStream, VolumeBar } from "../components/Interview/Interview";
 import { ApiInterviews } from "../api/ApiInterviews";
+import { UseAppContext } from "../context/AppContext";
+import { toast } from "react-toastify";
 
 export default function DeviceCheckPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const formData = location.state;
+  const { userProfile, isLogin } = UseAppContext();
 
   const streamRef = useRef(null);
   const [analyser, setAnalyser] = useState(null);
@@ -23,8 +26,10 @@ export default function DeviceCheckPage() {
         audioInputs: allDevices.filter((d) => d.kind === "audioinput"),
         videoInputs: allDevices.filter((d) => d.kind === "videoinput"),
       });
-    } catch (err) {
-      console.error("Lỗi lấy danh sách thiết bị:", err);
+    } catch {
+      toast.error("Không thể lấy danh sách thiết bị. Vui lòng kiểm tra quyền truy cập.", {
+        position: "top-right"
+      });
     }
   };
 
@@ -44,8 +49,8 @@ export default function DeviceCheckPage() {
       analyserNode.fftSize = 64;
       mic.connect(analyserNode);
       setAnalyser(analyserNode);
-    } catch (err) {
-      console.error("getUserMedia error:", err);
+    } catch {
+      // Silent fail - will be handled by loadDevices toast
     }
     return () => {
       if (audioContext) audioContext.close();
@@ -68,15 +73,22 @@ export default function DeviceCheckPage() {
   }, [selectedAudio, selectedVideo]);
 
   const handleContinue = async () => {
+    if (!isLogin || !userProfile) {
+      alert("Vui lòng đăng nhập để tiếp tục!");
+      navigate("/auth/login");
+      return;
+    }
+    
     if (!formData) {
       alert("Không có dữ liệu phỏng vấn!");
       return;
     }
+    
     const payload = {
       title: "Practice " + formData.skills.join(" "),
       domain: formData.position + " " + formData.skills.join(", "),
       level: formData.experience,
-      userId: 1,
+      userId: userProfile.id,
     };
 
     try {
@@ -86,8 +98,10 @@ export default function DeviceCheckPage() {
         const interviewId = response.data.sessionId;
         navigate(`/interview/${interviewId}`);
       }
-    } catch (err) {
-      console.error("Lỗi khi tạo session:", err);
+    } catch {
+      toast.error("Không thể tạo phiên phỏng vấn. Vui lòng thử lại.", {
+        position: "top-right"
+      });
     } finally {
       setLoading(false);
     }

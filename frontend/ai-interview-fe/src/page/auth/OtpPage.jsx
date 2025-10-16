@@ -19,6 +19,7 @@ export default function OtpPage() {
   });
 
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (value, index) => {
@@ -40,9 +41,36 @@ export default function OtpPage() {
     }
   };
 
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text/plain").trim();
+    
+    // Chỉ cho phép paste nếu là 6 chữ số
+    if (/^\d{6}$/.test(pastedData)) {
+      const newOtp = pastedData.split("");
+      setOtp(newOtp);
+      setError("");
+      // Focus vào ô cuối
+      document.getElementById("otp-5")?.focus();
+    } else {
+      setError("Please paste a valid 6-digit OTP code");
+    }
+  };
+
   const handleSubmit = async () => {
+    const otpValue = otp.join("");
+    
+    // Validate OTP
+    if (otpValue.length !== 6) {
+      setError("Please enter all 6 digits");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError("");
+    
     try {
-      const otpRequest = otp.join("").toString();
+      const otpRequest = otpValue.toString();
       const response = await Auth.VerifyOtp(otpRequest);
       if (response) {
         toast.success("OTP verified successfully!");
@@ -56,6 +84,29 @@ export default function OtpPage() {
     } catch (error) {
       const message = error?.response?.data || "Error verifying OTP";
       toast.error(message);
+      setError("Invalid OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    const savedEmail = localStorage.getItem("resetPasswordEmail");
+    if (!savedEmail) {
+      toast.error("Email not found. Please try again.");
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await Auth.SendEmail(savedEmail);
+      toast.success("OTP has been resent to your email!");
+      setOtp(["", "", "", "", "", ""]);
+      document.getElementById("otp-0")?.focus();
+    } catch {
+      toast.error("Failed to resend OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,6 +141,7 @@ export default function OtpPage() {
                     value={digit}
                     onChange={(e) => handleChange(e.target.value, index)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={handlePaste}
                     className="w-10 h-12 md:w-12 md:h-14 text-center text-xl font-semibold border border-gray-300 rounded-lg
                  focus:outline-none focus:ring-4 focus:ring-green-400/60 transition-all duration-200
                  hover:scale-105 hover:border-green-400"
@@ -104,15 +156,32 @@ export default function OtpPage() {
 
               <button
                 onClick={handleSubmit}
-                className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl text-lg font-semibold flex items-center justify-center gap-2 transition"
+                disabled={isLoading}
+                className={`w-full py-3 text-white rounded-xl text-lg font-semibold flex items-center justify-center gap-2 transition ${
+                  isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
+                }`}
               >
-                Verify
-                <ArrowRight className="w-5 h-5" />
+                {isLoading ? (
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                ) : (
+                  <>
+                    Verify
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
 
               <p className="text-gray-500 text-sm mt-6 text-center">
-                Didn’t receive the code?{" "}
-                <button className="text-green-600 hover:underline">
+                Didn't receive the code?{" "}
+                <button 
+                  onClick={handleResend}
+                  disabled={isLoading}
+                  className="text-green-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Resend
                 </button>
               </p>
