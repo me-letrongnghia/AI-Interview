@@ -26,6 +26,7 @@ public class InterviewSessionService {
     // Tạo phiên phỏng vấn mới và câu hỏi đầu tiên
     @Transactional
     public CreateInterviewSessionResponse createSession(CreateInterviewSessionRequest request) {
+        long startTime = System.currentTimeMillis();
         log.info("Creating new interview session for user: {}", request.getUserId());
         
         // Tạo và lưu interview session mới
@@ -36,13 +37,15 @@ public class InterviewSessionService {
         session.setLevel(request.getLevel());
         
         InterviewSession savedSession = sessionRepository.save(session);
-        log.info("Session created with ID: {}", savedSession.getId());
+        log.info("Session created with ID: {} in {}ms", savedSession.getId(), System.currentTimeMillis() - startTime);
         
+        long aiStartTime = System.currentTimeMillis();
         // Tạo câu hỏi đầu tiên bằng AI dựa trên domain và level
         String firstQuestionContent = aiService.generateFirstQuestion(
             request.getDomain(), 
             request.getLevel()
         );
+        log.info("AI question generated in {}ms", System.currentTimeMillis() - aiStartTime);
         
         // Lưu câu hỏi đầu tiên vào database
         InterviewQuestion firstQuestion = new InterviewQuestion();
@@ -59,6 +62,7 @@ public class InterviewSessionService {
             firstQuestionContent
         );
         
+        log.info("Total session creation time: {}ms", System.currentTimeMillis() - startTime);
         return new CreateInterviewSessionResponse(savedSession.getId());
     }
 

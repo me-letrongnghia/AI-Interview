@@ -74,13 +74,27 @@ export default function DeviceCheckPage() {
 
   const handleContinue = async () => {
     if (!isLogin || !userProfile) {
-      alert("Vui lòng đăng nhập để tiếp tục!");
+      toast.error("Vui lòng đăng nhập để tiếp tục!", {
+        position: "top-right"
+      });
       navigate("/auth/login");
       return;
     }
     
     if (!formData) {
-      alert("Không có dữ liệu phỏng vấn!");
+      toast.error("Không có dữ liệu phỏng vấn!", {
+        position: "top-right"
+      });
+      navigate("/options");
+      return;
+    }
+
+    // Validate formData structure
+    if (!formData.skills || !formData.position || !formData.experience) {
+      toast.error("Dữ liệu phỏng vấn không hợp lệ. Vui lòng chọn lại!", {
+        position: "top-right"
+      });
+      navigate("/options");
       return;
     }
     
@@ -94,12 +108,18 @@ export default function DeviceCheckPage() {
     try {
       setLoading(true);
       const response = await ApiInterviews.Post_Interview(payload);
+      
       if (response.status === 200 || response.status === 201) {
         const interviewId = response.data.sessionId;
         navigate(`/interview/${interviewId}`);
+      } else {
+        toast.error("Phản hồi không hợp lệ từ server!", {
+          position: "top-right"
+        });
       }
-    } catch {
-      toast.error("Không thể tạo phiên phỏng vấn. Vui lòng thử lại.", {
+    } catch (error) {
+      const errorMsg = error?.response?.data?.message || error?.message || "Không thể tạo phiên phỏng vấn. Vui lòng thử lại.";
+      toast.error(errorMsg, {
         position: "top-right"
       });
     } finally {
