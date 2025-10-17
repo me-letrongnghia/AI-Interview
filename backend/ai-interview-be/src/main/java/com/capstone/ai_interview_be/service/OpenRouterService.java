@@ -6,10 +6,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
@@ -19,6 +22,7 @@ public class OpenRouterService {
     
     private static final String DEFAULT_ERROR_MESSAGE = "Sorry, I couldn't generate a response at the moment.";
     private static final String API_ERROR_MESSAGE = "Sorry, there was an error with the AI service.";
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30); // 30s timeout
     
     private final WebClient webClient;
     private final String apiKey;
@@ -37,9 +41,14 @@ public class OpenRouterService {
         this.siteUrl = siteUrl;
         this.appName = appName;
         
+        // Configure HttpClient with timeout
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(REQUEST_TIMEOUT);
+        
         // Cấu hình WebClient với headers mặc định cho OpenRouter API
         this.webClient = WebClient.builder()
                 .baseUrl(apiUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .defaultHeader("HTTP-Referer", siteUrl)
@@ -50,21 +59,27 @@ public class OpenRouterService {
     // Gửi request tới OpenRouter API và xử lý response
     public String generateResponse(List<OpenRouterRequest.Message> messages) {
         try {
+            long startTime = System.currentTimeMillis();
+            
             // Chuẩn bị request payload cho OpenRouter API
             OpenRouterRequest request = new OpenRouterRequest();
             request.setModel(model);
             request.setMessages(messages);
-            request.setMaxTokens(100);
+            request.setMaxTokens(500); // Tăng từ 100 lên 500 tokens
             request.setTemperature(0.7);
             
             log.info("Sending request to OpenRouter with model: {} and {} messages", model, messages.size());
             
-            // Gửi request và nhận response từ OpenRouter
+            // Gửi request và nhận response từ OpenRouter với timeout
             OpenRouterResponse response = webClient.post()
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(OpenRouterResponse.class)
+                    .timeout(REQUEST_TIMEOUT)
                     .block();
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("OpenRouter API responded in {}ms", duration);
             
             // Xử lý response và trích xuất nội dung AI trả về
             if (response != null && !response.getChoices().isEmpty()) {

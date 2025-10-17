@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket connections
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)

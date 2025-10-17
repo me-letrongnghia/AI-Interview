@@ -4,6 +4,7 @@ import Header from "../components/Header";
 import Https from "../access/Https";
 import { ApiInterviews } from "../api/ApiInterviews";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 export default function ITInterviewSetup() {
   const [formData, setFormData] = useState({
     position: "",
@@ -73,7 +74,9 @@ export default function ITInterviewSetup() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("File quá lớn! Vui lòng chọn file dưới 5MB");
+        toast.error("File quá lớn! Vui lòng chọn file dưới 5MB", {
+          position: "top-right"
+        });
         return;
       }
       const allowedTypes = [
@@ -81,8 +84,10 @@ export default function ITInterviewSetup() {
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ];
-      if (!allowedTypes.includes(file.type)) {
-        alert("Chỉ chấp nhận file PDF, DOC, DOCX");
+      if (!allowedTypes.includes(fileType)) {
+        toast.error("Chỉ chấp nhận file PDF, DOC, DOCX", {
+          position: "top-right"
+        });
         return;
       }
       setFormData({ ...formData, cv: file });
@@ -101,15 +106,21 @@ export default function ITInterviewSetup() {
 
   const handleSubmit = async () => {
     if (!formData.position) {
-      alert("Vui lòng chọn vị trí ứng tuyển!");
+      toast.error("Vui lòng chọn vị trí ứng tuyển!", {
+        position: "top-right"
+      });
       return;
     }
     if (!formData.experience) {
-      alert("Vui lòng chọn mức kinh nghiệm!");
+      toast.error("Vui lòng chọn mức kinh nghiệm!", {
+        position: "top-right"
+      });
       return;
     }
     if (formData.skills.length < 3) {
-      alert("Vui lòng chọn ít nhất 3 kỹ năng!");
+      toast.error("Vui lòng chọn ít nhất 3 kỹ năng!", {
+        position: "top-right"
+      });
       return;
     }
     // if (!formData.cv) {

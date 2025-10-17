@@ -3,7 +3,7 @@ import axios from "axios";
 class Http {
   static instance = axios.create({
     baseURL: "http://localhost:8080",
-    timeout: 10000,
+    timeout: 60000, // 60 seconds for AI processing
     headers: {
       "Content-Type": "application/json",
     },
