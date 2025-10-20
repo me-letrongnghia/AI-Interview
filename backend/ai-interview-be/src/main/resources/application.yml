@@ -12,6 +12,17 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 openrouter:
   api-key: ${OPENROUTER_API_KEY}
@@ -20,6 +31,9 @@ openrouter:
   site-url: ${OPENROUTER_SITE_URL}
   app-name: ${OPENROUTER_APP_NAME}
 
-opentts:
-  api-url: ${OPENTTS_API_URL}
-  default-voice: ${OPENTTS_DEFAULT_VOICE}
+setTime:
+  accessToken: 2 # hours
+  refreshToken: 72 # hours
+firebase:
+  service-account:
+    path: ${FIREBASE_SERVICE_ACCOUNT_PATH}

@@ -1,40 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const TypingText = ({ text, speed, speechRate = 1.0, onComplete }) => {
-  const [displayedText, setDisplayedText] = useState('');
+export default function TypingText({ text, speechRate = 1, onComplete }) {
+  const [displayedText, setDisplayedText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const calculateSpeed = () => {
-    if (speed) return speed;
-
-    const baseSpeed = 45;
-    
-    const adjustedSpeed = baseSpeed / speechRate;
-    
-    return adjustedSpeed;
-  };
-
-  const typingSpeed = calculateSpeed();
 
   useEffect(() => {
     if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText((prev) => prev + text[currentIndex]);
-        setCurrentIndex((prev) => prev + 1);
-      }, typingSpeed);
+      // Tốc độ đánh máy dựa trên speechRate (ms per character)
+      const delay = 56 / speechRate;
+      
+      const timer = setTimeout(() => {
+        setDisplayedText(text.slice(0, currentIndex + 1));
+        setCurrentIndex(currentIndex + 1);
+      }, delay);
 
-      return () => clearTimeout(timeout);
-    } else if (currentIndex === text.length && onComplete) {
+      return () => clearTimeout(timer);
+    } else if (onComplete && currentIndex === text.length && currentIndex > 0) {
+      // Gọi onComplete khi đã hiển thị hết text
       onComplete();
     }
-  }, [currentIndex, text, typingSpeed, onComplete]);
+  }, [currentIndex, text, speechRate, onComplete]);
 
   // Reset khi text thay đổi
   useEffect(() => {
-    setDisplayedText('');
+    setDisplayedText("");
     setCurrentIndex(0);
   }, [text]);
 
-  return <span>{displayedText}</span>;
-};
-
-export default TypingText;
+  return <>{displayedText}</>;
+}
