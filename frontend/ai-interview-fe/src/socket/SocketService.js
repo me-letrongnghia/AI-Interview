@@ -42,16 +42,27 @@ export const playAudioFromBase64 = (base64Audio) => {
  */
 export const connectSocket = (sessionId, onMessageReceived) => {
   return new Promise((resolve, reject) => {
+    // Lấy token từ localStorage
+    const token = localStorage.getItem("accessToken");
+    
     const socket = new SockJS("http://localhost:8080/ws/interview");
     stompClient = Stomp.over(socket);
 
     // tắt debug spam
     stompClient.debug = null;
 
+    // Headers với JWT token - gửi qua STOMP header và native header
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      headers.token = token; // Fallback for SockJS
+    }
+
     stompClient.connect(
-      {},
+      headers,
       () => {
         isConnected = true;
+        
         // Subscribe kênh nhận message
         stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
           if (message.body) {
@@ -70,6 +81,7 @@ export const connectSocket = (sessionId, onMessageReceived) => {
         resolve();
       },
       (error) => {
+        isConnected = false;
         reject(error);
       }
     );

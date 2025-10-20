@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verification</title>
+    <style>
+      body {
+        background-color: #ffffff;
+        color: #000000;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 520px;
+        margin: 40px auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background-color: #22c55e;
+        color: #ffffff;
+        text-align: center;
+        padding: 16px 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 24px;
+      }
+      .content p {
+        font-size: 15px;
+        line-height: 1.6;
+        margin: 10px 0;
+      }
+      .code-box {
+        background-color: #f0fdf4;
+        border: 1px solid #22c55e;
+        color: #16a34a;
+        font-weight: bold;
+        font-size: 22px;
+        text-align: center;
+        padding: 14px 0;
+        border-radius: 6px;
+        letter-spacing: 3px;
+        margin: 18px 0;
+      }
+      .button {
+        display: inline-block;
+        background-color: #22c55e;
+        color: #ffffff !important;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+        padding: 12px 22px;
+        border-radius: 6px;
+        font-weight: 500;
+        margin-top: 15px;
+      }
+      .button:hover {
+        background-color: #16a34a;
+      }
+      .footer {
+        background-color: #f2f2f2;
+        text-align: center;
+        padding: 12px;
+        font-size: 12px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Email Verification</div>
+      <div class="content">
+        <p>Hello <strong th:text="${name}">User</strong>,</p>
+        <p>
+          Welcome to AI Interview Support System! To complete your registration,
+          please verify your email address using the verification code below:
+        </p>
+
+        <div class="code-box" th:text="${code}">123456</div>
+
+        <p>
+          Alternatively, you can click the button below to access the
+          verification page directly:
+        </p>
+
+        <a th:href="${resetLink}" class="button" target="_blank"
+          >Verify Email</a
+        >
+
+        <p>
+          If you didn't create an account with us, please ignore this email.
+          This verification code will expire in 10 minutes.
+        </p>
+      </div>
+      <div class="footer">
+        © 2025 AI Interview Support System — Your information security is our
+        top priority.
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,12 +1,37 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import pandaLogo from "../../assets/pandahome.png";
+import { UseAppContext } from "../../context/AppContext";
+function Header() {
+  const { isLogin, userProfile, logout } = UseAppContext();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
-function Header({ img, isLogin }) {
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setShowDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 h-20">
       <Link to="/" className="flex items-center w-[100px] h-full">
         <img
           className="w-full max-h-16 hover:opacity-80 transition-opacity"
-          src={img}
+          src={pandaLogo}
           alt="PandaPrep AI Logo"
         />
       </Link>
@@ -28,11 +53,46 @@ function Header({ img, isLogin }) {
         </a>
       </nav>
       {isLogin ? (
-        <img
-          src={img}
-          alt="User Avatar"
-          className="w-10 h-10 rounded-full object-cover"
-        />
+        <div className="relative" ref={dropdownRef}>
+          {userProfile?.picture ? (
+            <img
+              src={userProfile.picture}
+              alt="User Avatar"
+              className="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
+              onClick={() => setShowDropdown(!showDropdown)}
+              onError={(e) => {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(userProfile?.fullName || "User") + "&background=10b981&color=fff";
+              }}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-green-500 transition-all text-white font-semibold"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              {(userProfile?.fullName || userProfile?.name || "U").charAt(0).toUpperCase()}
+            </div>
+          )}
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <div className="px-4 py-2 border-b border-gray-200">
+                <p className="text-sm font-medium text-gray-900">
+                  {userProfile?.fullName || userProfile?.name || "User"}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {userProfile?.email || ""}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="flex items-center space-x-4">
           <button className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">

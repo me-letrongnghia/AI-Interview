@@ -1,13 +1,58 @@
 import React, { useState } from "react";
-import { LayoutAuth } from "../../components/LayoutAuth/LayoutAuth";
 import { ArrowRight } from "lucide-react";
+import { Auth } from "../../api/AuthApi";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [isCheckEmail, setIsCheckEmail] = useState(true);
-  const handleForgotPassword = () => {
-    setIsCheckEmail(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  const validateEmail = (value) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!value.trim()) {
+      return "Email is required.";
+    } else if (!emailRegex.test(value)) {
+      return "Please enter a valid email address.";
+    }
+    return "";
   };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    setEmailError(validateEmail(value));
+  };
+
+  const handleForgotPassword = async () => {
+    const error = validateEmail(email);
+    if (error) {
+      setEmailError(error);
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError("");
+
+    try {
+      await Auth.SendEmail(email);
+      localStorage.setItem("resetPasswordEmail", email);
+      setIsCheckEmail(false);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.response?.data || "Failed to send email. Please try again.";
+      
+      // Kiểm tra các loại lỗi phổ biến
+      if (errorMessage.includes("not found") || errorMessage.includes("does not exist") || errorMessage.includes("cannot be null")) {
+        setApiError("This email is not registered. Please sign up first.");
+      } else {
+        setApiError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div>
       {isCheckEmail ? (
@@ -18,7 +63,7 @@ const ForgotPassword = () => {
           <p className="mb-4 text-gray-400">
             Enter your registered email below
           </p>
-          <div className="flex-1 flex flex-col justify-center space-y-4 overflow-auto">
+          <div className="flex-1 flex flex-col mt-20 space-y-4 overflow-auto">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Email
@@ -26,16 +71,37 @@ const ForgotPassword = () => {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="username@gmail.com"
-                className="w-full h-10 px-4 border-2 border-green-300 rounded-lg"
+                className={`w-full h-10 px-4 border-2 rounded-lg ${
+                  emailError ? "border-red-300" : "border-green-300"
+                }`}
               />
+              {emailError && (
+                <p className="text-red-500 text-sm mt-1">{emailError}</p>
+              )}
             </div>
+            {apiError && (
+              <div className="text-red-500 text-sm text-center">{apiError}</div>
+            )}
             <button
               onClick={handleForgotPassword}
-              className="w-full h-10 bg-green-500 hover:bg-green-700 text-white rounded-lg"
+              disabled={isLoading}
+              className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
+                isLoading
+                  ? "bg-green-600 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-700"
+              }`}
             >
-              Continue
+              {isLoading ? (
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              ) : (
+                "Continue"
+              )}
             </button>
           </div>
         </div>

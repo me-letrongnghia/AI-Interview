@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Mic, MoreVertical } from "lucide-react";
+import { toast } from "react-toastify";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
 import Header from "../components/Header";
@@ -156,36 +157,6 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
   return display;
 }
 
-// ===== DeviceCheck =====
-const DeviceCheck = memo(({ pandaImage2, analyser, streamRef, onContinue }) => (
-  <div className="h-screen flex flex-col items-center justify-center bg-white">
-    <Link to="/" className="mb-6">
-      <img
-        src={pandaImage2}
-        alt="Logo"
-        className="h-16 hover:opacity-80 transition-opacity"
-      />
-    </Link>
-    <h2 className="text-xl font-semibold mb-2">Check audio and video</h2>
-    <p className="text-gray-500 mb-6 text-sm">
-      Before you begin, please make sure your audio and video devices are set up
-      correctly
-    </p>
-    <label className="mb-2">Audio check</label>
-    <VolumeBar analyser={analyser} />
-    <label className="mb-2 mt-4">Video check</label>
-    <div className="w-72 h-52 border rounded-lg mb-6 overflow-hidden">
-      {streamRef.current && <VideoStream streamRef={streamRef} muted />}
-    </div>
-    <button
-      onClick={onContinue}
-      className="bg-green-500 text-white px-8 py-2 rounded-full font-medium hover:bg-green-600 transition"
-    >
-      CONTINUE
-    </button>
-  </div>
-));
-
 // ===== Interview UI =====
 const InterviewUI = memo(
   ({
@@ -289,25 +260,30 @@ const InterviewUI = memo(
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-green-100 rounded-2xl px-4 py-3">
-                  <div className="flex space-x-1">
-                    <span
-                      className="animate-bounce"
-                      style={{ animationDelay: "0s" }}
-                    >
-                      .
-                    </span>
-                    <span
-                      className="animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    >
-                      .
-                    </span>
-                    <span
-                      className="animate-bounce"
-                      style={{ animationDelay: "0.4s" }}
-                    >
-                      .
-                    </span>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex space-x-1 text-green-800 text-lg">
+                        <span
+                          className="animate-bounce"
+                          style={{ animationDelay: "0s" }}
+                        >
+                          .
+                        </span>
+                        <span
+                          className="animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        >
+                          .
+                        </span>
+                        <span
+                          className="animate-bounce"
+                          style={{ animationDelay: "0.4s" }}
+                        >
+                          .
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-600"></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -411,7 +387,6 @@ const InterviewUI = memo(
 // ===== Main Component =====
 export default function InterviewInterface() {
   const { sessionId } = useParams();
-  const [step, setStep] = useState("check");
   const [isRunning, setIsRunning] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -459,7 +434,7 @@ export default function InterviewInterface() {
   const timerDisplay = useTimer(
     initialMinutes,
     initialSeconds,
-    step === "interview" && isRunning,
+    isRunning,
     useCallback(() => setIsRunning(false), [])
   );
 
@@ -468,7 +443,6 @@ export default function InterviewInterface() {
   // Auto disable mic khi AI đang generate câu hỏi
   useEffect(() => {
     if (typingMessageId && isRecording) {
-      console.log('AI is generating question, stopping microphone...');
       setIsRecording(false);
       stopListening();
     }
@@ -476,11 +450,8 @@ export default function InterviewInterface() {
 
   // Mic click handler - IMPROVED VERSION
   const handleMicClick = useCallback(() => {
-    console.log('Mic button clicked, current recording state:', isRecording);
-    
     // Không cho bật mic khi AI đang generate câu hỏi
     if (typingMessageId && !isRecording) {
-      console.log('AI is still generating question, microphone disabled');
       return;
     }
     
@@ -488,52 +459,30 @@ export default function InterviewInterface() {
     if (streamRef.current) {
       const videoTracks = streamRef.current.getVideoTracks();
       const audioTracks = streamRef.current.getAudioTracks();
-      
-      console.log('Current stream state:');
-      console.log('Video tracks:', videoTracks.map(t => ({
-        id: t.id,
-        enabled: t.enabled,
-        muted: t.muted,
-        readyState: t.readyState,
-        label: t.label
-      })));
-      
-      console.log('Audio tracks:', audioTracks.map(t => ({
-        id: t.id,
-        enabled: t.enabled,
-        muted: t.muted,
-        readyState: t.readyState,
-        label: t.label
-      })));
 
       // Kiểm tra nếu có track nào bị ended
       const hasEndedTracks = [...videoTracks, ...audioTracks].some(t => t.readyState === 'ended');
       if (hasEndedTracks) {
-        console.error('Some tracks have ended! Stream may be invalid.');
-        alert('Camera/microphone connection lost. Please refresh the page.');
+        toast.error('Kết nối camera/microphone bị mất. Vui lòng tải lại trang.');
         return;
       }
     } else {
-      console.error('Stream is null!');
-      alert('Camera/microphone not available. Please refresh the page.');
+      toast.error('Camera/microphone không khả dụng. Vui lòng tải lại trang.');
       return;
     }
     
     const newState = !isRecording;
     
     if (newState) {
-      console.log('Starting speech recognition...');
       // Đảm bảo stream vẫn active trước khi start
       if (!streamRef.current) {
-        console.error('Cannot start listening: stream is null');
-        alert('Camera/microphone not available. Please refresh the page.');
+        toast.error('Camera/microphone không khả dụng. Vui lòng tải lại trang.');
         return;
       }
       setIsRecording(true);
       // Delay startListening để tránh race condition
       setTimeout(() => startListening(), 100);
     } else {
-      console.log('Stopping speech recognition...');
       setIsRecording(false);
       stopListening();
     }
@@ -549,7 +498,6 @@ export default function InterviewInterface() {
       }-${JSON.stringify(msg).substring(0, 50)}`;
 
       if (processedMessagesRef.current.has(messageId)) {
-        console.log("Duplicate message ignored:", messageId);
         return;
       }
 
@@ -638,13 +586,12 @@ export default function InterviewInterface() {
 
   // KHỞI TẠO INTERVIEW KHI VÀO TRANG INTERVIEW - CHỈ CHẠY 1 LẦN
   useEffect(() => {
-    // Chỉ chạy khi step là "interview" và chưa được init
-    if (step !== "interview" || !sessionId || isInterviewInitialized.current) {
+    // Chỉ chạy khi có sessionId và chưa được init
+    if (!sessionId || isInterviewInitialized.current) {
       return;
     }
 
     isInterviewInitialized.current = true;
-    console.log("Initializing interview...");
 
     connectSocket(sessionId, handleSocketMessage);
 
@@ -665,8 +612,8 @@ export default function InterviewInterface() {
           speak(data.data.content);
         }
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
+        toast.error('Không thể tải câu hỏi phỏng vấn');
         const fallbackMessage = {
           type: "ai",
           text: "Hello! Let's start the interview.",
@@ -690,7 +637,7 @@ export default function InterviewInterface() {
       }
       stopSpeaking();
     };
-  }, [step, sessionId, handleSocketMessage, speak, stopSpeaking]);
+  }, [sessionId, handleSocketMessage, speak, stopSpeaking]);
 
   // Send message
   const sendMessage = useCallback(() => {
@@ -729,8 +676,6 @@ export default function InterviewInterface() {
 
     const initMedia = async () => {
       try {
-        console.log('Requesting media permissions...');
-        
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
@@ -755,8 +700,7 @@ export default function InterviewInterface() {
         // Lắng nghe sự kiện khi track bị ended
         stream.getTracks().forEach((track) => {
           track.onended = () => {
-            console.warn(`Track ${track.kind} ended unexpectedly!`);
-            alert(`${track.kind === 'video' ? 'Camera' : 'Microphone'} was disconnected. Please refresh the page.`);
+            toast.error(`${track.kind === 'video' ? 'Camera' : 'Microphone'} bị ngắt kết nối. Vui lòng tải lại trang.`);
           };
         });
 
@@ -768,24 +712,13 @@ export default function InterviewInterface() {
         microphone.connect(analyserNode);
 
         setAnalyser(analyserNode);
-
-        console.log("Media devices initialized successfully");
-        console.log("Video tracks:", stream.getVideoTracks());
-        console.log("Audio tracks:", stream.getAudioTracks());
-
-        stream.getTracks().forEach((track) => {
-          console.log(
-            `Track ${track.kind}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}, label=${track.label}`
-          );
-        });
       } catch (err) {
-        console.error("Error accessing media devices:", err);
         if (err.name === 'NotAllowedError') {
-          alert('Vui lòng cho phép truy cập camera và microphone để sử dụng tính năng phỏng vấn.');
+          toast.error('Vui lòng cho phép truy cập camera và microphone để sử dụng tính năng phỏng vấn.');
         } else if (err.name === 'NotFoundError') {
-          alert('Không tìm thấy camera hoặc microphone. Vui lòng kiểm tra thiết bị.');
+          toast.error('Không tìm thấy camera hoặc microphone. Vui lòng kiểm tra thiết bị.');
         } else {
-          alert(`Không thể truy cập camera/microphone: ${err.message}`);
+          toast.error(`Không thể truy cập camera/microphone: ${err.message}`);
         }
       }
     };
@@ -794,22 +727,21 @@ export default function InterviewInterface() {
 
     return () => {
       mounted = false;
-      console.log("Cleaning up media devices...");
 
       // Cleanup audio context
       if (microphone) {
         try {
           microphone.disconnect();
-        } catch (err) {
-          console.log("Error disconnecting microphone:", err);
+        } catch {
+          // Ignore errors during cleanup
         }
       }
 
       if (audioContext) {
         try {
           audioContext.close();
-        } catch (err) {
-          console.log("Error closing audio context:", err);
+        } catch {
+          // Ignore errors during cleanup
         }
       }
 
@@ -818,21 +750,13 @@ export default function InterviewInterface() {
         streamRef.current.getTracks().forEach((track) => {
           track.onended = null; // Remove event listener
           track.stop();
-          console.log(`Stopped ${track.kind} track`);
         });
         streamRef.current = null;
       }
     };
   }, []); // Empty dependency - chỉ chạy khi mount/unmount
 
-  return step === "check" ? (
-    <DeviceCheck
-      pandaImage2={pandaImage2}
-      analyser={analyser}
-      streamRef={streamRef}
-      onContinue={() => setStep("interview")}
-    />
-  ) : (
+  return (
     <InterviewUI
       imgBG={imgBG}
       pandaImage2={pandaImage2}
