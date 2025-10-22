@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.dto.response;
+package com.capstone.ai_interview_be.dto.CreateInterviewSession;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,12 +1,13 @@
 package com.capstone.ai_interview_be.controller;
 
-import com.capstone.ai_interview_be.dto.request.CreateInterviewSessionRequest;
-import com.capstone.ai_interview_be.dto.response.CreateInterviewSessionResponse;
+import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionRequest;
+import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionResponse;
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
-import com.capstone.ai_interview_be.service.ConversationService;
-import com.capstone.ai_interview_be.service.InterviewSessionService;
+import com.capstone.ai_interview_be.service.InterviewService.ConversationService;
+import com.capstone.ai_interview_be.service.InterviewService.InterviewSessionService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/interviews")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5000")
+@CrossOrigin(
+    origins = {"http://localhost:5000", "http://localhost:8080"}, 
+    allowCredentials = "true",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
+)
 public class InterviewController {
     
     private final InterviewSessionService sessionService;
@@ -26,12 +31,11 @@ public class InterviewController {
     private final InterviewQuestionRepository questionRepository;
     
     // Endpoint to get all interview questions
-    @PostMapping
+    @PostMapping("/sessions")
     public ResponseEntity<CreateInterviewSessionResponse> createInterviewSession(
             @Valid @RequestBody CreateInterviewSessionRequest request) {
-        
-        CreateInterviewSessionResponse response = sessionService.createSession(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            CreateInterviewSessionResponse response = sessionService.createSession(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // Endpoint to get the latest interview question for a session

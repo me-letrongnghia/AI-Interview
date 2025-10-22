@@ -1,6 +1,8 @@
 package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,16 +22,20 @@ public class InterviewSession {
     
     @Column(name = "user_id")
     private Long userId;
-    
-    @Column(nullable = false)
-    private String title;
-    
-    private String domain;
-    
+
+    private String role;
+
     private String level;
+
+    private List<String> skill;
+
+    private String language;
+
+    private String description;
+
     
     @Enumerated(EnumType.STRING)
-    private SessionStatus status = SessionStatus.ONGOING;
+    private Source source = Source.Custom;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -48,7 +54,7 @@ public class InterviewSession {
         updatedAt = LocalDateTime.now();
     }
     
-    public enum SessionStatus {
-        ONGOING, COMPLETED, CANCELLED
+    public enum Source {
+        Custom, JD, CV
     }
 }
