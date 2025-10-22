@@ -3,9 +3,9 @@ package com.capstone.ai_interview_be.controller;
 import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
 import com.capstone.ai_interview_be.dto.websocket.FeedbackMessage;
 import com.capstone.ai_interview_be.dto.websocket.QuestionMessage;
-import com.capstone.ai_interview_be.service.InterviewService;
+import com.capstone.ai_interview_be.service.InterviewService.InterviewService;
+
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -17,7 +17,6 @@ import java.time.format.DateTimeFormatter;
 
 @Controller
 @RequiredArgsConstructor
-@Slf4j
 @CrossOrigin(origins = "*")
 public class InterviewWebSocketController {
 
@@ -27,17 +26,8 @@ public class InterviewWebSocketController {
     @MessageMapping("/interview/{sessionId}/answer")
     public void handleAnswer(@DestinationVariable Long sessionId, AnswerMessage answerMessage) {
         try {
-            log.info("Received answer for session {}: {}", sessionId, answerMessage.getContent());
-
             // Xử lý answer và trả về response từ service
             var response = interviewService.processAnswerAndGenerateNext(sessionId, answerMessage);
-
-            // Gửi feedback ngay
-            // FeedbackMessage feedback = new FeedbackMessage();
-            // feedback.setType("feedback");
-            // feedback.setFeedback(response.getFeedback());
-            // feedback.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            // messagingTemplate.convertAndSend("/topic/interview/" + sessionId, feedback);
 
             // Nếu có câu hỏi tiếp theo, gửi luôn
             if (response.getNextQuestion() != null) {
@@ -62,8 +52,6 @@ public class InterviewWebSocketController {
             }
 
         } catch (Exception e) {
-            log.error("Error processing answer for session {}: {}", sessionId, e.getMessage(), e);
-
             FeedbackMessage error = new FeedbackMessage();
             error.setType("error");
             error.setFeedback("Sorry, there was an error processing your answer. Please try again.");

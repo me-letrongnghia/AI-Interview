@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service;
+package com.capstone.ai_interview_be.service.InterviewService;
 
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.capstone.ai_interview_be.repository.ConversationEntryRepository;
