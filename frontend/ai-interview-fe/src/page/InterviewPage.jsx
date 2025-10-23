@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { Mic, MoreVertical } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Mic, MoreVertical, LogOut } from "lucide-react";
 import { toast } from "react-toastify";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
@@ -38,33 +38,33 @@ const VideoStream = memo(({ streamRef, muted }) => {
       autoPlay
       playsInline
       muted={muted}
-      className="w-full h-full object-cover"
+      className='w-full h-full object-cover'
     />
   );
 });
 
 // ===== Timer =====
 const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
-  <div className="mb-4">
-    <div className="flex items-center justify-center gap-4 mb-1">
-      <span className="text-gray-500 text-xs">Minutes</span>
-      <span className="text-gray-500 text-xs ml-10">Seconds</span>
+  <div className='mb-6'>
+    <div className='flex items-center justify-center gap-6 mb-2'>
+      <span className='text-gray-600 text-sm font-medium'>Minutes</span>
+      <span className='text-gray-600 text-sm font-medium'>Seconds</span>
     </div>
-    <div className="flex items-center justify-center gap-2">
-      <span className="text-3xl font-bold text-gray-800">
+    <div className='flex items-center justify-center gap-3 bg-white/90 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-green-200'>
+      <span className='text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent'>
         {String(minutes).padStart(2, "0")}
       </span>
-      <span className="text-3xl font-bold text-gray-800">:</span>
-      <span className="text-3xl font-bold text-gray-800">
+      <span className='text-4xl font-bold text-gray-400'>:</span>
+      <span className='text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent'>
         {String(seconds).padStart(2, "0")}
       </span>
     </div>
-    <div className="text-center mt-3">
+    <div className='text-center mt-4'>
       <button
         onClick={onToggle}
-        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full font-medium transition-colors shadow-lg text-sm"
+        className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
       >
-        {isRunning ? "Stop" : "Start"}
+        {isRunning ? "⏸ Pause" : "▶ Start"}
       </button>
     </div>
   </div>
@@ -96,12 +96,12 @@ const VolumeBar = ({ analyser }) => {
   }, [analyser]);
 
   return (
-    <div className="flex items-center gap-1 h-2">
+    <div className='flex items-center gap-1 h-2'>
       {[...Array(10)].map((_, i) => (
         <div
           key={i}
           ref={(el) => (barsRef.current[i] = el)}
-          className="w-4 h-2 rounded-sm bg-gray-300"
+          className='w-4 h-2 rounded-sm bg-gray-300'
         />
       ))}
     </div>
@@ -161,7 +161,6 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
 const InterviewUI = memo(
   ({
     imgBG,
-    pandaImage2,
     streamRef,
     analyser,
     timerDisplay,
@@ -181,21 +180,32 @@ const InterviewUI = memo(
     typingMessageId,
     setTypingMessageId,
     speechRate,
+    handleLeaveRoom,
   }) => (
-    <div className="h-screen flex flex-col bg-white">
-      <Header img={pandaImage2} isLogin={true} />
-
-      <div className="flex-1 flex gap-3 p-3 bg-gray-100 overflow-hidden">
-        <div className="flex-1 relative rounded-2xl overflow-hidden shadow-lg">
+    <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50'>
+      <div className='flex-1 flex gap-4 p-4 overflow-hidden'>
+        <div className='flex-1 relative rounded-3xl overflow-hidden shadow-2xl border border-green-100'>
           <img
             src={imgBG}
-            alt="Background"
-            className="absolute inset-0 w-full h-full object-cover"
+            alt='Background'
+            className='absolute inset-0 w-full h-full object-cover opacity-95'
           />
-          <div className="relative h-full flex flex-col items-center justify-center p-6">
-            <h1 className="text-2xl font-bold text-green-600 mb-4 tracking-wide">
-              INTERVIEWING...
-            </h1>
+
+          {/* Exit Button - Top Left */}
+          <button
+            onClick={handleLeaveRoom}
+            className='absolute top-6 left-6 z-10 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
+          >
+            <LogOut size={18} />
+            <span>Thoát phòng</span>
+          </button>
+
+          <div className='relative h-full flex flex-col items-center justify-center p-8'>
+            <div className='mb-6 bg-white/90 backdrop-blur-sm px-8 py-3 rounded-full shadow-lg border border-green-200'>
+              <h1 className='text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent tracking-wide'>
+                INTERVIEWING...
+              </h1>
+            </div>
 
             <Timer
               minutes={timerDisplay.minutes}
@@ -204,25 +214,51 @@ const InterviewUI = memo(
               isRunning={isRunning}
             />
 
-            <div className="flex gap-8">
-              <div className="relative w-[500px] h-[340px] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-                {streamRef.current && <VideoStream streamRef={streamRef} muted />}
-                <button className="absolute top-3 right-3 text-white hover:text-gray-300">
-                  <MoreVertical size={20} />
+            <div className='flex gap-6'>
+              <div className='relative w-[480px] h-[320px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-green-300'>
+                {streamRef.current && (
+                  <VideoStream streamRef={streamRef} muted />
+                )}
+                <div className='absolute top-3 left-3 bg-red-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-white rounded-full animate-pulse'></div>
+                  <span className='text-white text-xs font-semibold'>LIVE</span>
+                </div>
+                <button className='absolute top-3 right-3 text-white hover:text-green-300 bg-black/40 hover:bg-black/60 p-2 rounded-full transition-all'>
+                  <MoreVertical size={18} />
                 </button>
               </div>
-              <div className="relative w-[500px] h-[340px] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex items-center justify-center">
-                {streamRef.current && <VideoStream streamRef={streamRef} muted />}
+              <div className='relative w-[480px] h-[320px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-purple-300 flex items-center justify-center'>
+                {streamRef.current && (
+                  <VideoStream streamRef={streamRef} muted />
+                )}
+                <div className='absolute top-3 left-3 bg-purple-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full'>
+                  <span className='text-white text-xs font-semibold'>
+                    AI Interviewer
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Chat Sidebar */}
-        <div className="w-96 bg-white shadow-xl flex flex-col border-l border-gray-200">
+        <div className='w-[420px] bg-white shadow-2xl flex flex-col border-l-2 border-green-200 rounded-3xl overflow-hidden'>
+          <div className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white'>
+            <h2 className='text-lg font-bold flex items-center gap-2'>
+              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                <path
+                  fillRule='evenodd'
+                  d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
+                  clipRule='evenodd'
+                />
+              </svg>
+              Chat với AI
+            </h2>
+          </div>
+
           <div
             ref={messagesRef}
-            className="flex-1 overflow-y-auto p-6 space-y-4"
+            className='flex-1 overflow-y-auto p-5 space-y-3 bg-gradient-to-b from-gray-50 to-white'
           >
             {chatHistory.map((chat, index) => (
               <div
@@ -232,13 +268,13 @@ const InterviewUI = memo(
                 }`}
               >
                 <div
-                  className={`max-w-xs ${
+                  className={`max-w-[85%] ${
                     chat.type === "user"
-                      ? "bg-gray-100 text-gray-800"
-                      : "bg-green-100 text-gray-800"
-                  } rounded-2xl px-4 py-3 shadow-sm`}
+                      ? "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300"
+                      : "bg-gradient-to-r from-green-100 to-emerald-100 text-gray-800 border border-green-300"
+                  } rounded-2xl px-4 py-3 shadow-md hover:shadow-lg transition-shadow`}
                 >
-                  <p className="text-sm">
+                  <p className='text-sm leading-relaxed'>
                     {chat.type === "ai" && chat.id === typingMessageId ? (
                       <TypingText
                         text={chat.text}
@@ -249,7 +285,7 @@ const InterviewUI = memo(
                       chat.text
                     )}
                   </p>
-                  <span className="text-xs text-gray-500 mt-1 block">
+                  <span className='text-xs text-gray-500 mt-1.5 block font-medium'>
                     {chat.time}
                   </span>
                 </div>
@@ -258,32 +294,32 @@ const InterviewUI = memo(
 
             {/* Loading indicator */}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-green-100 rounded-2xl px-4 py-3">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex space-x-1 text-green-800 text-lg">
-                        <span
-                          className="animate-bounce"
-                          style={{ animationDelay: "0s" }}
-                        >
-                          .
-                        </span>
-                        <span
-                          className="animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        >
-                          .
-                        </span>
-                        <span
-                          className="animate-bounce"
-                          style={{ animationDelay: "0.4s" }}
-                        >
-                          .
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-600"></span>
+              <div className='flex justify-start'>
+                <div className='bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl px-4 py-3 border border-green-300 shadow-md'>
+                  <div className='flex items-center gap-2'>
+                    <div className='flex space-x-1 text-green-600 text-lg'>
+                      <span
+                        className='animate-bounce'
+                        style={{ animationDelay: "0s" }}
+                      >
+                        ●
+                      </span>
+                      <span
+                        className='animate-bounce'
+                        style={{ animationDelay: "0.2s" }}
+                      >
+                        ●
+                      </span>
+                      <span
+                        className='animate-bounce'
+                        style={{ animationDelay: "0.4s" }}
+                      >
+                        ●
+                      </span>
                     </div>
+                    <span className='text-sm text-gray-600'>
+                      Đang suy nghĩ...
+                    </span>
                   </div>
                 </div>
               </div>
@@ -291,12 +327,12 @@ const InterviewUI = memo(
           </div>
 
           {/* Voice Input */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className='p-4 border-t-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50'>
+            <div className='flex items-center gap-2'>
               <input
-                type="text"
-                placeholder="Viết tin nhắn..."
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-200"
+                type='text'
+                placeholder='Nhập câu trả lời của bạn...'
+                className='flex-1 px-4 py-3 rounded-xl border-2 border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all bg-white shadow-sm'
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -309,20 +345,21 @@ const InterviewUI = memo(
 
               <button
                 onClick={handleMicClick}
-                aria-label="microphone"
-                className={`p-2 rounded-md transition-colors ${
+                aria-label='microphone'
+                className={`p-3 rounded-xl transition-all shadow-md hover:shadow-lg ${
                   isRecording
-                    ? "bg-red-100 text-red-600"
-                    : "bg-green-50 text-green-600"
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
                 }`}
+                title={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
               >
-                <Mic size={18} />
+                <Mic size={20} />
               </button>
 
               <button
                 onClick={sendMessage}
                 disabled={!chatInput.trim()}
-                className="ml-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-3 rounded-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-semibold'
               >
                 Gửi
               </button>
@@ -330,40 +367,40 @@ const InterviewUI = memo(
 
             {/* Expanded recording area */}
             {isRecording && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-full bg-red-500 text-white animate-pulse">
-                      <Mic size={20} />
+              <div className='mt-3 p-4 bg-white rounded-xl border-2 border-red-200 shadow-md'>
+                <div className='flex items-start justify-between'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2.5 rounded-full bg-red-500 text-white animate-pulse'>
+                      <Mic size={18} />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-800">
-                        Đang ghi âm...
+                      <div className='text-sm font-bold text-gray-800'>
+                        🎙 Đang ghi âm...
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Nói gì đó để chuyển đổi thành văn bản
+                      <div className='text-xs text-gray-500'>
+                        Nói gì đó để chuyển thành văn bản
                       </div>
                     </div>
                   </div>
 
                   <button
                     onClick={() => setIsRecording(false)}
-                    aria-label="close recording"
-                    className="text-gray-500 hover:text-gray-700"
+                    aria-label='close recording'
+                    className='text-gray-400 hover:text-red-600 font-bold text-lg transition-colors'
                   >
                     ✕
                   </button>
                 </div>
 
-                <div className="mt-3">
+                <div className='mt-3'>
                   <VolumeBar analyser={analyser} />
                 </div>
 
                 {(interimTranscript || chatInput) && (
-                  <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-700">
+                  <div className='mt-3 p-3 bg-green-50 rounded-lg border border-green-200'>
+                    <p className='text-sm text-gray-700'>
                       {chatInput}
-                      <span className="text-gray-400 italic">
+                      <span className='text-green-600 italic font-medium'>
                         {interimTranscript}
                       </span>
                     </p>
@@ -371,8 +408,8 @@ const InterviewUI = memo(
                 )}
 
                 {speechError && (
-                  <div className="mt-2 text-xs text-red-600">
-                    {speechError}
+                  <div className='mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200'>
+                    ⚠️ {speechError}
                   </div>
                 )}
               </div>
@@ -387,6 +424,7 @@ const InterviewUI = memo(
 // ===== Main Component =====
 export default function InterviewInterface() {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [isRunning, setIsRunning] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -440,6 +478,36 @@ export default function InterviewInterface() {
 
   const handleStop = useCallback(() => setIsRunning((prev) => !prev), []);
 
+  // Handle leave room
+  const handleLeaveRoom = useCallback(() => {
+    const confirmLeave = window.confirm(
+      "Bạn có chắc chắn muốn thoát khỏi phòng phỏng vấn? Tiến trình hiện tại sẽ không được lưu."
+    );
+
+    if (confirmLeave) {
+      // Stop speech
+      stopSpeaking();
+
+      // Stop recording
+      if (isRecording) {
+        setIsRecording(false);
+        stopListening();
+      }
+
+      // Stop media stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      // Disconnect socket
+      disconnectSocket();
+
+      // Show notification and navigate
+      toast.info("Đã thoát khỏi phòng phỏng vấn");
+      navigate("/");
+    }
+  }, [navigate, stopSpeaking, isRecording, stopListening]);
+
   // Auto disable mic khi AI đang generate câu hỏi
   useEffect(() => {
     if (typingMessageId && isRecording) {
@@ -454,29 +522,35 @@ export default function InterviewInterface() {
     if (typingMessageId && !isRecording) {
       return;
     }
-    
+
     // Kiểm tra stream trước khi toggle recording
     if (streamRef.current) {
       const videoTracks = streamRef.current.getVideoTracks();
       const audioTracks = streamRef.current.getAudioTracks();
 
       // Kiểm tra nếu có track nào bị ended
-      const hasEndedTracks = [...videoTracks, ...audioTracks].some(t => t.readyState === 'ended');
+      const hasEndedTracks = [...videoTracks, ...audioTracks].some(
+        (t) => t.readyState === "ended"
+      );
       if (hasEndedTracks) {
-        toast.error('Kết nối camera/microphone bị mất. Vui lòng tải lại trang.');
+        toast.error(
+          "Kết nối camera/microphone bị mất. Vui lòng tải lại trang."
+        );
         return;
       }
     } else {
-      toast.error('Camera/microphone không khả dụng. Vui lòng tải lại trang.');
+      toast.error("Camera/microphone không khả dụng. Vui lòng tải lại trang.");
       return;
     }
-    
+
     const newState = !isRecording;
-    
+
     if (newState) {
       // Đảm bảo stream vẫn active trước khi start
       if (!streamRef.current) {
-        toast.error('Camera/microphone không khả dụng. Vui lòng tải lại trang.');
+        toast.error(
+          "Camera/microphone không khả dụng. Vui lòng tải lại trang."
+        );
         return;
       }
       setIsRecording(true);
@@ -544,7 +618,8 @@ export default function InterviewInterface() {
         }
 
         case "error": {
-          const errorMsg = msg.feedback || "An error occurred, please try again.";
+          const errorMsg =
+            msg.feedback || "An error occurred, please try again.";
           setChatHistory((prev) => [
             ...prev,
             {
@@ -613,7 +688,7 @@ export default function InterviewInterface() {
         }
       })
       .catch(() => {
-        toast.error('Không thể tải câu hỏi phỏng vấn');
+        toast.error("Không thể tải câu hỏi phỏng vấn");
         const fallbackMessage = {
           type: "ai",
           text: "Hello! Let's start the interview.",
@@ -629,7 +704,7 @@ export default function InterviewInterface() {
       });
 
     const processedMessages = processedMessagesRef.current;
-    
+
     return () => {
       disconnectSocket();
       if (processedMessages) {
@@ -691,7 +766,7 @@ export default function InterviewInterface() {
 
         if (!mounted) {
           // Component unmounted before we got the stream
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
@@ -700,7 +775,11 @@ export default function InterviewInterface() {
         // Lắng nghe sự kiện khi track bị ended
         stream.getTracks().forEach((track) => {
           track.onended = () => {
-            toast.error(`${track.kind === 'video' ? 'Camera' : 'Microphone'} bị ngắt kết nối. Vui lòng tải lại trang.`);
+            toast.error(
+              `${
+                track.kind === "video" ? "Camera" : "Microphone"
+              } bị ngắt kết nối. Vui lòng tải lại trang.`
+            );
           };
         });
 
@@ -713,10 +792,14 @@ export default function InterviewInterface() {
 
         setAnalyser(analyserNode);
       } catch (err) {
-        if (err.name === 'NotAllowedError') {
-          toast.error('Vui lòng cho phép truy cập camera và microphone để sử dụng tính năng phỏng vấn.');
-        } else if (err.name === 'NotFoundError') {
-          toast.error('Không tìm thấy camera hoặc microphone. Vui lòng kiểm tra thiết bị.');
+        if (err.name === "NotAllowedError") {
+          toast.error(
+            "Vui lòng cho phép truy cập camera và microphone để sử dụng tính năng phỏng vấn."
+          );
+        } else if (err.name === "NotFoundError") {
+          toast.error(
+            "Không tìm thấy camera hoặc microphone. Vui lòng kiểm tra thiết bị."
+          );
         } else {
           toast.error(`Không thể truy cập camera/microphone: ${err.message}`);
         }
@@ -779,6 +862,7 @@ export default function InterviewInterface() {
       typingMessageId={typingMessageId}
       setTypingMessageId={setTypingMessageId}
       speechRate={speechRate}
+      handleLeaveRoom={handleLeaveRoom}
     />
   );
 }

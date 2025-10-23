@@ -3,6 +3,7 @@ package com.capstone.ai_interview_be.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/cv")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", allowCredentials = "false") 
+@CrossOrigin(origins = "http://localhost:5000", allowCredentials = "false") 
 public class CVController {
 
     private final FileParserService fileParserService;
@@ -43,18 +44,5 @@ public class CVController {
         }
     }
 
-    // Endpoint để trích xuất văn bản thô từ CV
-    @PostMapping("/text")
-    public ResponseEntity<String> textCv(@RequestParam("file") MultipartFile file) {
-        try {
-            String extractedText = fileParserService.parseCV(file);
-            return ResponseEntity.ok()
-                    .header("Content-Type", "text/plain; charset=UTF-8")
-                    .body(extractedText != null ? extractedText : "NO TEXT EXTRACTED");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error parsing file: " + e.getMessage());
-        }
-    }
+
 }
