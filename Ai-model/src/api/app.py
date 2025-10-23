@@ -12,6 +12,7 @@ from src.core.config import (
 )
 from src.services.model_loader import model_manager
 from src.api.routes import router
+from src.middleware import MetricsMiddleware
 
 
 @asynccontextmanager
@@ -42,6 +43,9 @@ def create_app() -> FastAPI:
         allow_methods=CORS_ALLOW_METHODS,
         allow_headers=CORS_ALLOW_HEADERS,
     )
+    
+    # Add metrics middleware
+    app.add_middleware(MetricsMiddleware)
     
     # Include routes
     app.include_router(router)

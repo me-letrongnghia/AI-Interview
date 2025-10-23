@@ -3,7 +3,9 @@ package com.capstone.ai_interview_be.dto.CreateInterviewSession;
 
 import java.util.List;
 
-import jakarta.persistence.Column;
+import com.capstone.ai_interview_be.model.InterviewSession;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,18 +15,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateInterviewSessionRequest {
 
-    @Column(name = "user_id")
+    @NotNull(message = "User ID is required")
     private Long userId;
 
+    @NotBlank(message = "Role is required")
     private String role;
 
+    @NotBlank(message = "Level is required")
     private String level;
 
     private List<String> skill;
 
     private String language;
 
-    private String source;
+    private InterviewSession.Source source;
 
 
 }

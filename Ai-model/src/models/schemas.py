@@ -12,7 +12,7 @@ from src.core.config import (
 
 class GenerateQuestionRequest(BaseModel):
     """Model request để tạo câu hỏi phỏng vấn"""
-    # jd_text: str = Field(..., description="Văn bản mô tả công việc", min_length=1)
+    jd_text: str = Field(..., description="Văn bản mô tả công việc", min_length=1)
     role: str = Field(default="Developer", description="Vị trí/chức danh công việc")
     level: str = Field(default="Mid-level", description="Trình độ kinh nghiệm (Junior/Mid-level/Senior)")
     skills: List[str] = Field(default_factory=list, description="Kỹ năng yêu cầu")

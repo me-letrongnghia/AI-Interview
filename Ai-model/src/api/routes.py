@@ -108,6 +108,14 @@ async def generate_question(request: GenerateQuestionRequest):
         
         start_time = time.time()
         
+        # Validate model is loaded
+        if not model_manager.is_loaded():
+            logger.error("Model not loaded")
+            raise HTTPException(
+                status_code=503,
+                detail="AI model is not ready. Please try again later."
+            )
+        
         # Tạo câu hỏi với ngữ cảnh hội thoại
         question = question_generator.generate(
             jd_text=request.jd_text,
@@ -131,12 +139,22 @@ async def generate_question(request: GenerateQuestionRequest):
             model_info={
                 "model_path": str(MODEL_PATH),
                 "max_tokens": request.max_tokens,
-                "temperature": request.temperature
+                "temperature": request.temperature,
+                "context_type": context_type
             }
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except RuntimeError as e:
+        logger.error(f"Runtime error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Model runtime error: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Loi khi tao cau hoi: {e}")
+        logger.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate question: {str(e)}"

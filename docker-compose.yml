@@ -17,6 +17,22 @@ services:
     networks:
       - app_network
 
+  genq-service:
+    build:
+      context: ./Ai-model
+      dockerfile: Dockerfile
+    container_name: ai_genq_service
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   backend:
     build:
       context: ./backend/ai-interview-be
@@ -26,8 +42,13 @@ services:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      GENQ_SERVICE_URL: http://genq-service:8000
+      GENQ_SERVICE_TIMEOUT: 30
+      GENQ_SERVICE_ENABLED: true
     depends_on:
       mysql:
+        condition: service_healthy
+      genq-service:
         condition: service_healthy
     ports:
       - "8080:8080"

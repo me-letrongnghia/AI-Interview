@@ -37,6 +37,13 @@ openrouter:
   site-url: ${OPENROUTER_SITE_URL}
   app-name: ${OPENROUTER_APP_NAME}
 
+# GenQ Service Configuration
+genq:
+  service:
+    url: ${GENQ_SERVICE_URL:http://localhost:8000}
+    timeout: ${GENQ_SERVICE_TIMEOUT:30}
+    enabled: ${GENQ_SERVICE_ENABLED:true}
+
 setTime:
   accessToken: 5 # hours
   refreshToken: 72 # hours

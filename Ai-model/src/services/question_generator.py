@@ -206,48 +206,63 @@ class QuestionGenerator:
         Returns:
             Chuỗi câu hỏi đã tạo
         """
-        if not self.model_manager.is_loaded():
-            raise RuntimeError("Model chua duoc tai")
-        
-        model = self.model_manager.get_model()
-        tokenizer = self.model_manager.get_tokenizer()
-        device = self.model_manager.get_device()
-        
-        skills = skills or []
-        
-        # Xây dựng prompt với ngữ cảnh
-        prompt = self._build_prompt(
-            jd_text, role, level, skills,
-            previous_question, previous_answer
-        )
-        
-        # Tokenize và chuyển lên device tương ứng
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        
-        # Tạo với chế độ inference
-        inference_ctx = torch.inference_mode if hasattr(torch, "inference_mode") else torch.no_grad
-        
-        with inference_ctx():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_tokens,
-                do_sample=True,
-                temperature=temperature,
-                top_p=TOP_P,
-                repetition_penalty=REPETITION_PENALTY,
-                num_beams=NUM_BEAMS,  # Sampling nhanh không dùng beam search
-                early_stopping=True,  # Dừng khi sinh token EOS
-                pad_token_id=tokenizer.eos_token_id
+        try:
+            if not self.model_manager.is_loaded():
+                logger.error("Model not loaded when trying to generate question")
+                raise RuntimeError("Model chua duoc tai")
+            
+            logger.info(f"Generating question for role={role}, level={level}, skills={skills}")
+            
+            model = self.model_manager.get_model()
+            tokenizer = self.model_manager.get_tokenizer()
+            device = self.model_manager.get_device()
+            
+            skills = skills or []
+            
+            # Xây dựng prompt với ngữ cảnh
+            prompt = self._build_prompt(
+                jd_text, role, level, skills,
+                previous_question, previous_answer
             )
-        
-        # Decode
-        text = tokenizer.decode(
-            outputs[0][inputs["input_ids"].shape[1]:], 
-            skip_special_tokens=True
-        )
-        
-        # Làm sạch và trả về
-        return self._clean_question(text)
+            
+            logger.debug(f"Built prompt with length: {len(prompt)}")
+            
+            # Tokenize và chuyển lên device tương ứng
+            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            
+            # Tạo với chế độ inference
+            inference_ctx = torch.inference_mode if hasattr(torch, "inference_mode") else torch.no_grad
+            
+            with inference_ctx():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=max_tokens,
+                    do_sample=True,
+                    temperature=temperature,
+                    top_p=TOP_P,
+                    repetition_penalty=REPETITION_PENALTY,
+                    num_beams=NUM_BEAMS,  # Sampling nhanh không dùng beam search
+                    early_stopping=True,  # Dừng khi sinh token EOS
+                    pad_token_id=tokenizer.eos_token_id
+                )
+            
+            # Decode
+            text = tokenizer.decode(
+                outputs[0][inputs["input_ids"].shape[1]:], 
+                skip_special_tokens=True
+            )
+            
+            logger.debug(f"Generated raw text: {text[:100]}...")
+            
+            # Làm sạch và trả về
+            cleaned_question = self._clean_question(text)
+            logger.info(f"Generated question: {cleaned_question}")
+            
+            return cleaned_question
+            
+        except Exception as e:
+            logger.error(f"Error generating question: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Failed to generate question: {str(e)}")
 
 
 # Instance global của question generator

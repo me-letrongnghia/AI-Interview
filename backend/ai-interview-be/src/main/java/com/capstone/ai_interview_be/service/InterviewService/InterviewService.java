@@ -58,8 +58,8 @@ public class InterviewService {
         String nextQuestionContent = aiService.generateNextQuestion(
             session.getRole(),  
             session.getSkill(),
-            session.getLevel(),
-            session.getLanguage(), 
+            session.getLanguage(),  // sessionLanguage - Fixed order
+            session.getLevel(),     // sessionLevel - Fixed order
             question.getContent(), 
             answerMessage.getContent()
         );

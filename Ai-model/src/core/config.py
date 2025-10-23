@@ -2,11 +2,12 @@
 Cấu hình cho dịch vụ GenQ
 """
 import logging
+import os
 from pathlib import Path
 
 # ==================== ĐƯỜNG DẪN ====================
 BASE_DIR = Path(__file__).parent.parent.parent
-MODEL_PATH = BASE_DIR / "model" / "Merge"
+MODEL_PATH = Path(os.getenv("MODEL_PATH", str(BASE_DIR / "model" / "Merge")))
 
 # ==================== THIẾT LẬP MODEL ====================
 MAX_TOKENS_MIN = 16
@@ -26,18 +27,21 @@ API_TITLE = "AI Interview - GenQ Service"
 API_DESCRIPTION = "Generate technical interview questions using GenQ model"
 API_VERSION = "1.0.0"
 
-HOST = "0.0.0.0"
-PORT = 8000
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
 
 # ==================== THIẾT LẬP CORS ====================
-CORS_ORIGINS = ["*"]  # Trong production, chỉ định origins cụ thể
+# Trong production, set CORS_ORIGINS env variable
+cors_origins_env = os.getenv("CORS_ORIGINS", "*")
+CORS_ORIGINS = cors_origins_env.split(",") if cors_origins_env != "*" else ["*"]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["*"]
 CORS_ALLOW_HEADERS = ["*"]
 
 # ==================== CẤU HÌNH LOGGING ====================
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOGGING_CONFIG = {
-    "level": logging.INFO,
+    "level": getattr(logging, LOG_LEVEL),
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 }
 

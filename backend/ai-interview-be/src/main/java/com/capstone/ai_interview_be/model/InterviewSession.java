@@ -3,6 +3,8 @@ package com.capstone.ai_interview_be.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -31,6 +33,8 @@ public class InterviewSession {
 
     private String language;
 
+    private String title;
+
     private String description;
 
     
@@ -55,6 +59,28 @@ public class InterviewSession {
     }
     
     public enum Source {
-        Custom, JD, CV
+        Custom, JD, CV;
+        
+        @JsonCreator
+        public static Source fromString(String value) {
+            if (value == null) {
+                return Custom;
+            }
+            
+            // Case-insensitive matching
+            for (Source source : Source.values()) {
+                if (source.name().equalsIgnoreCase(value)) {
+                    return source;
+                }
+            }
+            
+            // Default to Custom if not found
+            return Custom;
+        }
+        
+        @JsonValue
+        public String toValue() {
+            return this.name();
+        }
     }
 }
