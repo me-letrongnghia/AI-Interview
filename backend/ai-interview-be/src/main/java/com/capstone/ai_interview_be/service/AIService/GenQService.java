@@ -1,0 +1,234 @@
+package com.capstone.ai_interview_be.service.AIService;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Service để tích hợp với GenQ AI service (Python/FastAPI)
+ * GenQ service chạy trên port 8000 và cung cấp AI model local
+ */
+@Service
+@Slf4j
+public class GenQService {
+    
+    private final WebClient webClient;
+    
+    @Value("${genq.service.url:http://localhost:8000}")
+    private String genqBaseUrl;
+    
+    @Value("${genq.service.timeout:30}")
+    private int timeoutSeconds;
+    
+    // Cache health check result để tránh gọi quá nhiều
+    private volatile boolean lastHealthCheckResult = false;
+    private volatile long lastHealthCheckTime = 0;
+    private static final long HEALTH_CHECK_CACHE_MS = 5000; // 5 giây
+    
+    public GenQService(WebClient webClient) {
+        this.webClient = webClient;
+    }
+    
+    // Health check endpoint
+    private static final String HEALTH_ENDPOINT = "/health";
+    
+    // API endpoints
+    private static final String INITIAL_QUESTION_ENDPOINT = "/api/v1/initial-question";
+    private static final String GENERATE_QUESTION_ENDPOINT = "/api/v1/generate-question";
+    
+    /**
+     * Kiểm tra GenQ service có hoạt động không
+     * Sử dụng cache để tránh gọi health check quá nhiều lần
+     */
+    public boolean isServiceHealthy() {
+        // Kiểm tra cache
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastHealthCheckTime < HEALTH_CHECK_CACHE_MS) {
+            log.debug("Using cached health check result: {}", lastHealthCheckResult);
+            return lastHealthCheckResult;
+        }
+        
+        // Thực hiện health check thật
+        boolean isHealthy = performHealthCheck();
+        
+        // Cập nhật cache
+        lastHealthCheckResult = isHealthy;
+        lastHealthCheckTime = currentTime;
+        
+        return isHealthy;
+    }
+    
+    /**
+     * Thực hiện health check thật
+     */
+    private boolean performHealthCheck() {
+        try {
+            log.debug("Checking GenQ service health at: {}", genqBaseUrl + HEALTH_ENDPOINT);
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                    .uri(genqBaseUrl + HEALTH_ENDPOINT)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(5)) // Timeout ngắn cho health check
+                    .block();
+            
+            if (response != null && "healthy".equals(response.get("status"))) {
+                log.debug("GenQ service is healthy");
+                return true;
+            }
+            
+            log.warn("GenQ service health check failed: {}", response);
+            return false;
+            
+        } catch (WebClientResponseException e) {
+            log.warn("GenQ service unavailable - HTTP {}: {}", e.getStatusCode(), e.getMessage());
+            return false;
+        } catch (Exception e) {
+            log.warn("GenQ service unavailable: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Tạo câu hỏi phỏng vấn đầu tiên
+     */
+    public String generateFirstQuestion(String role, String level, List<String> skills) {
+        try {
+            log.info("Generating first question using GenQ service for role: {}, level: {}, skills: {}", 
+                    role, level, skills);
+            
+            // Chuẩn bị request body
+            Map<String, Object> requestBody = Map.of(
+                    "role", role != null ? role : "Developer",
+                    "level", level != null ? level : "Mid-level",
+                    "skills", skills != null ? skills : List.of()
+            );
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.post()
+                    .uri(genqBaseUrl + INITIAL_QUESTION_ENDPOINT)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(timeoutSeconds))
+                    .block();
+            
+            if (response != null && response.containsKey("first_question")) {
+                String question = (String) response.get("first_question");
+                log.info("GenQ service generated first question: {}", question);
+                return question;
+            }
+            
+            log.warn("GenQ service returned invalid response for first question: {}", response);
+            return getFallbackFirstQuestion(role, level);
+            
+        } catch (WebClientResponseException e) {
+            log.error("GenQ service error generating first question - HTTP {}: {}", 
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            return getFallbackFirstQuestion(role, level);
+        } catch (Exception e) {
+            log.error("GenQ service exception generating first question", e);
+            return getFallbackFirstQuestion(role, level);
+        }
+    }
+    
+    /**
+     * Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
+     */
+    public String generateNextQuestion(String role, String level, List<String> skills, 
+                                     String previousQuestion, String previousAnswer) {
+        try {
+            log.info("Generating next question using GenQ service for role: {}, level: {}", role, level);
+            
+            // Tạo jd_text từ role và skills
+            String jdText = String.format(
+                "Technical interview for %s position at %s level. Required skills: %s",
+                role != null ? role : "Developer",
+                level != null ? level : "Mid-level", 
+                skills != null && !skills.isEmpty() ? String.join(", ", skills) : "general technical skills"
+            );
+            
+            // Chuẩn bị request body
+            Map<String, Object> requestBody = Map.of(
+                    "jd_text", jdText,
+                    "role", role != null ? role : "Developer",
+                    "level", level != null ? level : "Mid-level",
+                    "skills", skills != null ? skills : List.of(),
+                    "previous_question", previousQuestion != null ? previousQuestion : "",
+                    "previous_answer", previousAnswer != null ? previousAnswer : "",
+                    "max_tokens", 48,
+                    "temperature", 0.7
+            );
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.post()
+                    .uri(genqBaseUrl + GENERATE_QUESTION_ENDPOINT)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(timeoutSeconds))
+                    .block();
+            
+            if (response != null && response.containsKey("question")) {
+                String question = (String) response.get("question");
+                log.info("GenQ service generated next question: {}", question);
+                return question;
+            }
+            
+            log.warn("GenQ service returned invalid response for next question: {}", response);
+            return getFallbackNextQuestion(role, level);
+            
+        } catch (WebClientResponseException e) {
+            log.error("GenQ service error generating next question - HTTP {}: {}", 
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            return getFallbackNextQuestion(role, level);
+        } catch (Exception e) {
+            log.error("GenQ service exception generating next question", e);
+            return getFallbackNextQuestion(role, level);
+        }
+    }
+    
+    /**
+     * Fallback câu hỏi đầu tiên khi GenQ service không khả dụng
+     */
+    private String getFallbackFirstQuestion(String role, String level) {
+        log.info("Using fallback first question for role: {}, level: {}", role, level);
+        return "Please tell me a little bit about yourself and your background.";
+    }
+    
+    /**
+     * Fallback câu hỏi tiếp theo khi GenQ service không khả dụng
+     */
+    private String getFallbackNextQuestion(String role, String level) {
+        log.info("Using fallback next question for role: {}, level: {}", role, level);
+        return "Can you tell me about a challenging project you've worked on recently?";
+    }
+    
+    /**
+     * Lấy thông tin về GenQ service
+     */
+    public Map<String, Object> getServiceInfo() {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                    .uri(genqBaseUrl + HEALTH_ENDPOINT)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(5))
+                    .block();
+            
+            return response != null ? response : Map.of("status", "unknown");
+            
+        } catch (Exception e) {
+            log.error("Failed to get GenQ service info", e);
+            return Map.of("status", "unavailable", "error", e.getMessage());
+        }
+    }
+}

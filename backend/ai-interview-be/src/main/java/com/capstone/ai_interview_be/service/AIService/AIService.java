@@ -17,21 +17,57 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Slf4j
 public class AIService {
     
+    private final GenQService genQService;
     private final OpenRouterService openRouterService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
+    /**
+     * Tạo câu hỏi phỏng vấn đầu tiên
+     * Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng
+     */
+    public String generateFirstQuestion(String role, String level, List<String> skills) {
+        log.info("Generating first question for role: {}, level: {}, skills: {}", role, level, skills);
+        
+        // Thử GenQ service trước
+        if (genQService.isServiceHealthy()) {
+            log.info("Using GenQ service for first question generation");
+            return genQService.generateFirstQuestion(role, level, skills);
+        }
+        
+        // Fallback về OpenRouter
+        log.warn("GenQ service unavailable, falling back to OpenRouter for first question");
+        try {
+            return openRouterService.generateFirstQuestion(role, skills, "English", level);
+        } catch (Exception e) {
+            log.error("Error generating first question with OpenRouter AI, using fallback", e);
+            return "Please tell me a little bit about yourself and your background.";
+        }
+    }
      
-    // Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
-    public String generateNextQuestion(String sessionRole,List<String> sessionSkill,String sessionLanguage, String sessionLevel, 
+    /**
+     * Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
+     * Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng
+     */
+    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
                                      String previousQuestion, String previousAnswer) {
-        log.info("Generating next question using OpenRouter for role: {}, skill: {}, language: {}, level: {}", 
+        log.info("Generating next question for role: {}, skill: {}, language: {}, level: {}", 
                 sessionRole, sessionSkill, sessionLanguage, sessionLevel);
+        
+        // Thử GenQ service trước
+        if (genQService.isServiceHealthy()) {
+            log.info("Using GenQ service for next question generation");
+            return genQService.generateNextQuestion(sessionRole, sessionLevel, sessionSkill, 
+                                                   previousQuestion, previousAnswer);
+        }
+        
+        // Fallback về OpenRouter
+        log.warn("GenQ service unavailable, falling back to OpenRouter for next question");
         try {
             return openRouterService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                                                         previousQuestion, previousAnswer);
         } catch (Exception e) {
             log.error("Error generating next question with OpenRouter AI, falling back to mock", e);
-            return "System generated question could not be created at this time.";
+            return "Can you tell me about a challenging project you've worked on recently?";
         }
     }
     

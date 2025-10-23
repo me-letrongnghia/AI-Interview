@@ -106,6 +106,39 @@ public class OpenRouterService {
     }
     
  
+    // Tạo câu hỏi đầu tiên
+    public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
+        String skillsText = (skills == null || skills.isEmpty())
+                ? "None"
+                : String.join(", ", skills);
+
+        String systemPrompt =
+            "You are an expert TECHNICAL interviewer. " +
+            "Output EXACTLY ONE opening interview question in " + (language == null ? "English" : language) + ". " +
+            "Tailor it to the candidate's role, skills, and level.\n" +
+            "Rules:\n" +
+            "- Start with a friendly greeting and introduction.\n" +
+            "- Ask an appropriate opening question for the given level (" + level + ").\n" +
+            "- Start with: Hello, Hi, Welcome, or similar greeting.\n" +
+            "- End with a question mark (?).\n" +
+            "- Do NOT include preamble, explanations, numbering, or multiple questions.\n" +
+            "- Return only the greeting and question.";
+
+        String userPrompt = String.format(
+            "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate the opening interview question.",
+            role != null ? role : "Unknown Role",
+            level != null ? level : "Junior",
+            skillsText
+        );
+
+        List<OpenRouterRequest.Message> messages = Arrays.asList(
+            new OpenRouterRequest.Message("system", systemPrompt),
+            new OpenRouterRequest.Message("user", userPrompt)
+        );
+
+        return generateResponse(messages);
+    }
+
     // Tạo câu hỏi tiếp theo
     public String generateNextQuestion(
             String role,

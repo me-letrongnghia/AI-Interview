@@ -1,0 +1,461 @@
+{
+	"info": {
+		"_postman_id": "ai-interview-genq-service",
+		"name": "AI Interview GenQ Service",
+		"description": "Collection for testing AI Interview GenQ Service APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if GenQ service is healthy and model is loaded"
+			},
+			"response": [
+				{
+					"name": "Healthy Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n  \"status\": \"healthy\",\n  \"model_loaded\": true,\n  \"model_path\": \"./model/Merge\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Root Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						""
+					]
+				},
+				"description": "Get service information and available endpoints"
+			},
+			"response": [
+				{
+					"name": "Service Info",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								""
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n  \"service\": \"AI Interview - GenQ Service\",\n  \"version\": \"1.0.0\",\n  \"status\": \"running\",\n  \"endpoints\": {\n    \"health\": \"/health\",\n    \"initial\": \"/api/v1/initial-question\",\n    \"generate\": \"/api/v1/generate-question\"\n  }\n}"
+				}
+			]
+		},
+		{
+			"name": "Initial Question - Java Developer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"Java Backend Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"Microservices\", \"PostgreSQL\", \"REST API\"]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/initial-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"initial-question"
+					]
+				},
+				"description": "Generate initial interview question for Java Backend Developer"
+			},
+			"response": [
+				{
+					"name": "Initial Question Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"Java Backend Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"Microservices\", \"PostgreSQL\", \"REST API\"]\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/initial-question",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"initial-question"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n  \"greeting\": \"Hello! Welcome to your Java Backend Developer interview. I'm excited to learn about your experience with Spring Boot, Microservices, PostgreSQL. Let's get started!\",\n  \"first_question\": \"Please tell me a little bit about yourself and your background.\",\n  \"generation_time\": 0.0\n}"
+				}
+			]
+		},
+		{
+			"name": "Initial Question - Frontend Developer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"Frontend Developer\",\n  \"level\": \"Junior\",\n  \"skills\": [\"React\", \"JavaScript\", \"CSS\", \"HTML\"]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/initial-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"initial-question"
+					]
+				},
+				"description": "Generate initial interview question for Frontend Developer"
+			}
+		},
+		{
+			"name": "Initial Question - DevOps Engineer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"DevOps Engineer\",\n  \"level\": \"Senior\",\n  \"skills\": [\"Docker\", \"Kubernetes\", \"AWS\", \"CI/CD\"]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/initial-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"initial-question"
+					]
+				},
+				"description": "Generate initial interview question for DevOps Engineer"
+			}
+		},
+		{
+			"name": "Generate Next Question - Java Developer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jd_text\": \"Technical interview for Java Backend Developer position at Mid-level level. Required skills: Spring Boot, Microservices, PostgreSQL, REST API\",\n  \"role\": \"Java Backend Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"Microservices\", \"PostgreSQL\", \"REST API\"],\n  \"previous_question\": \"Tell me about yourself\",\n  \"previous_answer\": \"I have 3 years experience with Spring Boot and microservices architecture\",\n  \"max_tokens\": 48,\n  \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/generate-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"generate-question"
+					]
+				},
+				"description": "Generate follow-up question based on previous conversation"
+			},
+			"response": [
+				{
+					"name": "Next Question Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jd_text\": \"Building microservices with Spring Boot and PostgreSQL\",\n  \"role\": \"Java Backend Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"Microservices\", \"PostgreSQL\", \"REST API\"],\n  \"previous_question\": \"Tell me about yourself\",\n  \"previous_answer\": \"I have 3 years experience with Spring Boot and microservices architecture\",\n  \"max_tokens\": 48,\n  \"temperature\": 0.7\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/generate-question",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"generate-question"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n  \"question\": \"Can you walk me through how you handle errors in your microservices?\",\n  \"generation_time\": 3.45,\n  \"model_info\": {\n    \"model_path\": \"./model/Merge\",\n    \"max_tokens\": 48,\n    \"temperature\": 0.7\n  }\n}"
+				}
+			]
+		},
+		{
+			"name": "Generate Question - Senior Level",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jd_text\": \"Designing scalable microservices architecture\",\n  \"role\": \"Senior Java Developer\",\n  \"level\": \"Senior\",\n  \"skills\": [\"Spring Boot\", \"Microservices\", \"Docker\", \"Kubernetes\"],\n  \"previous_question\": \"How do you handle database transactions?\",\n  \"previous_answer\": \"I use @Transactional annotation and implement distributed transactions with Saga pattern\",\n  \"max_tokens\": 64,\n  \"temperature\": 0.8\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/generate-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"generate-question"
+					]
+				},
+				"description": "Generate advanced question for Senior level developer"
+			}
+		},
+		{
+			"name": "Generate Question - Different Parameters",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jd_text\": \"Building RESTful APIs with Spring Boot\",\n  \"role\": \"Java Backend Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"REST API\", \"JPA\"],\n  \"previous_question\": \"Tell me about yourself\",\n  \"previous_answer\": \"I have 2 years experience with Spring Boot and REST APIs\",\n  \"max_tokens\": 32,\n  \"temperature\": 0.5\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/generate-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"generate-question"
+					]
+				},
+				"description": "Test with different max_tokens and temperature parameters"
+			}
+		},
+		{
+			"name": "Error Test - Invalid JSON",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"Java Developer\",\n  \"level\": \"Mid-level\",\n  \"skills\": [\"Spring Boot\", \"Java\"]\n  // Missing closing brace\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/initial-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"initial-question"
+					]
+				},
+				"description": "Test error handling with invalid JSON"
+			}
+		},
+		{
+			"name": "Error Test - Missing Required Fields",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"Java Developer\"\n  // Missing level and skills\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/initial-question",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"initial-question"
+					]
+				},
+				"description": "Test error handling with missing required fields"
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}
