@@ -2,3 +2,4 @@ node_modules
 local.env
 firebase-service-account.json
 backend/ai-interview-be/src/main/resources/firebase-service-account.json
+Ai-model
