@@ -45,7 +45,7 @@ genq:
     enabled: ${GENQ_SERVICE_ENABLED:true}
 
 setTime:
-  accessToken: 5 # hours
+  accessToken: 2 # hours
   refreshToken: 72 # hours
 firebase:
   service-account:

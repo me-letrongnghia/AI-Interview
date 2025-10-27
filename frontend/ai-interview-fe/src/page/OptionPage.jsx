@@ -353,11 +353,13 @@ export default function OptionPage() {
       error.response?.data?.message || error.response?.data || "Unknown error";
     if (error.response) {
       const status = error.response.status;
-      toast.error(
-        status === 400
-          ? `Data error: ${message}`
-          : `Error ${status}: ${message}`
-      );
+      if(status != 401){
+        toast.error(
+          status === 400
+            ? `Data error: ${message}`
+            : `Error ${status}: ${message}`
+        );
+      }
     } else if (error.request) {
       toast.error("Unable to connect to server. Please check your connection!");
     } else {

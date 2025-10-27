@@ -59,12 +59,14 @@ public class JwtService {
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Instant now = Instant.now();
-        Instant expiry = now.plus(Duration.ofHours(jwtExpiration));   
+        Instant expiry = now.plus(Duration.ofMinutes(jwtExpiration)); 
+        var roles = userDetails.getAuthorities();  
         return Jwts.builder()
                 .header()
                 .add("typ","jwt")
                 .and()
                 .subject(userDetails.getUsername())
+                .claim("roles", roles)
                 .claims(claims)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
