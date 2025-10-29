@@ -20,7 +20,7 @@ import java.util.List;
 @RequestMapping("/api/interviews")
 @RequiredArgsConstructor
 @CrossOrigin(
-    origins = {"http://localhost:3000", "http://localhost:5000"}, 
+    origins = {"http://localhost:5000"}, 
     allowCredentials = "true",
     methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
 )

@@ -36,6 +36,13 @@ public class InterviewSession {
     private String title;
 
     private String description;
+    
+    // CV và JD text gốc (optional) - để GenQ service tạo câu hỏi contextual
+    @Column(name = "cv_text", columnDefinition = "TEXT")
+    private String cvText;
+    
+    @Column(name = "jd_text", columnDefinition = "TEXT")
+    private String jdText;
 
     
     @Enumerated(EnumType.STRING)

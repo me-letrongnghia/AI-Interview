@@ -166,6 +166,7 @@ export default function OptionPage() {
   const [loading, setLoading] = useState(false);
   const [cvFile, setCvFile] = useState(null);
   const [cvData, setCvData] = useState(null);
+  const [cvRawText, setCvRawText] = useState(""); // Store raw CV text for GenQ service
   const [jdText, setJdText] = useState("");
   const [jdData, setJdData] = useState(null);
   const [customData, setCustomData] = useState({
@@ -381,6 +382,13 @@ export default function OptionPage() {
       const processedData = processApiResponse(response.data);
 
       setCvData(processedData);
+      
+      // Store raw CV text if backend returns it (for GenQ service)
+      // Backend should return extractedText field in future
+      if (response.data.extractedText) {
+        setCvRawText(response.data.extractedText);
+      }
+      
       toast.success("CV analysis completed successfully!");
     } catch (error) {
       if (error.message.includes("File") || error.message.includes("Only")) {
@@ -438,6 +446,8 @@ export default function OptionPage() {
               level: cvData.level || "Fresher",
               skill: cvData.skills || cvData.skill || [],
               language: cvData.language || "English",
+              // Include CV raw text for GenQ service to generate contextual questions
+              cvText: cvRawText || undefined,
             },
       jd: () =>
         !jdData
@@ -447,6 +457,8 @@ export default function OptionPage() {
               level: jdData.level || "Junior",
               skill: jdData.skills || jdData.skill || [],
               language: jdData.language || "English",
+              // Include JD raw text for GenQ service to generate contextual questions
+              jdText: jdText || undefined,
             },
       custom: () =>
         !customData.position ||
@@ -1193,6 +1205,7 @@ Job Description:
                       setSelectedOption("");
                       setCvFile(null);
                       setCvData(null);
+                      setCvRawText(""); // Clear CV raw text
                       setJdText("");
                       setJdData(null);
                       setCustomData({

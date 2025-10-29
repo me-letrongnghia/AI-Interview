@@ -76,7 +76,7 @@ public class GenQService {
                     .uri(genqBaseUrl + HEALTH_ENDPOINT)
                     .retrieve()
                     .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(5)) // Timeout ngắn cho health check
+                    .timeout(Duration.ofSeconds(60)) // Timeout ngắn cho health check
                     .block();
             
             if (response != null && "healthy".equals(response.get("status"))) {
@@ -99,17 +99,26 @@ public class GenQService {
     /**
      * Tạo câu hỏi phỏng vấn đầu tiên
      */
-    public String generateFirstQuestion(String role, String level, List<String> skills) {
+    public String generateFirstQuestion(String role, String level, List<String> skills, 
+                                       String cvText, String jdText) {
         try {
             log.info("Generating first question using GenQ service for role: {}, level: {}, skills: {}", 
                     role, level, skills);
+            log.info("CV text present: {}, JD text present: {}", cvText != null, jdText != null);
             
-            // Chuẩn bị request body
-            Map<String, Object> requestBody = Map.of(
-                    "role", role != null ? role : "Developer",
-                    "level", level != null ? level : "Mid-level",
-                    "skills", skills != null ? skills : List.of()
-            );
+            // Chuẩn bị request body với cv_text và jd_text (nếu có)
+            Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("role", role != null ? role : "Developer");
+            requestBody.put("level", level != null ? level : "Mid-level");
+            requestBody.put("skills", skills != null ? skills : List.of());
+            
+            // Thêm cv_text và jd_text nếu có
+            if (cvText != null && !cvText.trim().isEmpty()) {
+                requestBody.put("cv_text", cvText);
+            }
+            if (jdText != null && !jdText.trim().isEmpty()) {
+                requestBody.put("jd_text", jdText);
+            }
             
             @SuppressWarnings("unchecked")
             Map<String, Object> response = webClient.post()
@@ -140,32 +149,39 @@ public class GenQService {
     }
     
     /**
+     * Tạo câu hỏi phỏng vấn đầu tiên (backward compatibility - không có cv/jd text)
+     */
+    public String generateFirstQuestion(String role, String level, List<String> skills) {
+        return generateFirstQuestion(role, level, skills, null, null);
+    }
+    
+    /**
      * Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
      */
     public String generateNextQuestion(String role, String level, List<String> skills, 
-                                     String previousQuestion, String previousAnswer) {
+                                     String previousQuestion, String previousAnswer,
+                                     String cvText, String jdText) {
         try {
             log.info("Generating next question using GenQ service for role: {}, level: {}", role, level);
+            log.info("CV text present: {}, JD text present: {}", cvText != null, jdText != null);
             
-            // Tạo jd_text từ role và skills
-            String jdText = String.format(
-                "Technical interview for %s position at %s level. Required skills: %s",
-                role != null ? role : "Developer",
-                level != null ? level : "Mid-level", 
-                skills != null && !skills.isEmpty() ? String.join(", ", skills) : "general technical skills"
-            );
+            // Chuẩn bị request body với cv_text và jd_text (nếu có)
+            Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("role", role != null ? role : "Developer");
+            requestBody.put("level", level != null ? level : "Mid-level");
+            requestBody.put("skills", skills != null ? skills : List.of());
+            requestBody.put("previous_question", previousQuestion != null ? previousQuestion : "");
+            requestBody.put("previous_answer", previousAnswer != null ? previousAnswer : "");
+            requestBody.put("max_tokens", 48);
+            requestBody.put("temperature", 0.7);
             
-            // Chuẩn bị request body
-            Map<String, Object> requestBody = Map.of(
-                    "jd_text", jdText,
-                    "role", role != null ? role : "Developer",
-                    "level", level != null ? level : "Mid-level",
-                    "skills", skills != null ? skills : List.of(),
-                    "previous_question", previousQuestion != null ? previousQuestion : "",
-                    "previous_answer", previousAnswer != null ? previousAnswer : "",
-                    "max_tokens", 48,
-                    "temperature", 0.7
-            );
+            // Thêm cv_text và jd_text nếu có
+            if (cvText != null && !cvText.trim().isEmpty()) {
+                requestBody.put("cv_text", cvText);
+            }
+            if (jdText != null && !jdText.trim().isEmpty()) {
+                requestBody.put("jd_text", jdText);
+            }
             
             @SuppressWarnings("unchecked")
             Map<String, Object> response = webClient.post()
@@ -193,6 +209,14 @@ public class GenQService {
             log.error("GenQ service exception generating next question", e);
             return getFallbackNextQuestion(role, level);
         }
+    }
+    
+    /**
+     * Tạo câu hỏi tiếp theo (backward compatibility - không có cv/jd text)
+     */
+    public String generateNextQuestion(String role, String level, List<String> skills, 
+                                     String previousQuestion, String previousAnswer) {
+        return generateNextQuestion(role, level, skills, previousQuestion, previousAnswer, null, null);
     }
     
     /**

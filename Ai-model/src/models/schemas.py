@@ -12,7 +12,8 @@ from src.core.config import (
 
 class GenerateQuestionRequest(BaseModel):
     """Model request để tạo câu hỏi phỏng vấn"""
-    jd_text: str = Field(..., description="Văn bản mô tả công việc", min_length=1)
+    cv_text: Optional[str] = Field(default=None, description="Văn bản CV của ứng viên")
+    jd_text: Optional[str] = Field(default=None, description="Văn bản mô tả công việc (Job Description)")
     role: str = Field(default="Developer", description="Vị trí/chức danh công việc")
     level: str = Field(default="Mid-level", description="Trình độ kinh nghiệm (Junior/Mid-level/Senior)")
     skills: List[str] = Field(default_factory=list, description="Kỹ năng yêu cầu")
@@ -37,6 +38,7 @@ class GenerateQuestionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "cv_text": "Experienced Java developer with 3 years in Spring Boot and microservices",
                 "jd_text": "Building microservices with Spring Boot and PostgreSQL",
                 "role": "Java Backend Developer",
                 "level": "Mid-level",
