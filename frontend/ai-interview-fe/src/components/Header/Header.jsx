@@ -16,7 +16,7 @@ function Header() {
     { to: "/options", label: "Services" },
     { to: "/interview", label: "Blog" },
     { to: "#", label: "Help Center", external: true },
-    { to: "#", label: "About", external: true },
+    { to: "/about", label: "About", external: true },
   ];
 
   const handleLogout = () => {

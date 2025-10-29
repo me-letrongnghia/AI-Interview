@@ -22,10 +22,10 @@ googleProvider.setCustomParameters({
   prompt: "select_account",
 });
 
-// ⚙️ Cấu hình GitHub Provider
+// Cấu hình GitHub Provider
 export const githubProvider = new GithubAuthProvider();
 githubProvider.setCustomParameters({
   allow_signup: "true", // Cho phép người dùng đăng ký tài khoản GitHub mới (nếu cần)
 });
-
+githubProvider.addScope("user:email");
 export default app;
