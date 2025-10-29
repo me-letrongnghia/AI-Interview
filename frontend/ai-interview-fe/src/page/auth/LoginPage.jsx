@@ -14,9 +14,9 @@ export default function LoginPage() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const Navigate = useNavigate();
-  
+
   const validateEmail = (value) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!value.trim()) {
@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   const handleLoginSuccess = async (data) => {
-    const response = await Auth.LoginFirebase(data);
+    const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
     if (response.status === 200) {
       const user = {
         id: response.data.id,
@@ -72,18 +72,18 @@ export default function LoginPage() {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate trước khi submit
     const emailErr = validateEmail(email);
     const passwordErr = validatePassword(password);
-    
+
     setEmailError(emailErr);
     setPasswordError(passwordErr);
-    
+
     if (emailErr || passwordErr) {
       return;
     }
-    
+
     setIsLoading(true);
     const requestLogin = {
       email,
@@ -133,7 +133,9 @@ export default function LoginPage() {
             onChange={handleEmailChange}
             placeholder="username@gmail.com"
             className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${
-              emailError ? "border-red-500" : "border-green-300 focus:border-green-500"
+              emailError
+                ? "border-red-500"
+                : "border-green-300 focus:border-green-500"
             }`}
           />
           {emailError && (
@@ -178,14 +180,25 @@ export default function LoginPage() {
             onClick={handleSubmit}
             disabled={isLoading}
             className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
-              isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-700"
+              isLoading
+                ? "bg-green-600 cursor-not-allowed"
+                : "bg-green-500 hover:bg-green-700"
             }`}
           >
             {isLoading ? (
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <div
+                  className="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style={{ animationDelay: "0ms" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style={{ animationDelay: "150ms" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style={{ animationDelay: "300ms" }}
+                ></div>
               </div>
             ) : (
               "Sign in"

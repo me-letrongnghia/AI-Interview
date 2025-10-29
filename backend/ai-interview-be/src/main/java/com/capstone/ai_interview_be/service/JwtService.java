@@ -59,7 +59,7 @@ public class JwtService {
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Instant now = Instant.now();
-        Instant expiry = now.plus(Duration.ofMinutes(jwtExpiration)); 
+        Instant expiry = now.plus(Duration.ofHours(jwtExpiration)); 
         var roles = userDetails.getAuthorities();  
         return Jwts.builder()
                 .header()

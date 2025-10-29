@@ -11,11 +11,16 @@ import DeviceCheckPage from "./page/DeviceCheckPage";
 import ResetPassword from "./page/auth/ResetPassword";
 import OtpPage from "./page/auth/OtpPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { AboutPage } from "./page/AboutPage";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+  },
+  {
+    path: "/about",
+    element: <AboutPage />,
   },
   {
     path: "/interview/:sessionId",
