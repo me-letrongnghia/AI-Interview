@@ -23,6 +23,10 @@ public class JDController {
    @PostMapping("/scan")
     public ResponseEntity<DataScanResponse> scanJD(@RequestBody String jdText) {
         DataScanResponse jdData = aiService.extractData(jdText);
+        
+        // Include JD text for GenQ service to generate contextual questions
+        jdData.setExtractedText(jdText);
+        
         return ResponseEntity.ok(jdData);
     }
 }

@@ -1,6 +1,12 @@
 """
 FastAPI application factory and lifespan management
 """
+# MUST import this FIRST to redirect temp/cache to D: drive
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+import set_temp_env  # noqa: F401 (imported but unused - sets env vars)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

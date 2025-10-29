@@ -41,6 +41,12 @@ public class InterviewSessionService {
         session.setUserId(request.getUserId());
         session.setTitle(request.getRole() + " - " + request.getLevel() + " Interview");
         
+        // Lưu CV và JD text nếu có
+        session.setCvText(request.getCvText());
+        session.setJdText(request.getJdText());
+        log.info("CV text present: {}, JD text present: {}", 
+                request.getCvText() != null, request.getJdText() != null);
+        
         // Tạo description từ skills
         if (request.getSkill() != null && !request.getSkill().isEmpty()) {
             String skillsText = String.join(", ", request.getSkill());
@@ -55,14 +61,16 @@ public class InterviewSessionService {
         InterviewSession savedSession = sessionRepository.save(session);
         log.info("Created interview session with ID: {}", savedSession.getId());
         
-        // Tạo câu hỏi đầu tiên bằng AI
+        // Tạo câu hỏi đầu tiên bằng AI với CV/JD text
         String firstQuestionContent;
         try {
             log.info("Generating first question using AI for role: {}, level: {}", request.getRole(), request.getLevel());
             firstQuestionContent = aiService.generateFirstQuestion(
                 request.getRole(), 
                 request.getLevel(), 
-                request.getSkill() != null ? request.getSkill() : java.util.Arrays.asList()
+                request.getSkill() != null ? request.getSkill() : java.util.Arrays.asList(),
+                request.getCvText(),
+                request.getJdText()
             );
             log.info("AI generated first question: {}", firstQuestionContent);
         } catch (Exception e) {

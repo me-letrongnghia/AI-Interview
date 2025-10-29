@@ -1,6 +1,7 @@
 ﻿import time
 import logging
 import torch
+from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.core.config import MODEL_PATH
@@ -79,11 +80,22 @@ class ModelManager:
                 # CPU: Sử dụng float32 với tối ưu hóa bộ nhớ
                 logger.info("Dang tai model cho CPU (toi uu bo nho)")
                 logger.info("Toi uu hoa: max_tokens=48, temp=0.75, num_beams=1")
+                logger.info("Dang su dung che do tai tung phan de giam ap luc RAM...")
+                
+                # Tạo thư mục offload trong project directory (ổ D:) thay vì C:
+                project_root = Path(__file__).parent.parent.parent  # Ai-model directory
+                offload_path = project_root / "offload_temp"
+                offload_path.mkdir(exist_ok=True)
+                logger.info(f"Offload folder: {offload_path}")
+                
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_path,
                     torch_dtype=torch.float32,
                     low_cpu_mem_usage=True,
-                    trust_remote_code=True
+                    trust_remote_code=True,
+                    max_memory={0: "6GB"},  # Giới hạn RAM sử dụng
+                    offload_folder=str(offload_path),  # Offload vào ổ D: thay vì C:
+                    offload_state_dict=True
                 ).eval()
                 logger.info("Toi uu hoa: Du kien 12-15s/cau hoi tren CPU (cai thien tu 32s)")
             

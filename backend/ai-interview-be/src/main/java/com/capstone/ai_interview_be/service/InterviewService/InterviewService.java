@@ -14,8 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InterviewService {
     
     private final InterviewSessionRepository sessionRepository;
@@ -54,14 +56,19 @@ public class InterviewService {
             // feedback
         );
         
-        // Tạo câu hỏi tiếp theo bằng AI
+        // Tạo câu hỏi tiếp theo bằng AI với CV/JD text từ session
+        log.info("Generating next question for session {}, CV text: {}, JD text: {}", 
+                sessionId, session.getCvText() != null, session.getJdText() != null);
+        
         String nextQuestionContent = aiService.generateNextQuestion(
             session.getRole(),  
             session.getSkill(),
-            session.getLanguage(),  // sessionLanguage - Fixed order
-            session.getLevel(),     // sessionLevel - Fixed order
+            session.getLanguage(),  
+            session.getLevel(),     
             question.getContent(), 
-            answerMessage.getContent()
+            answerMessage.getContent(),
+            session.getCvText(),
+            session.getJdText()
         );
         
         // Lưu câu hỏi tiếp theo vào database

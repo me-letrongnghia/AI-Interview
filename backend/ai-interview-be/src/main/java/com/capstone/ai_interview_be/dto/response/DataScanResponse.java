@@ -18,6 +18,16 @@ public class DataScanResponse {
     private List<String> skill;
 
     private String language;
-
+    
+    // Raw extracted text from CV/JD for GenQ service
+    private String extractedText;
+    
+    // Constructor without extractedText for backward compatibility
+    public DataScanResponse(String role, String level, List<String> skill, String language) {
+        this.role = role;
+        this.level = level;
+        this.skill = skill;
+        this.language = language;
+    }
 
 }

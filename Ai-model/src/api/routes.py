@@ -91,9 +91,10 @@ async def health_check():
 @router.post("/api/v1/generate-question", response_model=GenerateQuestionResponse)
 async def generate_question(request: GenerateQuestionRequest):
     """
-    Tạo câu hỏi phỏng vấn kỹ thuật dựa trên job description và lịch sử hội thoại
+    Tạo câu hỏi phỏng vấn kỹ thuật dựa trên CV và/hoặc Job Description và lịch sử hội thoại
     
-    - **jd_text**: Mô tả công việc hoặc bối cảnh kỹ thuật
+    - **cv_text**: Văn bản CV của ứng viên (tùy chọn, ít nhất 1 trong cv_text hoặc jd_text phải có)
+    - **jd_text**: Mô tả công việc/Job Description (tùy chọn, ít nhất 1 trong cv_text hoặc jd_text phải có)
     - **role**: Vị trí/chức danh (vd: "Java Backend Developer")
     - **level**: Trình độ kinh nghiệm (Junior/Mid-level/Senior)
     - **skills**: Danh sách kỹ năng yêu cầu
@@ -105,6 +106,18 @@ async def generate_question(request: GenerateQuestionRequest):
     try:
         context_type = "follow-up" if request.previous_answer else "initial"
         logger.info(f"Dang tao cau hoi {context_type} cho vi tri: {request.role}, cap do: {request.level}")
+        
+        # Log thông tin về CV/JD text
+        has_cv = bool(request.cv_text and request.cv_text.strip())
+        has_jd = bool(request.jd_text and request.jd_text.strip())
+        if not has_cv and not has_jd:
+            logger.warning("Khong co cv_text hoac jd_text - cau hoi se duoc tao chi dua tren role/level/skills")
+        elif has_cv and has_jd:
+            logger.info("Co ca cv_text va jd_text")
+        elif has_cv:
+            logger.info("Chi co cv_text")
+        else:
+            logger.info("Chi co jd_text")
         
         start_time = time.time()
         
@@ -118,6 +131,7 @@ async def generate_question(request: GenerateQuestionRequest):
         
         # Tạo câu hỏi với ngữ cảnh hội thoại
         question = question_generator.generate(
+            cv_text=request.cv_text,
             jd_text=request.jd_text,
             role=request.role,
             level=request.level,

@@ -30,5 +30,9 @@ public class CreateInterviewSessionRequest {
 
     private InterviewSession.Source source;
 
+    // CV và JD text gốc (optional) - để GenQ service tạo câu hỏi tốt hơn
+    private String cvText;
+    
+    private String jdText;
 
 }

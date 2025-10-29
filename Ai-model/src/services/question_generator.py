@@ -16,7 +16,8 @@ class QuestionGenerator:
     
     def _build_prompt(
         self, 
-        jd_text: str, 
+        jd_text: str,
+        cv_text: str,
         role: str, 
         level: str, 
         skills: List[str],
@@ -24,6 +25,9 @@ class QuestionGenerator:
         previous_answer: Optional[str] = None
     ) -> str:
         """Xây dựng prompt để tạo câu hỏi"""
+        cv_text = cv_text or ""
+        jd_text = jd_text or ""
+        
         system_prompt = (
             "You are an experienced HR interviewer. Ask natural, conversational technical interview questions.\n\n"
             "CRITICAL RULES:\n"
@@ -52,6 +56,14 @@ class QuestionGenerator:
         
         skills_str = ", ".join(skills) if skills else "technical skills"
         
+        # Xây dựng context từ CV và/hoặc JD
+        context_parts = []
+        if cv_text:
+            context_parts.append(f"Candidate CV: {cv_text[:500]}")  # Giới hạn độ dài
+        if jd_text:
+            context_parts.append(f"Job Requirements: {jd_text[:500]}")  # Giới hạn độ dài
+        context_str = "\n".join(context_parts) if context_parts else ""
+        
         # Build context based on conversation history
         if previous_question and previous_answer:
             # Trích xuất các điểm chính từ câu trả lời trước để tham chiếu
@@ -63,20 +75,28 @@ class QuestionGenerator:
                 "- Sound genuinely curious and engaged\n"
                 "- AVOID starting with Explain/Describe/Define\n"
             )
-            user_prompt = (
-                f"Role: {role} ({level})\n"
-                f"Skills: {skills_str}\n\n"
-                f"They were asked: \"{previous_question}\"\n"
-                f"They answered: \"{previous_answer}\"\n\n"
-                f"Ask a natural follow-up question (use 'Can you...', 'How would you...', 'What would you do...', etc.):"
-            )
+            user_prompt_parts = [
+                f"Role: {role} ({level})",
+                f"Skills: {skills_str}"
+            ]
+            if context_str:
+                user_prompt_parts.append(f"\n{context_str}")
+            user_prompt_parts.extend([
+                f"\nThey were asked: \"{previous_question}\"",
+                f"They answered: \"{previous_answer}\"\n",
+                "Ask a natural follow-up question (use 'Can you...', 'How would you...', 'What would you do...', etc.):"
+            ])
+            user_prompt = "\n".join(user_prompt_parts)
         else:
-            # Câu hỏi đầu tiên - đã được sửa để đơn giản
-            user_prompt = (
-                f"Role: {role} ({level})\n"
-                f"Skills: {skills_str}\n\n"
-                f"Ask the opening question:"
-            )
+            # Câu hỏi đầu tiên
+            user_prompt_parts = [
+                f"Role: {role} ({level})",
+                f"Skills: {skills_str}"
+            ]
+            if context_str:
+                user_prompt_parts.append(f"\n{context_str}")
+            user_prompt_parts.append("\nAsk the opening question:")
+            user_prompt = "\n".join(user_prompt_parts)
         
         return f"<|system|>\n{system_prompt}\n<|user|>\n{user_prompt}\n<|assistant|>\n"
     
@@ -181,7 +201,8 @@ class QuestionGenerator:
     
     def generate(
         self,
-        jd_text: str,
+        cv_text: Optional[str] = None,
+        jd_text: Optional[str] = None,
         role: str = "Developer",
         level: str = "Mid-level",
         skills: Optional[List[str]] = None,
@@ -194,7 +215,8 @@ class QuestionGenerator:
         Tạo câu hỏi phỏng vấn
         
         Args:
-            jd_text: Văn bản mô tả công việc
+            cv_text: Văn bản CV của ứng viên (Optional)
+            jd_text: Văn bản mô tả công việc (Optional, ít nhất 1 trong 2 phải có)
             role: Vị trí/chức danh công việc
             level: Trình độ kinh nghiệm
             skills: Danh sách kỹ năng yêu cầu
@@ -221,8 +243,13 @@ class QuestionGenerator:
             
             # Xây dựng prompt với ngữ cảnh
             prompt = self._build_prompt(
-                jd_text, role, level, skills,
-                previous_question, previous_answer
+                jd_text=jd_text,
+                cv_text=cv_text,
+                role=role,
+                level=level,
+                skills=skills,
+                previous_question=previous_question,
+                previous_answer=previous_answer
             )
             
             logger.debug(f"Built prompt with length: {len(prompt)}")
