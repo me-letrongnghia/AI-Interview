@@ -104,7 +104,6 @@ public class OpenRouterService {
             return DEFAULT_ERROR_MESSAGE;
         }
     }
-    
  
     // Tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
@@ -140,13 +139,7 @@ public class OpenRouterService {
     }
 
     // Tạo câu hỏi tiếp theo
-    public String generateNextQuestion(
-            String role,
-            List<String> skills,
-            String language,
-            String level,
-            String previousQuestion,
-            String previousAnswer) {
+    public String generateNextQuestion(String role, List<String> skills, String language, String level, String previousQuestion, String previousAnswer) {
 
         String skillsText = (skills == null || skills.isEmpty())
                 ? "None"
@@ -181,7 +174,8 @@ public class OpenRouterService {
         return generateResponse(messages);
     }
 
-    public String generateData(String cvText){
+    // Trích xuất dữ liệu từ CV, JD
+    public String generateData(String Text){
         String systemPrompt =
             "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
             "Analyze the CV carefully and extract the following information:\n\n" +
@@ -198,35 +192,30 @@ public class OpenRouterService {
             "'Senior' (5+ years experience), " +
             "'Lead' (leadership experience), " +
             "'Principal' (senior leadership)\n\n" +
-            "3. Skills: Extract the TOP 3-5 MOST IMPORTANT technical skills mentioned, prioritizing: " +
-            "primary programming languages, main frameworks, core databases, essential tools. " +
-            "Select only the most relevant skills for the identified role.\n\n" +
-            "4. Language: Determine the primary language of the CV content\n\n" +
+            "3. Skills: Extract ALL technical skills and frameworks mentioned in the CV. " +
+            "Include all relevant programming languages, frameworks, databases, tools, and technologies. " +
+            "Avoid duplicates, but keep the full list.\n\n" +
+            "4. Language: Always set this field to 'en' by default.\n\n" +
             "CRITICAL INSTRUCTIONS:\n" +
-            "- You MUST analyze the actual CV content, do NOT use default values\n" +
             "- Return ONLY a valid JSON object with exact keys: role, level, skill, language\n" +
-            "- The 'skill' field MUST be an array of 3-5 strings containing the MOST IMPORTANT skills only\n" +
+            "- The 'skill' field MUST be an array of ALL detected skills and frameworks\n" +
+            "- If you cannot determine a field from the CV content, use null for that field EXCEPT 'language'\n" +
+            "- Always set 'language': 'en'\n" +
             "- If CV mentions web development with HTML/CSS/JS/PHP = Full Stack Developer\n" +
             "- If CV is a student with projects but no work experience = Intern or Fresher\n" +
-            "- Focus on the core skills that best represent the candidate's expertise\n" +
-            "- Prioritize programming languages and frameworks over tools\n" +
-            "- If you cannot determine a field from the CV content, use null for that field\n" +
-            "- If no clear role can be determined, set role to null\n" +
-            "- If no experience level can be assessed, set level to null\n" +
-            "- If no technical skills are found, set skill to null\n" +
-            "- If language cannot be determined, set language to null\n" +
+            "- Prioritize programming languages and frameworks when identifying role, but list all skills\n" +
+            "- Return only the JSON object, with no extra explanation or formatting\n" +
             "Example output formats:\n" +
-            "Complete data: {\"role\":\"Full Stack Developer\",\"level\":\"Fresher\",\"skill\":[\"Java\",\"JavaScript\",\"React\",\"MySQL\"],\"language\":\"English\"}\n" +
-            "Partial data: {\"role\":\"Software Engineer\",\"level\":null,\"skill\":[\"Python\",\"Django\"],\"language\":\"English\"}\n" +
-            "Missing data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"English\"}";
+            "Complete data: {\"role\":\"Full Stack Developer\",\"level\":\"Fresher\",\"skill\":[\"Java\",\"JavaScript\",\"React\",\"MySQL\",\"Docker\"],\"language\":\"en\"}\n" +
+            "Partial data: {\"role\":\"Software Engineer\",\"level\":null,\"skill\":[\"Python\",\"Django\",\"Flask\"],\"language\":\"en\"}\n" +
+            "Missing data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}";
 
         String userPrompt = String.format(
             "CV Content to analyze:\n\n%s\n\n" +
-            "Based on this CV, extract the role, level, and TOP 3-5 most important skills, and language. " +
-            "Focus on the most significant technical skills that define this person's expertise. " +
-            "If any information cannot be clearly determined from the CV content, return null for that field. " +
+            "Based on this CV, extract the role, level, ALL mentioned technical skills/frameworks, and language. " +
+            "If any information cannot be clearly determined from the CV content, return null for that field except 'language'. " +
             "Return ONLY the JSON object with the extracted data.",
-            cvText != null ? cvText : ""
+            Text != null ? Text : ""
         );
 
         List<OpenRouterRequest.Message> messages = Arrays.asList(

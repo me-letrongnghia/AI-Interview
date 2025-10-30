@@ -16,7 +16,7 @@ import com.capstone.ai_interview_be.dto.request.RegisterRequest;
 import com.capstone.ai_interview_be.dto.request.ResetPasswordRequest;
 import com.capstone.ai_interview_be.dto.response.UserProfileResponse;
 import com.capstone.ai_interview_be.service.AuthService;
-import com.capstone.ai_interview_be.service.emailService.VerifyCodeService;
+import com.capstone.ai_interview_be.service.EmailService.VerifyCodeService;
 
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +28,8 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
     private final AuthService authService;
     private final VerifyCodeService verificationService;
+
+    // Phương thức để đăng nhập người dùng và tạo JWT token
     @PostMapping("/login")
     public ResponseEntity<UserProfileResponse> authLogin(@RequestBody LoginRequest request,HttpServletResponse response) {
         // Logic to authenticate user and generate JWT token
@@ -45,6 +47,7 @@ public class AuthController {
         return ResponseEntity.ok(profileResponse);
     }
     
+    // Phương thức để đăng ký người dùng mới
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) throws MessagingException {
         // Logic to register user
@@ -52,6 +55,7 @@ public class AuthController {
         return ResponseEntity.ok(responseMessage);
     }
 
+    // Phương thức để đăng nhập người dùng bằng Firebase và tạo JWT token
     @PostMapping("/loginFirebase")
     public ResponseEntity<UserProfileResponse> loginWithFirebase(@RequestBody FireRequest idToken,HttpServletResponse response) {
         // Logic to authenticate user with Firebase and generate JWT token
@@ -68,12 +72,16 @@ public class AuthController {
         profileResponse.setRefresh_token(null);
         return ResponseEntity.ok(profileResponse);
     }
+    
+    // Phương thức để làm mới JWT token sử dụng refresh token từ cookie
     @PostMapping("/refresh-token")
     public ResponseEntity<UserProfileResponse> refreshToken(@CookieValue(name = "refreshToken") String refreshToken) {
         // Logic to refresh JWT token
         UserProfileResponse profileResponse = authService.refreshToken(refreshToken);
         return ResponseEntity.ok(profileResponse);
     }
+
+    // Phương thức để đăng xuất người dùng
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletResponse response) {
         // Clear the refresh token cookie
@@ -87,16 +95,19 @@ public class AuthController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
+    // Phương thức để xác minh email người dùng bằng mã xác nhận
     @PostMapping("/verify-email")
     public ResponseEntity<String> verifyEmail(@RequestParam("code") String code) {
        return ResponseEntity.ok(verificationService.verifyEmail(code));
     }
 
+    // Phương thức để gửi lại mã xác nhận email cho người dùng
     @PostMapping("/resend-verification")
     public ResponseEntity<String> resendVerification(@RequestParam("email") String email) throws MessagingException {
         return ResponseEntity.ok(verificationService.generateOrUpdateCodeForgotPassword(email));
     }
     
+    // Phương thức để đặt lại mật khẩu người dùng
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest newPassword ){
         return ResponseEntity.ok(authService.resetPassword(newPassword));

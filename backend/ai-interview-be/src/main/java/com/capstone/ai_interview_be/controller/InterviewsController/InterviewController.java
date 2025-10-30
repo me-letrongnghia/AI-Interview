@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.controller;
+package com.capstone.ai_interview_be.controller.InterviewsController;
 
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionRequest;
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionResponse;

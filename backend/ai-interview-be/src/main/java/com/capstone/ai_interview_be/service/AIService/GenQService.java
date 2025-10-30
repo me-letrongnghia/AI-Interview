@@ -42,10 +42,7 @@ public class GenQService {
     private static final String INITIAL_QUESTION_ENDPOINT = "/api/v1/initial-question";
     private static final String GENERATE_QUESTION_ENDPOINT = "/api/v1/generate-question";
     
-    /**
-     * Kiểm tra GenQ service có hoạt động không
-     * Sử dụng cache để tránh gọi health check quá nhiều lần
-     */
+    // Phương thức kiểm tra trạng thái hoạt động của GenQ service với caching
     public boolean isServiceHealthy() {
         // Kiểm tra cache
         long currentTime = System.currentTimeMillis();
@@ -64,9 +61,7 @@ public class GenQService {
         return isHealthy;
     }
     
-    /**
-     * Thực hiện health check thật
-     */
+    // Thực hiện health check thực tế
     private boolean performHealthCheck() {
         try {
             log.debug("Checking GenQ service health at: {}", genqBaseUrl + HEALTH_ENDPOINT);
@@ -96,9 +91,26 @@ public class GenQService {
         }
     }
     
-    /**
-     * Tạo câu hỏi phỏng vấn đầu tiên
-     */
+    // Phương thức để lấy thông tin về GenQ service
+    public Map<String, Object> getServiceInfo() {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                    .uri(genqBaseUrl + HEALTH_ENDPOINT)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(5))
+                    .block();
+            
+            return response != null ? response : Map.of("status", "unknown");
+            
+        } catch (Exception e) {
+            log.error("Failed to get GenQ service info", e);
+            return Map.of("status", "unavailable", "error", e.getMessage());
+        }
+    }
+
+    // Phương thức để tạo câu hỏi phỏng vấn đầu tiên với CV và JD text
     public String generateFirstQuestion(String role, String level, List<String> skills, 
                                        String cvText, String jdText) {
         try {
@@ -136,34 +148,29 @@ public class GenQService {
             }
             
             log.warn("GenQ service returned invalid response for first question: {}", response);
-            return getFallbackFirstQuestion(role, level);
+            return getFallbackError(role, level);
             
         } catch (WebClientResponseException e) {
             log.error("GenQ service error generating first question - HTTP {}: {}", 
                     e.getStatusCode(), e.getResponseBodyAsString());
-            return getFallbackFirstQuestion(role, level);
+            return getFallbackError(role, level);
         } catch (Exception e) {
             log.error("GenQ service exception generating first question", e);
-            return getFallbackFirstQuestion(role, level);
+            return getFallbackError(role, level);
         }
     }
     
-    /**
-     * Tạo câu hỏi phỏng vấn đầu tiên (backward compatibility - không có cv/jd text)
-     */
+    // Phương thức để tạo câu hỏi phỏng vấn đầu tiên 
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
-    
-    /**
-     * Tạo câu hỏi tiếp theo dựa trên câu hỏi và trả lời trước đó
-     */
+
+    // Phương thức để tạo câu hỏi tiếp theo với CV và JD text
     public String generateNextQuestion(String role, String level, List<String> skills, 
                                      String previousQuestion, String previousAnswer,
                                      String cvText, String jdText) {
         try {
-            log.info("Generating next question using GenQ service for role: {}, level: {}", role, level);
-            log.info("CV text present: {}, JD text present: {}", cvText != null, jdText != null);
+            log.info("Generating next question using GenQ service");
             
             // Chuẩn bị request body với cv_text và jd_text (nếu có)
             Map<String, Object> requestBody = new java.util.HashMap<>();
@@ -174,8 +181,7 @@ public class GenQService {
             requestBody.put("previous_answer", previousAnswer != null ? previousAnswer : "");
             requestBody.put("max_tokens", 48);
             requestBody.put("temperature", 0.7);
-            
-            // Thêm cv_text và jd_text nếu có
+
             if (cvText != null && !cvText.trim().isEmpty()) {
                 requestBody.put("cv_text", cvText);
             }
@@ -183,6 +189,7 @@ public class GenQService {
                 requestBody.put("jd_text", jdText);
             }
             
+            // Gọi GenQ service để lấy câu hỏi tiếp theo
             @SuppressWarnings("unchecked")
             Map<String, Object> response = webClient.post()
                     .uri(genqBaseUrl + GENERATE_QUESTION_ENDPOINT)
@@ -194,65 +201,31 @@ public class GenQService {
             
             if (response != null && response.containsKey("question")) {
                 String question = (String) response.get("question");
-                log.info("GenQ service generated next question: {}", question);
                 return question;
             }
             
             log.warn("GenQ service returned invalid response for next question: {}", response);
-            return getFallbackNextQuestion(role, level);
+            return getFallbackError(role, level);
             
         } catch (WebClientResponseException e) {
-            log.error("GenQ service error generating next question - HTTP {}: {}", 
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            return getFallbackNextQuestion(role, level);
+            log.error("GenQ service error generating next question - HTTP {}: {}",e.getStatusCode(), e.getResponseBodyAsString());
+            return getFallbackError(role, level);
         } catch (Exception e) {
             log.error("GenQ service exception generating next question", e);
-            return getFallbackNextQuestion(role, level);
+            return getFallbackError(role, level);
         }
     }
     
-    /**
-     * Tạo câu hỏi tiếp theo (backward compatibility - không có cv/jd text)
-     */
+    // Phương thức để tạo câu hỏi tiếp theo
     public String generateNextQuestion(String role, String level, List<String> skills, 
                                      String previousQuestion, String previousAnswer) {
         return generateNextQuestion(role, level, skills, previousQuestion, previousAnswer, null, null);
     }
-    
-    /**
-     * Fallback câu hỏi đầu tiên khi GenQ service không khả dụng
-     */
-    private String getFallbackFirstQuestion(String role, String level) {
-        log.info("Using fallback first question for role: {}, level: {}", role, level);
-        return "Please tell me a little bit about yourself and your background.";
+
+    // Fallback error nếu GenQ service không khả dụng
+    private String getFallbackError(String role, String level) {
+        log.info("Using fallback error for role: {}, level: {}", role, level);
+        return "An error occurred while generating the question.";
     }
     
-    /**
-     * Fallback câu hỏi tiếp theo khi GenQ service không khả dụng
-     */
-    private String getFallbackNextQuestion(String role, String level) {
-        log.info("Using fallback next question for role: {}, level: {}", role, level);
-        return "Can you tell me about a challenging project you've worked on recently?";
-    }
-    
-    /**
-     * Lấy thông tin về GenQ service
-     */
-    public Map<String, Object> getServiceInfo() {
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = webClient.get()
-                    .uri(genqBaseUrl + HEALTH_ENDPOINT)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(5))
-                    .block();
-            
-            return response != null ? response : Map.of("status", "unknown");
-            
-        } catch (Exception e) {
-            log.error("Failed to get GenQ service info", e);
-            return Map.of("status", "unavailable", "error", e.getMessage());
-        }
-    }
 }

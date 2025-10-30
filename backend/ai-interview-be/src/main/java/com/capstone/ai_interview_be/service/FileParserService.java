@@ -120,7 +120,6 @@ public class FileParserService {
         return tesseract;
     }
 
-
     // Parse DOCX files
     private String parseDOCX(MultipartFile file) throws IOException {
         try (XWPFDocument doc = new XWPFDocument(file.getInputStream());

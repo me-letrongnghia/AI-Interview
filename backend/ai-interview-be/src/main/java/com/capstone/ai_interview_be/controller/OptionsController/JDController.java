@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.controller;
+package com.capstone.ai_interview_be.controller.OptionsController;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -20,13 +20,15 @@ public class JDController {
     
     private final AIService aiService;
 
+    // Phương thức để quét và trích xuất dữ liệu từ JD
    @PostMapping("/scan")
     public ResponseEntity<DataScanResponse> scanJD(@RequestBody String jdText) {
         DataScanResponse jdData = aiService.extractData(jdText);
         
-        // Include JD text for GenQ service to generate contextual questions
         jdData.setExtractedText(jdText);
         
         return ResponseEntity.ok(jdData);
     }
+
+    
 }

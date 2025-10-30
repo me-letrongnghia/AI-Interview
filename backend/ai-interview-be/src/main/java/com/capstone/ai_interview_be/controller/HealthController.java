@@ -11,9 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Health check endpoints để monitor các services
- */
+// Controller để kiểm tra trạng thái hệ thống và các dịch vụ AI
 @RestController
 @RequestMapping("/api/health")
 @RequiredArgsConstructor
@@ -22,9 +20,7 @@ public class HealthController {
     
     private final GenQService genQService;
     
-    /**
-     * Kiểm tra trạng thái backend
-     */
+    // Kiểm tra trạng thái hệ thống backend
     @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> health = new HashMap<>();
@@ -34,10 +30,8 @@ public class HealthController {
         
         return ResponseEntity.ok(health);
     }
-    
-    /**
-     * Kiểm tra trạng thái GenQ AI service
-     */
+
+    // Kiểm tra trạng thái dịch vụ GenQ AI
     @GetMapping("/genq")
     public ResponseEntity<Map<String, Object>> genqHealthCheck() {
         Map<String, Object> health = new HashMap<>();

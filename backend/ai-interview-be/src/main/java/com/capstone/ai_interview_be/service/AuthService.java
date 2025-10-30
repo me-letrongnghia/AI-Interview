@@ -18,8 +18,8 @@ import com.capstone.ai_interview_be.dto.request.ResetPasswordRequest;
 import com.capstone.ai_interview_be.dto.response.UserProfileResponse;
 import com.capstone.ai_interview_be.model.UserEntity;
 import com.capstone.ai_interview_be.repository.UserRepository;
-import com.capstone.ai_interview_be.service.emailService.VerifyCodeService;
-import com.capstone.ai_interview_be.service.userService.CustomUserDetails;
+import com.capstone.ai_interview_be.service.EmailService.VerifyCodeService;
+import com.capstone.ai_interview_be.service.UserService.CustomUserDetails;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 
