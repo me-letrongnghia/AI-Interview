@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service.UserService;
+package com.capstone.ai_interview_be.service.userService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

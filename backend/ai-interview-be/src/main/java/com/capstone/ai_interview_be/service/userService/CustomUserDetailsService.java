@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service.UserService;
+package com.capstone.ai_interview_be.service.userService;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

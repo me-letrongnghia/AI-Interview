@@ -16,7 +16,7 @@ import com.capstone.ai_interview_be.dto.request.RegisterRequest;
 import com.capstone.ai_interview_be.dto.request.ResetPasswordRequest;
 import com.capstone.ai_interview_be.dto.response.UserProfileResponse;
 import com.capstone.ai_interview_be.service.AuthService;
-import com.capstone.ai_interview_be.service.EmailService.VerifyCodeService;
+import com.capstone.ai_interview_be.service.emailService.VerifyCodeService;
 
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
