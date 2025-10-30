@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.controller;
+package com.capstone.ai_interview_be.controller.OptionsController;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,7 @@ public class CVController {
     private final FileParserService fileParserService;
     private final AIService aiService;
 
-    // Endpoint để scan và trích xuất dữ liệu từ CV
+    // Phương thức để quét và trích xuất dữ liệu từ CV
     @PostMapping("/scan")
     public ResponseEntity<DataScanResponse> scanCV(
         @RequestParam("file") MultipartFile file) {
@@ -36,8 +36,6 @@ public class CVController {
             String extractedText = fileParserService.parseCV(file);
             
             DataScanResponse cvData = aiService.extractData(extractedText);
-            
-            // Include extracted text for GenQ service to generate contextual questions
             cvData.setExtractedText(extractedText);
             
             return ResponseEntity.ok(cvData);
@@ -45,6 +43,5 @@ public class CVController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
 }

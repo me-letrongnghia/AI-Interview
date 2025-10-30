@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service.emailService;
+package com.capstone.ai_interview_be.service.EmailService;
 
 import java.time.LocalDateTime;
 

@@ -197,7 +197,7 @@ const InterviewUI = memo(
             className='absolute top-6 left-6 z-10 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
           >
             <LogOut size={18} />
-            <span>Thoát phòng</span>
+            <span>Close</span>
           </button>
 
           <div className='relative h-full flex flex-col items-center justify-center p-8'>
@@ -252,7 +252,7 @@ const InterviewUI = memo(
                   clipRule='evenodd'
                 />
               </svg>
-              Chat với AI
+              AI Interview Conversation
             </h2>
           </div>
 
@@ -318,7 +318,7 @@ const InterviewUI = memo(
                       </span>
                     </div>
                     <span className='text-sm text-gray-600'>
-                      Đang suy nghĩ...
+                      AI ...
                     </span>
                   </div>
                 </div>

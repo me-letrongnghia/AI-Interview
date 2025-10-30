@@ -12,13 +12,11 @@ import {
   FileSearch,
 } from "lucide-react";
 import Header from "../components/Header";
-
 import { ApiInterviews } from "../api/ApiInterviews";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ScanApi } from "../api/ScanApi";
 
-// Helper Components
 const FormSelect = ({ label, value, onChange, options, required }) => (
   <div>
     <label className='block text-sm font-bold text-gray-700 mb-3'>
@@ -173,7 +171,7 @@ export default function OptionPage() {
     position: "",
     experience: "",
     skills: [],
-    language: "English", // Default language
+    language: "en", 
   });
 
   const navigate = useNavigate();
@@ -321,7 +319,7 @@ export default function OptionPage() {
     { value: "senior", label: "Senior (5+ years)", time: "60 mins" },
   ];
 
-  // Utility functions
+  // Validate uploaded file
   const validateFile = (file) => {
     const allowedTypes = [
       "application/pdf",
@@ -336,16 +334,18 @@ export default function OptionPage() {
       throw new Error("Only PDF, DOC, DOCX files are accepted");
   };
 
+  // Process API response to standardize data
   const processApiResponse = (data) => ({
     position: data.role || data.position,
     level: data.level,
     skills: Array.isArray(data.skill || data.skills)
       ? data.skill || data.skills
       : [],
-    language: data.language || "English",
-    domain: data.domain || "Software Development",
+    language: data.language || "en",
+    domain: data.domain || "Information Technology",
     ...data,
   });
+
 
   const handleApiError = (error, context) => {
     console.error(`${context} error:`, error);
@@ -383,8 +383,6 @@ export default function OptionPage() {
 
       setCvData(processedData);
       
-      // Store raw CV text if backend returns it (for GenQ service)
-      // Backend should return extractedText field in future
       if (response.data.extractedText) {
         setCvRawText(response.data.extractedText);
       }
@@ -505,6 +503,8 @@ export default function OptionPage() {
       setLoading(false);
     }
   };
+
+  // Render CV option UI
   const renderCVOption = () => (
     <div className='space-y-6'>
       <div className='text-center mb-6'>
@@ -585,7 +585,7 @@ export default function OptionPage() {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
                 <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Vị trí / Vai trò:
+                  Position Applied For:
                 </label>
                 <input
                   type='text'
@@ -604,7 +604,7 @@ export default function OptionPage() {
 
               <div>
                 <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Cấp độ:
+                  Experience Level:
                 </label>
                 <select
                   value={cvData.level || "Fresher"}
@@ -623,15 +623,13 @@ export default function OptionPage() {
 
               <div>
                 <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Ngôn ngữ:
+                  language:
                 </label>
                 <input
                   type='text'
                   value={cvData.language || ""}
-                  onChange={(e) =>
-                    setCvData({ ...cvData, language: e.target.value })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+                  readOnly
+                  className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
                   placeholder='Ví dụ: English, Vietnamese'
                 />
               </div>
@@ -643,12 +641,11 @@ export default function OptionPage() {
                 <input
                   type='text'
                   value={cvData.domain || "Software Development"}
-                  onChange={(e) =>
-                    setCvData({ ...cvData, domain: e.target.value })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+                  readOnly
+                  className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
                   placeholder='Ví dụ: Software Development'
                 />
+
               </div>
             </div>
 
@@ -709,38 +706,28 @@ export default function OptionPage() {
     </div>
   );
 
+  // Render JD option UI
   const renderJDOption = () => (
     <div className='space-y-6'>
       <div className='text-center mb-6'>
         <h3 className='text-xl font-bold text-gray-800 mb-2'>
-          💼 Nhập Job Description
+          💼 Enter Job Description
         </h3>
         <p className='text-gray-600'>
-          Mô tả công việc sẽ được AI phân tích để tạo câu hỏi phù hợp
+          AI will analyze the JD and generate JSON data for customization
         </p>
       </div>
 
       <div className='bg-white border-2 border-green-200 rounded-2xl p-6'>
         <label className='block text-lg font-bold text-gray-800 mb-4'>
-          📝 Nội dung Job Description <span className='text-red-500'>*</span>
+          📝 Job Description Content <span className='text-red-500'>*</span>
         </label>
         <div className='relative'>
           <textarea
             value={jdText}
             onChange={(e) => setJdText(e.target.value)}
             className='w-full h-48 p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none'
-            placeholder={`Example:
-Position: Frontend Developer
-Requirements:
-- 2+ years experience with React, JavaScript
-- TypeScript, HTML/CSS knowledge
-- REST API experience
-- Good teamwork skills
-
-Job Description:
-- Develop user interfaces
-- Optimize application performance
-- Code review and testing...`}
+            placeholder={`Paste the job description text here...`}
           />
           <div className='absolute bottom-3 right-3 text-sm text-gray-400'>
             {jdText.length} characters
@@ -769,154 +756,11 @@ Job Description:
           )}
         </button>
       </div>
-
-      {jdData && (
-        <div className='bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200'>
-          <div className='flex items-center gap-3 mb-6'>
-            <div className='w-10 h-10 bg-green-500 rounded-full flex items-center justify-center'>
-              <FileSearch className='w-5 h-5 text-white' />
-            </div>
-            <div>
-              <h4 className='font-bold text-lg text-gray-800'>
-                📋 Information from Job Description
-              </h4>
-              <p className='text-sm text-gray-600'>
-                Review and edit information before creating session
-              </p>
-            </div>
-          </div>
-
-          {/* Summary view */}
-          <div className='bg-white rounded-xl p-6 mb-4 border border-green-200'>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div>
-                <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Position / Role:
-                </label>
-                <input
-                  type='text'
-                  value={jdData.position || jdData.role || ""}
-                  onChange={(e) =>
-                    setJdData({
-                      ...jdData,
-                      position: e.target.value,
-                      role: e.target.value,
-                    })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-                  placeholder='Example: Frontend Developer'
-                />
-              </div>
-
-              <div>
-                <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Level:
-                </label>
-                <select
-                  value={jdData.level || "Junior"}
-                  onChange={(e) =>
-                    setJdData({ ...jdData, level: e.target.value })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-                >
-                  <option value='Intern'>Intern</option>
-                  <option value='Fresher'>Fresher</option>
-                  <option value='Junior'>Junior</option>
-                  <option value='Middle'>Middle</option>
-                  <option value='Senior'>Senior</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Language:
-                </label>
-                <input
-                  type='text'
-                  value={jdData.language || ""}
-                  onChange={(e) =>
-                    setJdData({ ...jdData, language: e.target.value })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-                  placeholder='Example: English, Vietnamese'
-                />
-              </div>
-
-              <div>
-                <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Domain:
-                </label>
-                <input
-                  type='text'
-                  value={jdData.domain || "Software Development"}
-                  onChange={(e) =>
-                    setJdData({ ...jdData, domain: e.target.value })
-                  }
-                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-                  placeholder='Example: Software Development'
-                />
-              </div>
-            </div>
-
-            <div className='mt-4'>
-              <label className='block text-sm font-bold text-gray-700 mb-2'>
-                Kỹ năng:
-              </label>
-              <div className='flex flex-wrap gap-2 mb-3'>
-                {(jdData.skills || jdData.skill || []).map((skill, index) => (
-                  <span
-                    key={index}
-                    className='px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center gap-1'
-                  >
-                    {skill}
-                    <button
-                      onClick={() => {
-                        const skills = jdData.skills || jdData.skill || [];
-                        const newSkills = skills.filter((_, i) => i !== index);
-                        setJdData({
-                          ...jdData,
-                          skills: newSkills,
-                          skill: newSkills,
-                        });
-                      }}
-                      className='ml-1 text-green-600 hover:text-red-500'
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                type='text'
-                placeholder='Enter new skill and press Enter'
-                className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && e.target.value.trim()) {
-                    const skills = jdData.skills || jdData.skill || [];
-                    const newSkills = [...skills, e.target.value.trim()];
-                    setJdData({
-                      ...jdData,
-                      skills: newSkills,
-                      skill: newSkills,
-                    });
-                    e.target.value = "";
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          <div className='mt-4 flex items-center text-sm text-green-600'>
-            <CheckCircle className='w-4 h-4 mr-2' />
-            Data is ready to create interview session
-          </div>
-        </div>
-      )}
     </div>
   );
 
+  // Render Custom option UI
   const renderCustomOption = () => {
-    // Get skills list based on selected position
     const availableSkills =
       customData.position && skillsListByPositions[customData.position]
         ? skillsListByPositions[customData.position]
@@ -939,7 +783,7 @@ Job Description:
           {/* Basic Info Grid */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
             <FormSelect
-              label='Job Position'
+              label='Position Applied For'
               value={customData.position}
               onChange={(value) => {
                 // Reset skills when position changes
@@ -957,7 +801,7 @@ Job Description:
             />
 
             <FormSelect
-              label='Experience'
+              label='Experience Level'
               value={customData.experience}
               onChange={(value) =>
                 setCustomData((prev) => ({ ...prev, experience: value }))
@@ -973,7 +817,7 @@ Job Description:
             />
 
             <FormSelect
-              label='Interview Language'
+              label='Language'
               value={customData.language}
               onChange={(value) =>
                 setCustomData((prev) => ({ ...prev, language: value }))

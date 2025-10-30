@@ -29,15 +29,19 @@ public class InterviewSession {
 
     private String level;
 
+    @ElementCollection
+    @CollectionTable(name = "interview_session_skills", 
+                 joinColumns = @JoinColumn(name = "session_id"))
+    @Column(name = "skill") 
     private List<String> skill;
 
     private String language;
 
     private String title;
 
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
-    // CV và JD text gốc (optional) - để GenQ service tạo câu hỏi contextual
     @Column(name = "cv_text", columnDefinition = "TEXT")
     private String cvText;
     
@@ -74,14 +78,12 @@ public class InterviewSession {
                 return Custom;
             }
             
-            // Case-insensitive matching
             for (Source source : Source.values()) {
                 if (source.name().equalsIgnoreCase(value)) {
                     return source;
                 }
             }
             
-            // Default to Custom if not found
             return Custom;
         }
         

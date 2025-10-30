@@ -26,7 +26,7 @@ public class CreateInterviewSessionRequest {
 
     private List<String> skill;
 
-    private String language;
+    private String language = "en";
 
     private InterviewSession.Source source;
 

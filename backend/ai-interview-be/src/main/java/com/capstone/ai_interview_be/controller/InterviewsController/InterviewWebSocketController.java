@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.controller;
+package com.capstone.ai_interview_be.controller.InterviewsController;
 
 import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
 import com.capstone.ai_interview_be.dto.websocket.FeedbackMessage;

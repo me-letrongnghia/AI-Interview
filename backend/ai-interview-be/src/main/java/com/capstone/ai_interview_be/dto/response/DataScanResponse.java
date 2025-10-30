@@ -17,7 +17,7 @@ public class DataScanResponse {
 
     private List<String> skill;
 
-    private String language;
+    private String language = "en";
     
     // Raw extracted text from CV/JD for GenQ service
     private String extractedText;
