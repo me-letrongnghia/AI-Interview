@@ -3,9 +3,12 @@ package com.capstone.ai_interview_be.controller.InterviewsController;
 import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
 import com.capstone.ai_interview_be.dto.websocket.FeedbackMessage;
 import com.capstone.ai_interview_be.dto.websocket.QuestionMessage;
+import com.capstone.ai_interview_be.model.InterviewSession;
+import com.capstone.ai_interview_be.repository.InterviewSessionRepository;
 import com.capstone.ai_interview_be.service.InterviewService.InterviewService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -18,10 +21,12 @@ import java.time.format.DateTimeFormatter;
 @Controller
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class InterviewWebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final InterviewService interviewService;
+    private final InterviewSessionRepository sessionRepository;
 
     @MessageMapping("/interview/{sessionId}/answer")
     public void handleAnswer(@DestinationVariable Long sessionId, AnswerMessage answerMessage) {
@@ -58,6 +63,31 @@ public class InterviewWebSocketController {
             error.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 
             messagingTemplate.convertAndSend("/topic/interview/" + sessionId, error);
+        }
+    }
+
+    @MessageMapping("/interview/{sessionId}/end")
+    public void handleEndInterview(@DestinationVariable Long sessionId) {
+        try {
+            // Update session status
+            InterviewSession session = sessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new RuntimeException("Session not found"));
+
+            session.setStatus("completed");
+            session.setCompletedAt(LocalDateTime.now());
+            sessionRepository.save(session);
+
+            // Gửi message yêu cầu client redirect
+            FeedbackMessage endMessage = new FeedbackMessage();
+            endMessage.setType("interview_ended");
+            endMessage.setSessionId(sessionId);
+            endMessage.setRedirectUrl("/feedback/" + sessionId);
+            endMessage.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+            messagingTemplate.convertAndSend("/topic/interview/" + sessionId, endMessage);
+
+        } catch (Exception e) {
+            log.error("Error ending interview", e);
         }
     }
 }

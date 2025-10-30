@@ -21,6 +21,7 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: "select_account",
 });
+// Cấu hình GitHub Provider
 
 // Cấu hình GitHub Provider
 export const githubProvider = new GithubAuthProvider();

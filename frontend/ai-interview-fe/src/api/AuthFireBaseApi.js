@@ -21,6 +21,7 @@ export const signInWithGoogle = async () => {
 //GitHub Login
 export const signInWithGithub = async () => {
   try {
+    // 1️⃣ Đăng nhập qua Firebase
     const result = await signInWithPopup(auth, githubProvider);
     const user = result.user;
 
@@ -55,3 +56,4 @@ export const signInWithGithub = async () => {
     };
   }
 };
+

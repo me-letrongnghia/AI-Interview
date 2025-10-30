@@ -1,4 +1,3 @@
-// InterviewComponents.jsx
 import { memo, useRef, useEffect } from "react";
 
 // ===== VideoStream =====

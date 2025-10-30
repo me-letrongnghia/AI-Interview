@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Mic, MoreVertical, LogOut } from "lucide-react";
+import { Mic, LogOut } from "lucide-react";
 import { toast } from "react-toastify";
 import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/pandahome.png";
-import Header from "../components/Header";
 import TypingText from "../components/TypingText";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import useTextToSpeech from "../hooks/useTextToSpeech";
@@ -181,6 +180,10 @@ const InterviewUI = memo(
     setTypingMessageId,
     speechRate,
     handleLeaveRoom,
+    handleToggleCamera,
+    toggleMicrophone,
+    isCameraOn,
+    isMicOn,
   }) => (
     <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50'>
       <div className='flex-1 flex gap-4 p-4 overflow-hidden'>
@@ -197,7 +200,7 @@ const InterviewUI = memo(
             className='absolute top-6 left-6 z-10 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
           >
             <LogOut size={18} />
-            <span>Close</span>
+            <span>Kết thúc</span>
           </button>
 
           <div className='relative h-full flex flex-col items-center justify-center p-8'>
@@ -223,10 +226,23 @@ const InterviewUI = memo(
                   <div className='w-2 h-2 bg-white rounded-full animate-pulse'></div>
                   <span className='text-white text-xs font-semibold'>LIVE</span>
                 </div>
-                <button className='absolute top-3 right-3 text-white hover:text-green-300 bg-black/40 hover:bg-black/60 p-2 rounded-full transition-all'>
-                  <MoreVertical size={18} />
-                </button>
+
+                <div className='absolute top-3 right-3 text-white hover:text-green-300 bg-black/40 hover:bg-black/60 p-2 rounded-full transition-all'>
+                  {/* Camera toggle button (main view) */}
+                  <button
+                    onClick={handleToggleCamera}
+                    className={`p-2 rounded-full transition-colors ${
+                      isCameraOn
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-green-500 hover:bg-green-600"
+                    } text-white`}
+                    title={isCameraOn ? "Tắt camera" : "Bật camera"}
+                  >
+                    {isCameraOn ? "📷" : "📷"}
+                  </button>
+                </div>
               </div>
+
               <div className='relative w-[480px] h-[320px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-purple-300 flex items-center justify-center'>
                 {streamRef.current && (
                   <VideoStream streamRef={streamRef} muted />
@@ -317,9 +333,7 @@ const InterviewUI = memo(
                         ●
                       </span>
                     </div>
-                    <span className='text-sm text-gray-600'>
-                      AI ...
-                    </span>
+                    <span className='text-sm text-gray-600'>AI ...</span>
                   </div>
                 </div>
               </div>
@@ -328,47 +342,80 @@ const InterviewUI = memo(
 
           {/* Voice Input */}
           <div className='p-4 border-t-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50'>
-            <div className='flex items-center gap-2'>
-              <input
-                type='text'
-                placeholder='Nhập câu trả lời của bạn...'
-                className='flex-1 px-4 py-3 rounded-xl border-2 border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all bg-white shadow-sm'
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-              />
+            <div className='flex flex-col gap-4'>
+              {/* Text input area */}
+              <div className='flex gap-3 items-end'>
+                <div className='flex-1 min-w-0'>
+                  <textarea
+                    placeholder='Nhập câu trả lời của bạn...'
+                    className='w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all bg-white shadow-sm resize-none min-h-[48px] max-h-32'
+                    value={chatInput}
+                    rows={1}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onInput={(e) => {
+                      e.target.style.height = "auto";
+                      e.target.style.height = e.target.scrollHeight + "px";
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                  />
+                </div>
 
-              <button
-                onClick={handleMicClick}
-                aria-label='microphone'
-                className={`p-3 rounded-xl transition-all shadow-md hover:shadow-lg ${
-                  isRecording
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
-                }`}
-                title={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
-              >
-                <Mic size={20} />
-              </button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!chatInput.trim()}
+                  className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-3 rounded-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-semibold h-fit'
+                >
+                  Gửi
+                </button>
+              </div>
 
-              <button
-                onClick={sendMessage}
-                disabled={!chatInput.trim()}
-                className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-3 rounded-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-semibold'
-              >
-                Gửi
-              </button>
+              {/* Mic controls */}
+              <div className='flex items-center justify-between'>
+                <div className='flex gap-2'>
+                  {/* Mic on/off toggle */}
+                  <button
+                    onClick={toggleMicrophone}
+                    aria-label='toggle-mic'
+                    className={`p-3 rounded-xl transition-all shadow-md ${
+                      isMicOn
+                        ? "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
+                        : "bg-red-500 text-white hover:bg-red-600"
+                    }`}
+                    title={isMicOn ? "Tắt micro" : "Bật micro"}
+                  >
+                    {isMicOn ? "🎤" : "🔇"}
+                  </button>
+
+                  <button
+                    onClick={handleMicClick}
+                    aria-label='microphone'
+                    className={`p-3 rounded-xl transition-all shadow-md hover:shadow-lg ${
+                      isRecording
+                        ? "bg-red-500 text-white hover:bg-red-600"
+                        : "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
+                    }`}
+                    title={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
+                  >
+                    <Mic size={20} />
+                  </button>
+                </div>
+
+                {/* Optional: Add character count or other info */}
+                <div className='text-xs text-gray-500'>
+                  {chatInput.length} ký tự
+                </div>
+              </div>
             </div>
 
             {/* Expanded recording area */}
             {isRecording && (
-              <div className='mt-3 p-4 bg-white rounded-xl border-2 border-red-200 shadow-md'>
-                <div className='flex items-start justify-between'>
+              <div className='mt-4 p-4 bg-white rounded-xl border-2 border-red-200 shadow-md'>
+                <div className='flex items-start justify-between mb-3'>
                   <div className='flex items-center gap-3'>
                     <div className='p-2.5 rounded-full bg-red-500 text-white animate-pulse'>
                       <Mic size={18} />
@@ -386,18 +433,18 @@ const InterviewUI = memo(
                   <button
                     onClick={() => setIsRecording(false)}
                     aria-label='close recording'
-                    className='text-gray-400 hover:text-red-600 font-bold text-lg transition-colors'
+                    className='text-gray-400 hover:text-red-600 font-bold text-lg transition-colors p-1'
                   >
                     ✕
                   </button>
                 </div>
 
-                <div className='mt-3'>
+                <div className='mb-3'>
                   <VolumeBar analyser={analyser} />
                 </div>
 
                 {(interimTranscript || chatInput) && (
-                  <div className='mt-3 p-3 bg-green-50 rounded-lg border border-green-200'>
+                  <div className='p-3 bg-green-50 rounded-lg border border-green-200 mb-2'>
                     <p className='text-sm text-gray-700'>
                       {chatInput}
                       <span className='text-green-600 italic font-medium'>
@@ -408,7 +455,7 @@ const InterviewUI = memo(
                 )}
 
                 {speechError && (
-                  <div className='mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200'>
+                  <div className='text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200'>
                     ⚠️ {speechError}
                   </div>
                 )}
@@ -437,6 +484,85 @@ export default function InterviewInterface() {
   const [analyser, setAnalyser] = useState(null);
   const processedMessagesRef = useRef(new Set());
   const isInterviewInitialized = useRef(false);
+
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+
+  const handleToggleCamera = useCallback(() => {
+    if (!streamRef.current) {
+      toast.error("Camera chưa sẵn sàng. Vui lòng tải lại trang.");
+      return;
+    }
+
+    const videoTrack = streamRef.current
+      .getVideoTracks()
+      .find((track) => track.kind === "video");
+
+    if (videoTrack) {
+      const newState = !videoTrack.enabled;
+      videoTrack.enabled = newState;
+      setIsCameraOn(newState);
+
+      toast.info(newState ? "Camera bật lại" : "Camera đã tắt");
+    } else {
+      toast.error("Không tìm thấy luồng camera.");
+    }
+  }, []);
+
+  const toggleMicrophone = useCallback(() => {
+    if (!streamRef.current) {
+      toast.error("Micro chưa sẵn sàng. Vui lòng tải lại trang.");
+      return;
+    }
+    const audioTracks = streamRef.current.getAudioTracks();
+    if (!audioTracks || audioTracks.length === 0) {
+      toast.error("Không tìm thấy luồng microphone.");
+      return;
+    }
+    const newState = !audioTracks[0].enabled;
+    audioTracks.forEach((t) => (t.enabled = newState));
+    setIsMicOn(newState);
+    toast.info(newState ? "Micro bật lại" : "Micro đã tắt");
+  }, []);
+
+  // ensure media tracks are stopped on unload (close/refresh)
+  useEffect(() => {
+    const stopAllMedia = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => {
+          try {
+            t.stop();
+          } catch {
+            /* ignore */
+          }
+        });
+        streamRef.current = null;
+      }
+    };
+
+    const onBeforeUnload = () => {
+      stopAllMedia();
+      // Some browsers require setting returnValue to show prompt
+      // e.returnValue = '';
+    };
+
+    const onPageHide = () => stopAllMedia();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stopAllMedia();
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    // cleanup on unmount (covers react-router navigation)
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      stopAllMedia();
+    };
+  }, []);
 
   // Speech-to-Text
   const {
@@ -481,7 +607,7 @@ export default function InterviewInterface() {
   // Handle leave room
   const handleLeaveRoom = useCallback(() => {
     const confirmLeave = window.confirm(
-      "Bạn có chắc chắn muốn thoát khỏi phòng phỏng vấn? Tiến trình hiện tại sẽ không được lưu."
+      "Bạn có chắc chắn muốn kết thúc phỏng vấn?"
     );
 
     if (confirmLeave) {
@@ -496,17 +622,24 @@ export default function InterviewInterface() {
 
       // Stop media stream
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch {
+            toast.warn("Không thể dừng một số track media.");
+          }
+        });
+        streamRef.current = null;
       }
 
       // Disconnect socket
       disconnectSocket();
 
-      // Show notification and navigate
-      toast.info("Đã thoát khỏi phòng phỏng vấn");
-      navigate("/");
+      // Show notification and navigate to feedback generation page
+      toast.info("Đang tạo feedback, vui lòng đợi trong chốc lát...");
+      navigate(`/feedback/${sessionId}`);
     }
-  }, [navigate, stopSpeaking, isRecording, stopListening]);
+  }, [navigate, stopSpeaking, isRecording, stopListening, sessionId]);
 
   // Auto disable mic khi AI đang generate câu hỏi
   useEffect(() => {
@@ -716,6 +849,13 @@ export default function InterviewInterface() {
 
   // Send message
   const sendMessage = useCallback(() => {
+    if (!chatInput.trim()) return;
+
+    // Không cho gửi nếu đang loading hoặc chưa có questionId
+    if (isLoading) {
+      toast.warn("AI đang xử lý, vui lòng đợi...");
+      return;
+    }
     const text = chatInput.trim();
     if (!text) return;
 
@@ -782,6 +922,12 @@ export default function InterviewInterface() {
             );
           };
         });
+
+        // sync initial mic/cam enabled state
+        const v = stream.getVideoTracks()[0];
+        const a = stream.getAudioTracks()[0];
+        if (v) setIsCameraOn(Boolean(v.enabled));
+        if (a) setIsMicOn(Boolean(a.enabled));
 
         // Khởi tạo audio context cho volume bar
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -863,6 +1009,10 @@ export default function InterviewInterface() {
       setTypingMessageId={setTypingMessageId}
       speechRate={speechRate}
       handleLeaveRoom={handleLeaveRoom}
+      handleToggleCamera={handleToggleCamera}
+      toggleMicrophone={toggleMicrophone}
+      isCameraOn={isCameraOn}
+      isMicOn={isMicOn}
     />
   );
 }

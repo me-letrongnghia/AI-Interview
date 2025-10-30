@@ -1,19 +1,26 @@
 package com.capstone.ai_interview_be.service.InterviewService;
 
+import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.ProcessAnswerResponse;
 import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
+import com.capstone.ai_interview_be.model.AnswerFeedback;
 import com.capstone.ai_interview_be.model.InterviewAnswer;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
 import com.capstone.ai_interview_be.model.InterviewSession;
+import com.capstone.ai_interview_be.repository.AnswerFeedbackRepository;
 import com.capstone.ai_interview_be.repository.InterviewAnswerRepository;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.repository.InterviewSessionRepository;
 import com.capstone.ai_interview_be.service.AIService.AIService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +30,10 @@ public class InterviewService {
     private final InterviewSessionRepository sessionRepository;
     private final InterviewQuestionRepository questionRepository;
     private final InterviewAnswerRepository answerRepository;
+    private final AnswerFeedbackRepository answerFeedbackRepository;
     private final AIService aiService;
     private final ConversationService conversationService;
+    private final ObjectMapper objectMapper;
     
     // Xử lý việc submit câu trả lời qua WebSocket và tạo câu hỏi tiếp theo
     @Transactional
@@ -45,9 +54,38 @@ public class InterviewService {
         InterviewAnswer answer = new InterviewAnswer();
         answer.setQuestionId(answerMessage.getQuestionId());
         answer.setContent(answerMessage.getContent());
-        
         InterviewAnswer savedAnswer = answerRepository.save(answer);
         
+        // Chạy async để không block việc tạo câu hỏi tiếp theo
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.info("Generating feedback for answer {} in background", savedAnswer.getId());
+                
+                AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
+                    question.getContent(),
+                    answerMessage.getContent(),
+                    session.getRole(),
+                    session.getLevel()
+                );
+                
+                // Lưu vào DB
+                AnswerFeedback answerFeedback = new AnswerFeedback();
+                answerFeedback.setAnswerId(savedAnswer.getId());
+                answerFeedback.setScore(feedbackData.getScore());
+                answerFeedback.setFeedbackText(feedbackData.getFeedback());
+                answerFeedback.setSampleAnswer(feedbackData.getSampleAnswer());
+                answerFeedback.setCriteriaScores(objectMapper.writeValueAsString(feedbackData.getCriteriaScores()));
+                answerFeedback.setCreatedAt(LocalDateTime.now());
+                answerFeedbackRepository.save(answerFeedback);
+                
+                log.info("Feedback generated and saved for answer {}", savedAnswer.getId());
+                
+            } catch (Exception e) {
+                log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
+                // Không throw exception để không ảnh hưởng luồng chính
+            }
+        });
+
         // Cập nhật conversation entry với answer và feedback
         conversationService.updateConversationEntry(
             answerMessage.getQuestionId(),

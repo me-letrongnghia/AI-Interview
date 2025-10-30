@@ -52,6 +52,15 @@ public class InterviewSession {
     @Enumerated(EnumType.STRING)
     private Source source = Source.Custom;
     
+    @Column(name = "status")
+    private String status = "in_progress"; // in_progress, completed
+    
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+    
+    @Column(name = "feedback_generated")
+    private Boolean feedbackGenerated = false;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

@@ -2,13 +2,14 @@ package com.capstone.ai_interview_be.service.AIService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import java.util.Arrays;
 import java.util.List;
-
 import org.springframework.stereotype.Service;
 
+import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.DataScanResponse;
+import com.capstone.ai_interview_be.dto.response.OverallFeedbackData;
+import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
@@ -119,5 +120,59 @@ public class AIService {
         }
         return jsonResponse.trim();
     }
-  
+
+    // Generate feedback cho một câu trả lời
+    // Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng
+    public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
+        log.info("Generating answer feedback for question: {}", question);
+        
+        // Hiện tại chỉ dùng OpenRouter vì GenQ chưa được train cho feedback
+        // Sau này có thể thêm GenQ service khi model đã được train
+        try {
+            return openRouterService.generateAnswerFeedback(question, answer, role, level);
+        } catch (Exception e) {
+            log.error("Error generating answer feedback with OpenRouter, using fallback", e);
+            return AnswerFeedbackData.builder()
+                    .score(5.0)
+                    .feedback("Unable to generate detailed feedback at this moment.")
+                    .sampleAnswer("Please review the question and try to provide more specific details.")
+                    .criteriaScores(java.util.Map.of(
+                        "clarity", 5.0,
+                        "accuracy", 5.0,
+                        "depth", 5.0,
+                        "relevance", 5.0
+                    ))
+                    .build();
+        }
+    }
+
+    // Generate overall feedback cho cả session
+    // Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng     
+    public OverallFeedbackData generateOverallFeedback(
+            List<ConversationEntry> conversation,
+            String role,
+            String level,
+            List<String> skills) {
+        log.info("Generating overall feedback for session with {} questions", conversation.size());
+        
+        // Hiện tại chỉ dùng OpenRouter vì GenQ chưa được train cho feedback
+        // Sau này có thể thêm GenQ service khi model đã được train
+        try {
+            return openRouterService.generateOverallFeedback(conversation, role, level, skills);
+        } catch (Exception e) {
+            log.error("Error generating overall feedback with OpenRouter, using fallback", e);
+            return OverallFeedbackData.builder()
+                    .overallScore(6.0)
+                    .assessment("Thank you for completing the interview. Your performance showed potential.")
+                    .strengths(java.util.Arrays.asList(
+                        "Participated in the interview",
+                        "Attempted to answer questions"
+                    ))
+                    .weaknesses(java.util.Arrays.asList(
+                        "Could provide more detailed responses"
+                    ))
+                    .recommendations("Continue practicing technical interview questions and focus on providing detailed, structured answers.")
+                    .build();
+        }
+    }
 }
