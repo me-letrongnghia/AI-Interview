@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service.EmailService;
+package com.capstone.ai_interview_be.service.emailService;
 
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
