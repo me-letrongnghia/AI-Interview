@@ -1,17 +1,27 @@
-import { useState, useEffect, useRef, memo, useCallback } from "react";
+﻿import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Mic, LogOut } from "lucide-react";
+import {
+  Mic,
+  LogOut,
+  Video,
+  VideoOff,
+  MicOff,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import imgBG from "../assets/backgroundI.png";
-import pandaImage2 from "../assets/pandahome.png";
+import pandaImage2 from "../assets/LinhVat.png";
 import TypingText from "../components/TypingText";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import useTextToSpeech from "../hooks/useTextToSpeech";
 import { ApiInterviews } from "../api/ApiInterviews";
+import { UseAppContext } from "../context/AppContext";
 import {
   connectSocket,
   disconnectSocket,
   sendAnswer,
+  ensureConnected,
 } from "../socket/SocketService";
 
 // Helper function để format thời gian nhất quán
@@ -21,7 +31,7 @@ const formatTime = (date) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 };
-// ===== VideoStream =====
+// Video Stream để hiển thị video từ camera
 const VideoStream = memo(({ streamRef, muted }) => {
   const videoRef = useRef(null);
 
@@ -42,34 +52,25 @@ const VideoStream = memo(({ streamRef, muted }) => {
   );
 });
 
-// ===== Timer =====
-const Timer = memo(({ minutes, seconds, onToggle, isRunning }) => (
-  <div className='mb-6'>
-    <div className='flex items-center justify-center gap-6 mb-2'>
-      <span className='text-gray-600 text-sm font-medium'>Minutes</span>
-      <span className='text-gray-600 text-sm font-medium'>Seconds</span>
-    </div>
-    <div className='flex items-center justify-center gap-3 bg-white/90 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-green-200'>
-      <span className='text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent'>
-        {String(minutes).padStart(2, "0")}
-      </span>
-      <span className='text-4xl font-bold text-gray-400'>:</span>
-      <span className='text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent'>
-        {String(seconds).padStart(2, "0")}
-      </span>
-    </div>
-    <div className='text-center mt-4'>
-      <button
-        onClick={onToggle}
-        className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
-      >
-        {isRunning ? "⏸ Pause" : "▶ Start"}
-      </button>
+// Time để hiển thị đồng hồ đếm ngược (compact version for header)
+const Timer = memo(({ minutes, seconds }) => (
+  <div className='bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200'>
+    <div className='flex items-center gap-2'>
+      <span className='text-xs font-medium text-gray-600'>Time:</span>
+      <div className='flex items-center gap-1'>
+        <span className='text-lg font-bold text-gray-900'>
+          {String(minutes).padStart(2, "0")}
+        </span>
+        <span className='text-lg font-bold text-gray-900'>:</span>
+        <span className='text-lg font-bold text-gray-900'>
+          {String(seconds).padStart(2, "0")}
+        </span>
+      </div>
     </div>
   </div>
 ));
 
-// ===== VolumeBar =====
+// Volume Bar để hiển thị mức âm lượng
 const VolumeBar = ({ analyser }) => {
   const barsRef = useRef([]);
 
@@ -107,7 +108,7 @@ const VolumeBar = ({ analyser }) => {
   );
 };
 
-// ===== Custom hook for timer =====
+// Custom hook để quản lý đồng hồ đếm ngược
 function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
   const [display, setDisplay] = useState({
     minutes: initialMinutes,
@@ -116,6 +117,16 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
   const minutesRef = useRef(initialMinutes);
   const secondsRef = useRef(initialSeconds);
   const intervalRef = useRef(null);
+
+  // Update timer when initial values change
+  useEffect(() => {
+    minutesRef.current = initialMinutes;
+    secondsRef.current = initialSeconds;
+    setDisplay({
+      minutes: initialMinutes,
+      seconds: initialSeconds,
+    });
+  }, [initialMinutes, initialSeconds]);
 
   useEffect(() => {
     if (!isActive) {
@@ -144,27 +155,16 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
     };
   }, [isActive, onFinish]);
 
-  useEffect(() => {
-    minutesRef.current = initialMinutes;
-    secondsRef.current = initialSeconds;
-    setDisplay({
-      minutes: initialMinutes,
-      seconds: initialSeconds,
-    });
-  }, [initialMinutes, initialSeconds]);
-
   return display;
 }
 
-// ===== Interview UI =====
+// Interview UI
 const InterviewUI = memo(
   ({
     imgBG,
     streamRef,
     analyser,
     timerDisplay,
-    handleStop,
-    isRunning,
     isRecording,
     handleMicClick,
     chatHistory,
@@ -184,171 +184,380 @@ const InterviewUI = memo(
     toggleMicrophone,
     isCameraOn,
     isMicOn,
+    userProfile,
+    pandaImage,
+    interviewConfig,
   }) => (
-    <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50'>
-      <div className='flex-1 flex gap-4 p-4 overflow-hidden'>
-        <div className='flex-1 relative rounded-3xl overflow-hidden shadow-2xl border border-green-100'>
+    <div className='h-screen flex flex-col bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 relative overflow-hidden'>
+      {/* Animated background elements */}
+      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
+        <div className='absolute top-0 left-0 w-96 h-96 bg-green-300/30 rounded-full blur-3xl animate-pulse'></div>
+        <div
+          className='absolute bottom-0 right-0 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl animate-pulse'
+          style={{ animationDelay: "1s" }}
+        ></div>
+        <div
+          className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-pulse'
+          style={{ animationDelay: "2s" }}
+        ></div>
+      </div>
+
+      <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
+        {/* Main Video Area */}
+        <div className='flex-1 relative rounded-3xl overflow-hidden shadow-2xl border-2 border-green-200/50 backdrop-blur-xl bg-white/50'>
           <img
             src={imgBG}
             alt='Background'
-            className='absolute inset-0 w-full h-full object-cover opacity-95'
+            className='absolute inset-0 w-full h-full object-cover opacity-50'
           />
 
-          {/* Exit Button - Top Left */}
-          <button
-            onClick={handleLeaveRoom}
-            className='absolute top-6 left-6 z-10 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
-          >
-            <LogOut size={18} />
-            <span>Kết thúc</span>
-          </button>
+          {/* Decorative grid pattern overlay */}
+          <div
+            className='absolute inset-0 opacity-10'
+            style={{
+              backgroundImage:
+                "linear-gradient(0deg, transparent 24%, rgba(16, 185, 129, .3) 25%, rgba(16, 185, 129, .3) 26%, transparent 27%, transparent 74%, rgba(16, 185, 129, .3) 75%, rgba(16, 185, 129, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(16, 185, 129, .3) 25%, rgba(16, 185, 129, .3) 26%, transparent 27%, transparent 74%, rgba(16, 185, 129, .3) 75%, rgba(16, 185, 129, .3) 76%, transparent 77%, transparent)",
+              backgroundSize: "50px 50px",
+            }}
+          ></div>
 
-          <div className='relative h-full flex flex-col items-center justify-center p-8'>
-            <div className='mb-6 bg-white/90 backdrop-blur-sm px-8 py-3 rounded-full shadow-lg border border-green-200'>
-              <h1 className='text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent tracking-wide'>
-                INTERVIEWING...
-              </h1>
-            </div>
+          {/* Header Bar */}
+          <div className='absolute top-0 left-0 right-0 bg-gradient-to-b from-green-500/80 via-emerald-500/60 to-transparent backdrop-blur-md p-6 flex items-center justify-between z-10'>
+            <button
+              onClick={handleLeaveRoom}
+              className='group flex items-center gap-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
+            >
+              <LogOut
+                size={20}
+                className='group-hover:rotate-12 transition-transform duration-300'
+              />
+              <span>End Interview</span>
+            </button>
 
+            {/* Timer in header */}
             <Timer
               minutes={timerDisplay.minutes}
               seconds={timerDisplay.seconds}
-              onToggle={handleStop}
-              isRunning={isRunning}
             />
+          </div>
 
-            <div className='flex gap-6'>
-              <div className='relative w-[480px] h-[320px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-green-300'>
+          {/* Main Content Area */}
+          <div className='relative h-full flex flex-col items-center justify-center p-8 pt-20'>
+            {/* Video Grid - Larger and centered */}
+            <div className='grid grid-cols-2 gap-8 max-w-7xl w-full'>
+              {/* Your Video */}
+              <div className='group relative aspect-video bg-gray-900 rounded-2xl shadow-lg overflow-hidden border-2 border-green-500 transition-all duration-300'>
                 {streamRef.current && (
                   <VideoStream streamRef={streamRef} muted />
                 )}
-                <div className='absolute top-3 left-3 bg-red-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2'>
+
+                {/* Live Badge */}
+                <div className='absolute top-3 left-3 flex items-center gap-2 bg-red-500 px-3 py-1.5 rounded-lg shadow-md'>
                   <div className='w-2 h-2 bg-white rounded-full animate-pulse'></div>
                   <span className='text-white text-xs font-semibold'>LIVE</span>
                 </div>
 
-                <div className='absolute top-3 right-3 text-white hover:text-green-300 bg-black/40 hover:bg-black/60 p-2 rounded-full transition-all'>
-                  {/* Camera toggle button (main view) */}
+                {/* Camera Controls */}
+                <div className='absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
                   <button
                     onClick={handleToggleCamera}
-                    className={`p-2 rounded-full transition-colors ${
+                    className={`p-3 rounded-lg transition-all ${
                       isCameraOn
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-green-500 hover:bg-green-600"
-                    } text-white`}
-                    title={isCameraOn ? "Tắt camera" : "Bật camera"}
+                        ? "bg-white/20 hover:bg-white/30 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
+                    title={isCameraOn ? "Turn off camera" : "Turn on camera"}
                   >
-                    {isCameraOn ? "📷" : "📷"}
+                    {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
                   </button>
+
+                  <button
+                    onClick={toggleMicrophone}
+                    className={`p-3 rounded-lg transition-all ${
+                      isMicOn
+                        ? "bg-white/20 hover:bg-white/30 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
+                    title={isMicOn ? "Mute microphone" : "Unmute microphone"}
+                  >
+                    {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
+                  </button>
+                </div>
+
+                {/* Name Label */}
+                <div className='absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg'>
+                  <span className='text-gray-800 text-sm font-semibold'>
+                    Candidate
+                  </span>
                 </div>
               </div>
 
-              <div className='relative w-[480px] h-[320px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-purple-300 flex items-center justify-center'>
-                {streamRef.current && (
-                  <VideoStream streamRef={streamRef} muted />
-                )}
-                <div className='absolute top-3 left-3 bg-purple-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full'>
+              {/* AI Interviewer Video */}
+              <div className='relative aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg overflow-hidden border-2 border-emerald-500'>
+                {/* AI Avatar */}
+                <div className='absolute inset-0 flex items-center justify-center'>
+                  <div className='relative w-32 h-32'>
+                    <img
+                      src={pandaImage}
+                      alt='Master Panda'
+                      className='w-full h-full object-contain'
+                    />
+                  </div>
+                </div>
+
+                {/* AI Badge */}
+                <div className='absolute top-3 left-3 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md'>
                   <span className='text-white text-xs font-semibold'>
-                    AI Interviewer
+                    AI INTERVIEWER
                   </span>
                 </div>
+
+                {/* Name Label */}
+                <div className='absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg'>
+                  <span className='text-gray-800 text-sm font-semibold'>
+                    Master Panda
+                  </span>
+                </div>
+
+                {/* Speaking Indicator */}
+                {typingMessageId && (
+                  <div className='absolute bottom-3 right-3 flex items-center gap-2 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md'>
+                    <div className='flex gap-1'>
+                      <div className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'></div>
+                      <div
+                        className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                    <span className='text-white text-xs font-semibold'>
+                      Speaking...
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar - Bottom Fixed */}
+          <div className='absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-green-500/80 via-emerald-500/60 to-transparent backdrop-blur-md z-10'>
+            <div className='max-w-7xl mx-auto'>
+              <div className='bg-white/90 backdrop-blur-sm rounded-full h-4 overflow-hidden border-2 border-white/50 shadow-lg'>
+                <div
+                  className='h-full bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 rounded-full transition-all duration-1000 shadow-lg relative overflow-hidden'
+                  style={{
+                    width: `${Math.min(
+                      (chatHistory.filter((m) => m.type === "ai").length /
+                        interviewConfig.maxQuestions) *
+                        100,
+                      100
+                    )}%`,
+                  }}
+                >
+                  <div className='absolute inset-0 bg-white/30 animate-pulse'></div>
+                </div>
+              </div>
+              <div className='flex justify-between mt-3 px-3'>
+                <span className='text-sm text-white font-bold drop-shadow-lg'>
+                  Interview Progress
+                </span>
+                <span className='text-sm text-white font-bold drop-shadow-lg'>
+                  {chatHistory.filter((m) => m.type === "ai").length}/
+                  {interviewConfig.maxQuestions} Questions
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Chat Sidebar */}
-        <div className='w-[420px] bg-white shadow-2xl flex flex-col border-l-2 border-green-200 rounded-3xl overflow-hidden'>
-          <div className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white'>
-            <h2 className='text-lg font-bold flex items-center gap-2'>
-              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
-                <path
-                  fillRule='evenodd'
-                  d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
-                  clipRule='evenodd'
-                />
-              </svg>
-              AI Interview Conversation
-            </h2>
+        <div className='w-[450px] bg-white/90 backdrop-blur-xl shadow-2xl flex flex-col border-2 border-green-300/50 rounded-3xl overflow-hidden'>
+          {/* Chat Header - Enhanced */}
+          <div className='bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 p-5 text-white relative overflow-hidden'>
+            {/* Animated background pattern */}
+            <div className='absolute inset-0 opacity-20'>
+              <div
+                className='absolute inset-0'
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.1) 10px, rgba(255,255,255,.1) 20px)",
+                }}
+              ></div>
+            </div>
+
+            <div className='relative flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <div className='p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg'>
+                  <svg
+                    className='w-6 h-6'
+                    fill='currentColor'
+                    viewBox='0 0 20 20'
+                  >
+                    <path
+                      fillRule='evenodd'
+                      d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
+                      clipRule='evenodd'
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className='text-lg font-bold tracking-wide'>
+                    Interview Chat
+                  </h2>
+                  <p className='text-xs text-white/90 font-medium'>
+                    Real-time conversation
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* Messages Container - Enhanced */}
           <div
             ref={messagesRef}
-            className='flex-1 overflow-y-auto p-5 space-y-3 bg-gradient-to-b from-gray-50 to-white'
+            className='flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-green-50/50 via-emerald-50/30 to-white/50'
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "#10b981 #f0fdf4",
+            }}
           >
             {chatHistory.map((chat, index) => (
               <div
                 key={chat.id || index}
                 className={`flex ${
                   chat.type === "user" ? "justify-end" : "justify-start"
-                }`}
+                } animate-fadeIn`}
               >
-                <div
-                  className={`max-w-[85%] ${
-                    chat.type === "user"
-                      ? "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300"
-                      : "bg-gradient-to-r from-green-100 to-emerald-100 text-gray-800 border border-green-300"
-                  } rounded-2xl px-4 py-3 shadow-md hover:shadow-lg transition-shadow`}
-                >
-                  <p className='text-sm leading-relaxed'>
-                    {chat.type === "ai" && chat.id === typingMessageId ? (
-                      <TypingText
-                        text={chat.text}
-                        speechRate={speechRate}
-                        onComplete={() => setTypingMessageId(null)}
-                      />
-                    ) : (
-                      chat.text
-                    )}
-                  </p>
-                  <span className='text-xs text-gray-500 mt-1.5 block font-medium'>
-                    {chat.time}
-                  </span>
-                </div>
+                {chat.type === "ai" ? (
+                  // AI Message - Simple & Clean
+                  <div className='max-w-[85%] group'>
+                    <div className='flex items-start gap-3'>
+                      {/* AI Avatar */}
+                      <div className='flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+                        <img
+                          src={pandaImage}
+                          alt='AI Panda'
+                          className='w-full h-full object-contain'
+                        />
+                      </div>
+
+                      {/* AI Message Bubble */}
+                      <div className='flex-1'>
+                        <div className='flex items-center gap-2 mb-1'>
+                          <span className='text-xs font-bold text-green-700'>
+                            Master Panda
+                          </span>
+                          <span className='text-xs text-gray-400'>
+                            {chat.time}
+                          </span>
+                        </div>
+                        <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md border-2 border-green-200 hover:shadow-lg transition-shadow'>
+                          <p className='text-sm leading-relaxed text-gray-800'>
+                            {chat.id === typingMessageId ? (
+                              <TypingText
+                                text={chat.text}
+                                speechRate={speechRate}
+                                onComplete={() => setTypingMessageId(null)}
+                              />
+                            ) : (
+                              chat.text
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // User Message - Simple & Clean
+                  <div className='max-w-[85%] group'>
+                    <div className='flex items-start gap-3 justify-end'>
+                      {/* User Message Bubble */}
+                      <div className='flex-1'>
+                        <div className='flex items-center gap-2 mb-1 justify-end'>
+                          <span className='text-xs text-gray-400'>
+                            {chat.time}
+                          </span>
+                          <span className='text-xs font-bold text-green-700'>
+                            {userProfile?.fullName ||
+                              userProfile?.name ||
+                              "You"}
+                          </span>
+                        </div>
+                        <div className='bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl rounded-tr-sm px-4 py-3 shadow-md hover:shadow-lg transition-shadow'>
+                          <p className='text-sm leading-relaxed text-white'>
+                            {chat.text}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* User Avatar */}
+                      <div className='flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+                        {userProfile?.picture ? (
+                          <img
+                            src={userProfile.picture}
+                            alt={userProfile.fullName || userProfile.name}
+                            className='w-full h-full object-cover'
+                          />
+                        ) : (
+                          <span className='text-white text-sm font-bold'>
+                            {(userProfile?.fullName || userProfile?.name || "U")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
 
-            {/* Loading indicator */}
+            {/* Loading indicator - Simple */}
             {isLoading && (
-              <div className='flex justify-start'>
-                <div className='bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl px-4 py-3 border border-green-300 shadow-md'>
-                  <div className='flex items-center gap-2'>
-                    <div className='flex space-x-1 text-green-600 text-lg'>
-                      <span
-                        className='animate-bounce'
-                        style={{ animationDelay: "0s" }}
-                      >
-                        ●
+              <div className='flex justify-start animate-fadeIn'>
+                <div className='flex items-start gap-3'>
+                  <div className='flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+                    <img
+                      src={pandaImage}
+                      alt='AI Panda'
+                      className='w-full h-full object-contain'
+                    />
+                  </div>
+                  <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md border-2 border-green-200'>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm text-gray-600'>
+                        Panda is thinking
                       </span>
-                      <span
-                        className='animate-bounce'
-                        style={{ animationDelay: "0.2s" }}
-                      >
-                        ●
-                      </span>
-                      <span
-                        className='animate-bounce'
-                        style={{ animationDelay: "0.4s" }}
-                      >
-                        ●
-                      </span>
+                      <div className='flex space-x-1.5'>
+                        <div className='w-1 h-1 bg-green-500 rounded-full animate-bounce'></div>
+                        <div
+                          className='w-1 h-1 bg-green-500 rounded-full animate-bounce'
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                        <div
+                          className='w-1 h-1 bg-green-500 rounded-full animate-bounce'
+                          style={{ animationDelay: "0.4s" }}
+                        ></div>
+                      </div>
                     </div>
-                    <span className='text-sm text-gray-600'>AI ...</span>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Voice Input */}
-          <div className='p-4 border-t-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50'>
+          {/* Input Area - Enhanced */}
+          <div className='p-5 border-t-2 border-green-200 bg-gradient-to-br from-green-50/70 via-emerald-50/50 to-teal-50/30 backdrop-blur-sm'>
             <div className='flex flex-col gap-4'>
-              {/* Text input area */}
-              <div className='flex gap-3 items-end'>
-                <div className='flex-1 min-w-0'>
+              {/* Text input with character counter */}
+              <div className='flex gap-3'>
+                <div className='flex-1 min-w-0 relative'>
                   <textarea
-                    placeholder='Nhập câu trả lời của bạn...'
-                    className='w-full px-4 py-3 rounded-xl border-2 border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all bg-white shadow-sm resize-none min-h-[48px] max-h-32'
+                    placeholder='Type your answer here...'
+                    className='w-full px-4 py-3.5 pr-16 rounded-2xl border-2 border-green-200 focus:outline-none focus:ring-0 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-md resize-none min-h-[56px] max-h-32 text-sm placeholder:text-gray-400'
                     value={chatInput}
                     rows={1}
                     onChange={(e) => setChatInput(e.target.value)}
@@ -367,75 +576,61 @@ const InterviewUI = memo(
 
                 <button
                   onClick={sendMessage}
-                  disabled={!chatInput.trim()}
-                  className='bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-3 rounded-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-semibold h-fit'
+                  disabled={!chatInput.trim() || isLoading}
+                  className='group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-4 rounded-2xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95 disabled:transform-none self-start'
+                  title='Send message (Enter)'
                 >
-                  Gửi
+                  <Send
+                    size={20}
+                    className='group-hover:translate-x-0.5 transition-transform'
+                  />
                 </button>
               </div>
 
-              {/* Mic controls */}
-              <div className='flex items-center justify-between'>
-                <div className='flex gap-2'>
-                  {/* Mic on/off toggle */}
-                  <button
-                    onClick={toggleMicrophone}
-                    aria-label='toggle-mic'
-                    className={`p-3 rounded-xl transition-all shadow-md ${
-                      isMicOn
-                        ? "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
-                        : "bg-red-500 text-white hover:bg-red-600"
-                    }`}
-                    title={isMicOn ? "Tắt micro" : "Bật micro"}
-                  >
-                    {isMicOn ? "🎤" : "🔇"}
-                  </button>
-
-                  <button
-                    onClick={handleMicClick}
-                    aria-label='microphone'
-                    className={`p-3 rounded-xl transition-all shadow-md hover:shadow-lg ${
-                      isRecording
-                        ? "bg-red-500 text-white hover:bg-red-600"
-                        : "bg-white text-green-600 hover:bg-green-50 border-2 border-green-200"
-                    }`}
-                    title={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
-                  >
-                    <Mic size={20} />
-                  </button>
-                </div>
-
-                {/* Optional: Add character count or other info */}
-                <div className='text-xs text-gray-500'>
-                  {chatInput.length} ký tự
-                </div>
-              </div>
+              {/* Voice Controls - Compact */}
+              <button
+                onClick={handleMicClick}
+                disabled={typingMessageId && !isRecording}
+                className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isRecording
+                    ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
+                    : "bg-white border border-green-300 text-green-600 hover:border-green-400"
+                }`}
+                title={isRecording ? "Stop recording" : "Start voice input"}
+              >
+                <Mic size={18} className={isRecording ? "animate-pulse" : ""} />
+                <span className='font-medium text-sm'>
+                  {isRecording ? "Recording..." : "Voice Input"}
+                </span>
+              </button>
             </div>
 
-            {/* Expanded recording area */}
+            {/* Recording Indicator - Enhanced */}
             {isRecording && (
-              <div className='mt-4 p-4 bg-white rounded-xl border-2 border-red-200 shadow-md'>
-                <div className='flex items-start justify-between mb-3'>
+              <div className='mt-4 p-4 bg-white rounded-2xl border-2 border-red-200 shadow-xl animate-fadeIn'>
+                <div className='flex items-center justify-between mb-3'>
                   <div className='flex items-center gap-3'>
-                    <div className='p-2.5 rounded-full bg-red-500 text-white animate-pulse'>
-                      <Mic size={18} />
+                    <div className='relative'>
+                      <div className='absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75'></div>
+                      <div className='relative p-2 rounded-full bg-gradient-to-r from-red-500 to-rose-600'>
+                        <Mic size={16} className='text-white' />
+                      </div>
                     </div>
                     <div>
-                      <div className='text-sm font-bold text-gray-800'>
-                        🎙 Đang ghi âm...
+                      <div className='text-sm font-bold text-gray-800 flex items-center gap-2'>
+                        Recording...
                       </div>
                       <div className='text-xs text-gray-500'>
-                        Nói gì đó để chuyển thành văn bản
+                        Speak clearly into your microphone
                       </div>
                     </div>
                   </div>
 
                   <button
                     onClick={() => setIsRecording(false)}
-                    aria-label='close recording'
-                    className='text-gray-400 hover:text-red-600 font-bold text-lg transition-colors p-1'
+                    className='text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg'
                   >
-                    ✕
+                    <span className='text-xl font-bold'>✖</span>
                   </button>
                 </div>
 
@@ -444,7 +639,10 @@ const InterviewUI = memo(
                 </div>
 
                 {(interimTranscript || chatInput) && (
-                  <div className='p-3 bg-green-50 rounded-lg border border-green-200 mb-2'>
+                  <div className='p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 shadow-inner'>
+                    <div className='text-xs text-green-700 font-bold mb-1 flex items-center gap-1'>
+                      <span>Transcript:</span>
+                    </div>
                     <p className='text-sm text-gray-700'>
                       {chatInput}
                       <span className='text-green-600 italic font-medium'>
@@ -455,8 +653,8 @@ const InterviewUI = memo(
                 )}
 
                 {speechError && (
-                  <div className='text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200'>
-                    ⚠️ {speechError}
+                  <div className='mt-2 text-xs text-red-700 bg-red-50 p-3 rounded-xl border-2 border-red-200 flex items-center gap-2 font-semibold'>
+                    <span>{speechError}</span>
                   </div>
                 )}
               </div>
@@ -464,15 +662,63 @@ const InterviewUI = memo(
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar for chat */
+        *::-webkit-scrollbar {
+          width: 8px;
+        }
+        *::-webkit-scrollbar-track {
+          background: #f0fdf4;
+          border-radius: 10px;
+        }
+        *::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #10b981, #059669);
+          border-radius: 10px;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #059669, #047857);
+        }
+      `}</style>
     </div>
   )
 );
 
-// ===== Main Component =====
+// Helper function to get interview config based on level
+const getInterviewConfig = (level) => {
+  const levelLower = (level || "fresher").toLowerCase();
+
+  const configs = {
+    intern: { minutes: 15, maxQuestions: 10 },
+    fresher: { minutes: 20, maxQuestions: 15 },
+    junior: { minutes: 30, maxQuestions: 20 },
+    middle: { minutes: 45, maxQuestions: 25 },
+    senior: { minutes: 60, maxQuestions: 30 },
+  };
+
+  return configs[levelLower] || configs.fresher;
+};
+
+// Main Interview Interface Component
 export default function InterviewInterface() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const [isRunning, setIsRunning] = useState(true);
+  const { userProfile } = UseAppContext();
+  const [isRunning, setIsRunning] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
@@ -488,9 +734,15 @@ export default function InterviewInterface() {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
 
+  // Interview config based on level - default to intern
+  const [interviewConfig, setInterviewConfig] = useState({
+    minutes: 15,
+    maxQuestions: 10,
+  });
+
   const handleToggleCamera = useCallback(() => {
     if (!streamRef.current) {
-      toast.error("Camera chưa sẵn sàng. Vui lòng tải lại trang.");
+      toast.error("Camera is not available. Please refresh the page.");
       return;
     }
 
@@ -503,26 +755,26 @@ export default function InterviewInterface() {
       videoTrack.enabled = newState;
       setIsCameraOn(newState);
 
-      toast.info(newState ? "Camera bật lại" : "Camera đã tắt");
+      toast.info(newState ? "Camera on" : "Camera off");
     } else {
-      toast.error("Không tìm thấy luồng camera.");
+      toast.error("Not found video track.");
     }
   }, []);
 
   const toggleMicrophone = useCallback(() => {
     if (!streamRef.current) {
-      toast.error("Micro chưa sẵn sàng. Vui lòng tải lại trang.");
+      toast.error("Microphone is not available. Please refresh the page.");
       return;
     }
     const audioTracks = streamRef.current.getAudioTracks();
     if (!audioTracks || audioTracks.length === 0) {
-      toast.error("Không tìm thấy luồng microphone.");
+      toast.error("Not found audio track.");
       return;
     }
     const newState = !audioTracks[0].enabled;
     audioTracks.forEach((t) => (t.enabled = newState));
     setIsMicOn(newState);
-    toast.info(newState ? "Micro bật lại" : "Micro đã tắt");
+    toast.info(newState ? "Microphone on" : "Microphone off");
   }, []);
 
   // ensure media tracks are stopped on unload (close/refresh)
@@ -547,19 +799,19 @@ export default function InterviewInterface() {
     };
 
     const onPageHide = () => stopAllMedia();
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") stopAllMedia();
-    };
+    // const onVisibilityChange = () => {
+    //   if (document.visibilityState === "hidden") stopAllMedia();
+    // };
 
     window.addEventListener("beforeunload", onBeforeUnload);
     window.addEventListener("pagehide", onPageHide);
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    // document.addEventListener("visibilitychange", onVisibilityChange);
 
     // cleanup on unmount (covers react-router navigation)
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("pagehide", onPageHide);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
+      // document.removeEventListener("visibilitychange", onVisibilityChange);
       stopAllMedia();
     };
   }, []);
@@ -592,25 +844,19 @@ export default function InterviewInterface() {
     }
   }, [chatHistory]);
 
-  // Timer
-  const initialMinutes = 44;
-  const initialSeconds = 28;
-  const timerDisplay = useTimer(
-    initialMinutes,
-    initialSeconds,
-    isRunning,
-    useCallback(() => setIsRunning(false), [])
-  );
+  // Handle leave room - MUST be defined before useTimer
+  const handleLeaveRoom = useCallback(
+    (autoLeave = false) => {
+      if (!autoLeave) {
+        const confirmLeave = window.confirm(
+          "Are you sure you want to leave the interview? Your progress will be saved and feedback will be generated."
+        );
 
-  const handleStop = useCallback(() => setIsRunning((prev) => !prev), []);
+        if (!confirmLeave) {
+          return;
+        }
+      }
 
-  // Handle leave room
-  const handleLeaveRoom = useCallback(() => {
-    const confirmLeave = window.confirm(
-      "Bạn có chắc chắn muốn kết thúc phỏng vấn?"
-    );
-
-    if (confirmLeave) {
       // Stop speech
       stopSpeaking();
 
@@ -626,7 +872,7 @@ export default function InterviewInterface() {
           try {
             track.stop();
           } catch {
-            toast.warn("Không thể dừng một số track media.");
+            toast.warn("Error stopping media track.");
           }
         });
         streamRef.current = null;
@@ -636,10 +882,26 @@ export default function InterviewInterface() {
       disconnectSocket();
 
       // Show notification and navigate to feedback generation page
-      toast.info("Đang tạo feedback, vui lòng đợi trong chốc lát...");
+      toast.info("Generating feedback...", { autoClose: 3000 });
       navigate(`/feedback/${sessionId}`);
-    }
-  }, [navigate, stopSpeaking, isRecording, stopListening, sessionId]);
+    },
+    [navigate, stopSpeaking, isRecording, stopListening, sessionId]
+  );
+
+  // Timer with dynamic initial values
+  const timerDisplay = useTimer(
+    interviewConfig.minutes,
+    0,
+    isRunning,
+    useCallback(() => {
+      setIsRunning(false);
+      // Auto leave when time is up
+      toast.warning("Time is up! Ending interview...");
+      setTimeout(() => {
+        handleLeaveRoom(true); // true = auto leave
+      }, 2000);
+    }, [handleLeaveRoom])
+  );
 
   // Auto disable mic khi AI đang generate câu hỏi
   useEffect(() => {
@@ -667,12 +929,14 @@ export default function InterviewInterface() {
       );
       if (hasEndedTracks) {
         toast.error(
-          "Kết nối camera/microphone bị mất. Vui lòng tải lại trang."
+          "Connection to camera/microphone was lost. Please refresh the page."
         );
         return;
       }
     } else {
-      toast.error("Camera/microphone không khả dụng. Vui lòng tải lại trang.");
+      toast.error(
+        "Camera/microphone is not available. Please refresh the page."
+      );
       return;
     }
 
@@ -682,7 +946,7 @@ export default function InterviewInterface() {
       // Đảm bảo stream vẫn active trước khi start
       if (!streamRef.current) {
         toast.error(
-          "Camera/microphone không khả dụng. Vui lòng tải lại trang."
+          "Camera/microphone is not available. Please refresh the page."
         );
         return;
       }
@@ -698,20 +962,28 @@ export default function InterviewInterface() {
   // WebSocket message handler
   const handleSocketMessage = useCallback(
     (msg) => {
-      if (!msg) return;
+      console.log("🎯 Handling socket message:", msg);
+
+      if (!msg) {
+        console.warn("⚠️ Received empty message");
+        return;
+      }
 
       const messageId = `${msg.type}-${
         msg.timestamp || Date.now()
       }-${JSON.stringify(msg).substring(0, 50)}`;
 
       if (processedMessagesRef.current.has(messageId)) {
+        console.log("⏭️ Message already processed, skipping:", messageId);
         return;
       }
 
       processedMessagesRef.current.add(messageId);
+      console.log("✅ Processing new message:", { type: msg.type, messageId });
 
       switch (msg.type) {
         case "question":
+          console.log("❓ Received new question:", msg.nextQuestion);
           if (msg.nextQuestion) {
             const q = msg.nextQuestion;
             setCurrentQuestionId(q.questionId);
@@ -747,6 +1019,11 @@ export default function InterviewInterface() {
           // Đọc ngay, typing animation chạy song song
           speak(endMessage);
           setIsLoading(false);
+
+          // Auto leave after end message
+          setTimeout(() => {
+            handleLeaveRoom(true);
+          }, 3000);
           break;
         }
 
@@ -772,15 +1049,32 @@ export default function InterviewInterface() {
         default:
           if (msg.content && msg.id) {
             setCurrentQuestionId(msg.id);
-            setChatHistory((prev) => [
-              ...prev,
-              {
-                type: "ai",
-                text: msg.content,
-                time: formatTime(new Date()),
-                id: messageId,
-              },
-            ]);
+            setChatHistory((prev) => {
+              const newHistory = [
+                ...prev,
+                {
+                  type: "ai",
+                  text: msg.content,
+                  time: formatTime(new Date()),
+                  id: messageId,
+                },
+              ];
+
+              // Check if reached max questions
+              const aiQuestionCount = newHistory.filter(
+                (m) => m.type === "ai"
+              ).length;
+              if (aiQuestionCount >= interviewConfig.maxQuestions) {
+                toast.warning(
+                  `Reached maximum ${interviewConfig.maxQuestions} questions! Ending interview...`
+                );
+                setTimeout(() => {
+                  handleLeaveRoom(true);
+                }, 3000);
+              }
+
+              return newHistory;
+            });
             setTypingMessageId(messageId);
             // Đọc ngay, typing animation chạy song song
             speak(msg.content);
@@ -789,12 +1083,12 @@ export default function InterviewInterface() {
           break;
       }
     },
-    [speak, setIsLoading]
+    [speak, setIsLoading, interviewConfig.maxQuestions, handleLeaveRoom]
   );
 
-  // KHỞI TẠO INTERVIEW KHI VÀO TRANG INTERVIEW - CHỈ CHẠY 1 LẦN
+  // Initialize interview session
   useEffect(() => {
-    // Chỉ chạy khi có sessionId và chưa được init
+    // Prevent multiple initializations
     if (!sessionId || isInterviewInitialized.current) {
       return;
     }
@@ -803,37 +1097,80 @@ export default function InterviewInterface() {
 
     connectSocket(sessionId, handleSocketMessage);
 
-    ApiInterviews.Get_Interview(sessionId)
-      .then((data) => {
-        if (data && data.data) {
-          setCurrentQuestionId(data.data.id);
-          const initialMessage = {
-            type: "ai",
-            text: data.data.content,
-            time: formatTime(new Date()),
-            id: `initial-${data.data.id}`,
-          };
-          setChatHistory([initialMessage]);
-          processedMessagesRef.current.add(`initial-${data.data.id}`);
-          setTypingMessageId(`initial-${data.data.id}`);
-          // Đọc ngay, typing animation chạy song song
-          speak(data.data.content);
+    // Try to get session info to determine level
+    ApiInterviews.getSessionInfo(sessionId)
+      .then((sessionResponse) => {
+        console.log("📊 Session response:", sessionResponse);
+        if (
+          sessionResponse &&
+          sessionResponse.data &&
+          sessionResponse.data.level
+        ) {
+          const level = sessionResponse.data.level;
+          console.log("🎯 Level from backend:", level);
+          const config = getInterviewConfig(level);
+          setInterviewConfig(config);
+          console.log(
+            `✅ Interview configured for ${level}: ${config.minutes}min, ${config.maxQuestions} questions`
+          );
+          // Auto-start timer after config is loaded
+          setIsRunning(true);
+        } else {
+          console.warn(
+            "⚠️ No level in session data, using default intern config"
+          );
+          const defaultConfig = getInterviewConfig("intern");
+          setInterviewConfig(defaultConfig);
+          setIsRunning(true);
         }
       })
-      .catch(() => {
-        toast.error("Không thể tải câu hỏi phỏng vấn");
-        const fallbackMessage = {
-          type: "ai",
-          text: "Hello! Let's start the interview.",
-          time: formatTime(new Date()),
-          id: "fallback-initial",
-        };
-        setChatHistory([fallbackMessage]);
-        processedMessagesRef.current.add("fallback-initial");
-        setCurrentQuestionId("default-question-id");
-        setTypingMessageId("fallback-initial");
-        // Đọc ngay, typing animation chạy song song
-        speak("Hello! Let's start the interview.");
+      .catch((err) => {
+        console.warn(
+          "⚠️ Could not fetch session info (API may not exist):",
+          err.message
+        );
+        // Fallback: Use intern config and start timer
+        const defaultConfig = getInterviewConfig("intern");
+        setInterviewConfig(defaultConfig);
+        console.log("🔄 Using fallback intern config:", defaultConfig);
+        setIsRunning(true);
+      })
+      .finally(() => {
+        // Then get the first question
+        ApiInterviews.Get_Interview(sessionId)
+          .then((data) => {
+            if (data && data.data) {
+              setCurrentQuestionId(data.data.id);
+              const initialMessage = {
+                type: "ai",
+                text: data.data.content,
+                time: formatTime(new Date()),
+                id: `initial-${data.data.id}`,
+              };
+              setChatHistory([initialMessage]);
+              processedMessagesRef.current.add(`initial-${data.data.id}`);
+              setTypingMessageId(`initial-${data.data.id}`);
+              // Đọc ngay, typing animation chạy song song
+              speak(data.data.content);
+            }
+          })
+          .catch(() => {
+            toast.error(
+              "No initial question found. Starting default question."
+            );
+            const fallbackMessage = {
+              type: "ai",
+              text: "Hello! Let's start the interview.",
+              time: formatTime(new Date()),
+              id: "fallback-initial",
+            };
+            setChatHistory([fallbackMessage]);
+            processedMessagesRef.current.add("fallback-initial");
+            setCurrentQuestionId("default-question-id");
+            setTypingMessageId("fallback-initial");
+            // Đọc ngay, typing animation chạy song song
+            speak("Hello! Let's start the interview.");
+          });
       });
 
     const processedMessages = processedMessagesRef.current;
@@ -853,9 +1190,16 @@ export default function InterviewInterface() {
 
     // Không cho gửi nếu đang loading hoặc chưa có questionId
     if (isLoading) {
-      toast.warn("AI đang xử lý, vui lòng đợi...");
+      toast.warn("AI is still processing. Please wait.");
       return;
     }
+
+    if (!currentQuestionId) {
+      console.warn("⚠️ No current question ID, cannot send answer");
+      toast.warn("Please wait for a question before answering");
+      return;
+    }
+
     const text = chatInput.trim();
     if (!text) return;
 
@@ -870,7 +1214,68 @@ export default function InterviewInterface() {
       id: userMessageId,
     };
 
-    setChatHistory((prev) => [...prev, userMessage]);
+    // Check if this will be the last answer BEFORE updating history
+    const currentAnsweredCount = chatHistory.filter(
+      (m) => m.type === "user"
+    ).length;
+    const willBeLastAnswer =
+      currentAnsweredCount + 1 >= interviewConfig.maxQuestions;
+
+    console.log(
+      `📊 Answering question ${currentAnsweredCount + 1}/${
+        interviewConfig.maxQuestions
+      }`
+    );
+
+    setChatHistory((prev) => {
+      const newHistory = [...prev, userMessage];
+
+      // If this was the last question, add congrats message
+      if (willBeLastAnswer) {
+        console.log(
+          "🎯 This is the last answer! Adding congratulations message..."
+        );
+
+        const congratsMessage = {
+          type: "ai",
+          text: `🎉 Congratulations! You've successfully completed all ${interviewConfig.maxQuestions} questions. Thank you for your participation. The interview will end shortly...`,
+          time: formatTime(new Date()),
+          id: `congrats-${Date.now()}`,
+        };
+
+        const finalHistory = [...newHistory, congratsMessage];
+
+        // Speak the congratulations message and wait for it to finish
+        setTimeout(() => {
+          speak(congratsMessage.text);
+        }, 500);
+
+        // Show toast
+        toast.success(
+          `You've completed all ${interviewConfig.maxQuestions} questions! Great job!`
+        );
+
+        // Calculate speaking time (roughly 150 words per minute = 2.5 words per second)
+        const wordCount = congratsMessage.text.split(" ").length;
+        const speakingTime = Math.max((wordCount / 2.5) * 1000, 5000); // At least 5 seconds
+
+        console.log(
+          `⏱️ Will wait ${Math.round(
+            speakingTime / 1000
+          )} seconds for speech to complete`
+        );
+
+        // Leave room after speech completes
+        setTimeout(() => {
+          handleLeaveRoom(true);
+        }, speakingTime + 2000); // Add 2 extra seconds buffer
+
+        return finalHistory;
+      }
+
+      return newHistory;
+    });
+
     setChatInput("");
     resetTranscript();
     setIsLoading(true);
@@ -879,10 +1284,54 @@ export default function InterviewInterface() {
       questionId: currentQuestionId || "unknown",
       content: text,
       timestamp: new Date().toISOString(),
+      isLastAnswer: willBeLastAnswer, // Tell backend this is the last answer
     };
 
-    sendAnswer(sessionId, payload);
-  }, [chatInput, currentQuestionId, sessionId, resetTranscript]);
+    console.log("📤 Sending answer via WebSocket:", {
+      sessionId,
+      questionId: currentQuestionId,
+      contentLength: text.length,
+      isLastAnswer: willBeLastAnswer,
+      payload,
+    });
+
+    // Send answer to backend (even if it's the last one, to save it)
+    const sent = sendAnswer(sessionId, payload);
+
+    if (!sent) {
+      console.log("⚠️ Send failed, attempting to reconnect...");
+      ensureConnected(sessionId, handleSocketMessage)
+        .then(() => {
+          console.log("✅ Reconnected, retrying send...");
+          sendAnswer(sessionId, payload);
+        })
+        .catch((error) => {
+          console.error("❌ Reconnect failed:", error);
+          toast.error("Connection lost. Please refresh the page.");
+          setIsLoading(false);
+        });
+    }
+
+    // If this was the last answer, set loading to false immediately
+    // (no need to wait for next question)
+    if (willBeLastAnswer) {
+      console.log("✅ Last answer sent to backend for saving");
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1000); // Small delay to ensure backend received it
+    }
+  }, [
+    chatInput,
+    currentQuestionId,
+    sessionId,
+    resetTranscript,
+    isLoading,
+    handleSocketMessage,
+    interviewConfig.maxQuestions,
+    handleLeaveRoom,
+    speak,
+    chatHistory,
+  ]);
 
   // Init camera + mic - IMPROVED WITH BETTER ERROR HANDLING
   useEffect(() => {
@@ -918,7 +1367,7 @@ export default function InterviewInterface() {
             toast.error(
               `${
                 track.kind === "video" ? "Camera" : "Microphone"
-              } bị ngắt kết nối. Vui lòng tải lại trang.`
+              } connection was lost. Please refresh the page.`
             );
           };
         });
@@ -940,14 +1389,14 @@ export default function InterviewInterface() {
       } catch (err) {
         if (err.name === "NotAllowedError") {
           toast.error(
-            "Vui lòng cho phép truy cập camera và microphone để sử dụng tính năng phỏng vấn."
+            "Please allow access to camera and microphone to proceed with the interview."
           );
         } else if (err.name === "NotFoundError") {
           toast.error(
-            "Không tìm thấy camera hoặc microphone. Vui lòng kiểm tra thiết bị."
+            "Could not find camera or microphone. Please check your device."
           );
         } else {
-          toast.error(`Không thể truy cập camera/microphone: ${err.message}`);
+          toast.error(`Error accessing camera/microphone: ${err.message}`);
         }
       }
     };
@@ -988,12 +1437,11 @@ export default function InterviewInterface() {
   return (
     <InterviewUI
       imgBG={imgBG}
-      pandaImage2={pandaImage2}
+      pandaImage={pandaImage2}
+      userProfile={userProfile}
       streamRef={streamRef}
       analyser={analyser}
       timerDisplay={timerDisplay}
-      handleStop={handleStop}
-      isRunning={isRunning}
       isRecording={isRecording}
       handleMicClick={handleMicClick}
       chatHistory={chatHistory}
@@ -1013,6 +1461,7 @@ export default function InterviewInterface() {
       toggleMicrophone={toggleMicrophone}
       isCameraOn={isCameraOn}
       isMicOn={isMicOn}
+      interviewConfig={interviewConfig}
     />
   );
 }

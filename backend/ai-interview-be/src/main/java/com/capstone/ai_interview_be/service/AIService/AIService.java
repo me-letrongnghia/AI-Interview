@@ -102,6 +102,18 @@ public class AIService {
             DataScanResponse response = objectMapper.readValue(cleanedJson, DataScanResponse.class);
             log.info("Successfully parsed DataScanResponse: {}", response);
             
+            // Set default level if null (AI couldn't determine)
+            if (response.getLevel() == null || response.getLevel().trim().isEmpty()) {
+                log.info("Level is null, setting default to 'Fresher'");
+                response.setLevel("Fresher");
+            }
+            
+            // Set default role if null
+            if (response.getRole() == null || response.getRole().trim().isEmpty()) {
+                log.info("Role is null, setting default to 'Software Engineer'");
+                response.setRole("Software Engineer");
+            }
+            
             return response;
             
         } catch (Exception e) {

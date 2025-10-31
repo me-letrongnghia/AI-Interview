@@ -2,8 +2,10 @@ package com.capstone.ai_interview_be.controller.InterviewsController;
 
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionRequest;
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionResponse;
+import com.capstone.ai_interview_be.dto.response.InterviewSessionInfoResponse;
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
+import com.capstone.ai_interview_be.model.InterviewSession;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.service.InterviewService.ConversationService;
 import com.capstone.ai_interview_be.service.InterviewService.InterviewSessionService;
@@ -53,6 +55,31 @@ public class InterviewController {
         
         List<ConversationEntry> conversation = conversationService.getSessionConversation(sessionId);
         return ResponseEntity.ok(conversation);
+    }
+    
+    // Endpoint to get session info (including level for frontend config)
+    @GetMapping("/sessions/{sessionId}")
+    public ResponseEntity<InterviewSessionInfoResponse> getSessionInfo(
+            @PathVariable Long sessionId) {
+        
+        InterviewSession session = sessionService.getSessionById(sessionId);
+        
+        // Map to DTO response
+        InterviewSessionInfoResponse response = new InterviewSessionInfoResponse(
+            session.getId(),
+            session.getUserId(),
+            session.getRole(),
+            session.getLevel(),
+            session.getSkill(),
+            session.getLanguage(),
+            session.getTitle(),
+            session.getDescription(),
+            session.getStatus(),
+            session.getCreatedAt(),
+            session.getUpdatedAt()
+        );
+        
+        return ResponseEntity.ok(response);
     }
     
     
