@@ -649,7 +649,7 @@ export default function OptionPage() {
                     })
                   }
                   className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
-                  placeholder='Ví dụ: Full Stack Developer'
+                  placeholder='e.g. Full Stack Developer'
                 />
               </div>
 
@@ -681,7 +681,7 @@ export default function OptionPage() {
                   value={cvData.language || ""}
                   readOnly
                   className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
-                  placeholder='Ví dụ: English, Vietnamese'
+                  placeholder='e.g. English, Vietnamese'
                 />
               </div>
 
@@ -694,7 +694,7 @@ export default function OptionPage() {
                   value={cvData.domain || "Software Development"}
                   readOnly
                   className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
-                  placeholder='Ví dụ: Software Development'
+                  placeholder='e.g. Software Development'
                 />
               </div>
             </div>
@@ -729,7 +729,7 @@ export default function OptionPage() {
               </div>
               <input
                 type='text'
-                placeholder='Nhập kỹ năng mới và nhấn Enter'
+                placeholder='Enter a new skill and press Enter'
                 className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && e.target.value.trim()) {
@@ -837,17 +837,17 @@ Job Description:
               {loading ? (
                 <>
                   <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
-                  Đang phân tích...
+                  Analyzing...
                 </>
               ) : (
                 <>
                   <FileSearch className='w-5 h-5 inline mr-3' />
-                  Phân tích JD với AI (Tùy chọn)
+                  Analyze JD with AI (Optional)
                 </>
               )}
             </button>
             <p className='mt-2 text-sm text-gray-500 text-center'>
-              💡 Hoặc cuộn xuống để tự điền thông tin
+              💡 Or scroll down to manually fill in the information
             </p>
 
             
@@ -878,12 +878,12 @@ Job Description:
               {loading ? (
                 <>
                   <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
-                  Đang quét dữ liệu...
+                  Scraping data...
                 </>
               ) : (
                 <>
                   <FileSearch className='w-5 h-5 inline mr-3' />
-                  quét JD từ URL
+                  Scrape JD from URL
                 </>
               )}
             </button>

@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIService {
     
     private final GenQService genQService;
-    private final OpenRouterService openRouterService;
+    private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     // Phương thức để tạo câu hỏi phỏng vấn đầu tiên với CV và JD text
@@ -31,12 +31,12 @@ public class AIService {
             log.info("Using GenQ service for first question generation");
             return genQService.generateFirstQuestion(role, level, skills, cvText, jdText);
         }
-        // Fallback về OpenRouter
-        log.warn("GenQ service unavailable, falling back to OpenRouter for first question");
+        // Fallback về Gemini
+        log.warn("GenQ service unavailable, falling back to Gemini for first question");
         try {
-            return openRouterService.generateFirstQuestion(role, skills, "English", level);
+            return geminiService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
-            log.error("Error generating first question with OpenRouter AI, using fallback", e);
+            log.error("Error generating first question with Gemini AI, using fallback", e);
             return "Please tell me a little bit about yourself and your background.";
         }
     }
@@ -57,10 +57,10 @@ public class AIService {
             return genQService.generateNextQuestion(sessionRole, sessionLevel, sessionSkill, 
                                                    previousQuestion, previousAnswer, cvText, jdText);
         }
-        // Fallback về OpenRouter
-        log.warn("GenQ service unavailable, falling back to OpenRouter for next question");
+        // Fallback về Gemini
+        log.warn("GenQ service unavailable, falling back to Gemini for next question");
         try {
-            return openRouterService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+            return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                                                         previousQuestion, previousAnswer);
         } catch (Exception e) {
             log.error("Error generating next question", e);
@@ -79,18 +79,18 @@ public class AIService {
     public DataScanResponse extractData(String Text) {
         try {
             log.info("Extracting data from CV, JD text: {}", Text != null ? Text.substring(0, Math.min(100, Text.length())) : "null");
-            String jsonResponse = openRouterService.generateData(Text);
+            String jsonResponse = geminiService.generateData(Text);
 
-            log.info("Raw JSON response from OpenRouter: {}", jsonResponse);
+            log.info("Raw JSON response from Gemini: {}", jsonResponse);
             // Kiểm tra response rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                log.warn("Empty response from OpenRouter service");
+                log.warn("Empty response from Gemini service");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             
             // Kiểm tra lỗi trong response
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
-                log.error("OpenRouter service returned error message: {}", jsonResponse);
+                log.error("Gemini service returned error message: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             
@@ -125,25 +125,33 @@ public class AIService {
     // Hàm để làm sạch JSON response nếu có ký tự thừa
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null) return "{}";
-        int start = jsonResponse.indexOf("{");
-        int end = jsonResponse.lastIndexOf("}"); 
+        
+        // Remove markdown code fences (```json, ```, etc.)
+        String cleaned = jsonResponse
+            .replaceAll("```json\\s*", "")  // Remove ```json
+            .replaceAll("```\\s*", "")       // Remove trailing ```
+            .trim();
+        
+        // Extract JSON object
+        int start = cleaned.indexOf("{");
+        int end = cleaned.lastIndexOf("}"); 
         if (start != -1 && end != -1 && end > start) {
-            return jsonResponse.substring(start, end + 1);
+            return cleaned.substring(start, end + 1);
         }
-        return jsonResponse.trim();
+        return cleaned;
     }
 
     // Generate feedback cho một câu trả lời
-    // Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng
+    // Ưu tiên GenQ service, fallback về Gemini nếu không khả dụng
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
         log.info("Generating answer feedback for question: {}", question);
         
-        // Hiện tại chỉ dùng OpenRouter vì GenQ chưa được train cho feedback
+        // Hiện tại chỉ dùng Gemini vì GenQ chưa được train cho feedback
         // Sau này có thể thêm GenQ service khi model đã được train
         try {
-            return openRouterService.generateAnswerFeedback(question, answer, role, level);
+            return geminiService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
-            log.error("Error generating answer feedback with OpenRouter, using fallback", e);
+            log.error("Error generating answer feedback with Gemini, using fallback", e);
             return AnswerFeedbackData.builder()
                     .score(5.0)
                     .feedback("Unable to generate detailed feedback at this moment.")
@@ -159,7 +167,7 @@ public class AIService {
     }
 
     // Generate overall feedback cho cả session
-    // Ưu tiên GenQ service, fallback về OpenRouter nếu không khả dụng     
+    // Ưu tiên GenQ service, fallback về Gemini nếu không khả dụng     
     public OverallFeedbackData generateOverallFeedback(
             List<ConversationEntry> conversation,
             String role,
@@ -167,12 +175,12 @@ public class AIService {
             List<String> skills) {
         log.info("Generating overall feedback for session with {} questions", conversation.size());
         
-        // Hiện tại chỉ dùng OpenRouter vì GenQ chưa được train cho feedback
+        // Hiện tại chỉ dùng Gemini vì GenQ chưa được train cho feedback
         // Sau này có thể thêm GenQ service khi model đã được train
         try {
-            return openRouterService.generateOverallFeedback(conversation, role, level, skills);
+            return geminiService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
-            log.error("Error generating overall feedback with OpenRouter, using fallback", e);
+            log.error("Error generating overall feedback with Gemini, using fallback", e);
             return OverallFeedbackData.builder()
                     .overallScore(6.0)
                     .assessment("Thank you for completing the interview. Your performance showed potential.")
