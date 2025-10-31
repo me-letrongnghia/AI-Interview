@@ -96,5 +96,13 @@ public class InterviewSessionService {
         return new CreateInterviewSessionResponse(savedSession.getId());
     }
 
+    /**
+     * Lấy thông tin session theo ID
+     */
+    public InterviewSession getSessionById(Long sessionId) {
+        log.info("Getting session info for sessionId: {}", sessionId);
+        return sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
+    }
     
 }

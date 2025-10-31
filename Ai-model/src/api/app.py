@@ -1,7 +1,3 @@
-"""
-FastAPI application factory and lifespan management
-"""
-# MUST import this FIRST to redirect temp/cache to D: drive
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

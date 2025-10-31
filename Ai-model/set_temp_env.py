@@ -38,13 +38,4 @@ os.environ["SCIPY_TMPDIR"] = str(TEMP_DIR)
 # Disable Windows Store Python redirection (optional)
 os.environ["PYTHONNOUSERSITE"] = "1"
 
-print("=" * 80)
-print("🔧 ENVIRONMENT VARIABLES SET:")
-print(f"   TEMP/TMP:              {TEMP_DIR}")
-print(f"   HF_HOME:               {HF_CACHE_DIR}")
-print(f"   TRANSFORMERS_CACHE:    {HF_CACHE_DIR}")
-print(f"   TORCH_HOME:            {CACHE_DIR / 'torch'}")
-print("=" * 80)
-print(f"✅ All temp/cache files will be created in ổ D: (not C:)")
-print("=" * 80)
 

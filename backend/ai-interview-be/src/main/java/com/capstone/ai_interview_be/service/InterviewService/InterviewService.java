@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service.InterviewService;
+﻿package com.capstone.ai_interview_be.service.InterviewService;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.ProcessAnswerResponse;
@@ -67,7 +67,7 @@ public class InterviewService {
                     session.getRole(),
                     session.getLevel()
                 );
-                
+
                 // Lưu vào DB
                 AnswerFeedback answerFeedback = new AnswerFeedback();
                 answerFeedback.setAnswerId(savedAnswer.getId());
@@ -93,11 +93,11 @@ public class InterviewService {
             answerMessage.getContent()
             // feedback
         );
-        
+
         // Tạo câu hỏi tiếp theo bằng AI với CV/JD text từ session
-        log.info("Generating next question for session {}, CV text: {}, JD text: {}", 
-                sessionId, session.getCvText() != null, session.getJdText() != null);
-        
+        log.info("Generating next question for session {}, CV text: {}, JD text: {}",
+            sessionId, session.getCvText() != null, session.getJdText() != null);
+
         String nextQuestionContent = aiService.generateNextQuestion(
             session.getRole(),  
             session.getSkill(),
@@ -108,8 +108,8 @@ public class InterviewService {
             session.getCvText(),
             session.getJdText()
         );
-        
-        // Lưu câu hỏi tiếp theo vào database
+
+        // Lấy câu mới nhất lưu vào DB
         InterviewQuestion nextQuestion = new InterviewQuestion();
         nextQuestion.setSessionId(sessionId);
         nextQuestion.setContent(nextQuestionContent);
@@ -133,5 +133,64 @@ public class InterviewService {
             savedAnswer.getFeedback(),
             nextQuestionDto
         );
+    }
+
+    
+    // Process last answer without generating next question
+    @Transactional
+    public void processLastAnswer(Long sessionId, AnswerMessage answerMessage) {
+        log.info("Processing last answer for session {}", sessionId);
+        
+        InterviewSession session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
+        
+        InterviewQuestion question = questionRepository.findById(answerMessage.getQuestionId())
+            .orElseThrow(() -> new RuntimeException("Question not found with id: " + answerMessage.getQuestionId()));
+        
+        if (!question.getSessionId().equals(sessionId)) {
+            throw new RuntimeException("Question does not belong to this session");
+        }
+        
+        InterviewAnswer answer = new InterviewAnswer();
+        answer.setQuestionId(answerMessage.getQuestionId());
+        answer.setContent(answerMessage.getContent());
+        InterviewAnswer savedAnswer = answerRepository.save(answer);
+        
+        log.info("Saved last answer {} for session {}", savedAnswer.getId(), sessionId);
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.info("Generating feedback for last answer {} in background", savedAnswer.getId());
+                
+                AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
+                    question.getContent(),
+                    answerMessage.getContent(),
+                    session.getRole(),
+                    session.getLevel()
+                );
+                
+                AnswerFeedback answerFeedback = new AnswerFeedback();
+                answerFeedback.setAnswerId(savedAnswer.getId());
+                answerFeedback.setScore(feedbackData.getScore());
+                answerFeedback.setFeedbackText(feedbackData.getFeedback());
+                answerFeedback.setSampleAnswer(feedbackData.getSampleAnswer());
+                answerFeedback.setCriteriaScores(objectMapper.writeValueAsString(feedbackData.getCriteriaScores()));
+                answerFeedback.setCreatedAt(LocalDateTime.now());
+                answerFeedbackRepository.save(answerFeedback);
+                
+                log.info("Feedback generated and saved for last answer {}", savedAnswer.getId());
+                
+            } catch (Exception e) {
+                log.error("Error generating feedback for last answer {}", savedAnswer.getId(), e);
+            }
+        });
+
+        conversationService.updateConversationEntry(
+            answerMessage.getQuestionId(),
+            savedAnswer.getId(), 
+            answerMessage.getContent()
+        );
+        
+        log.info("Completed processing last answer for session {}", sessionId);
     }
 }

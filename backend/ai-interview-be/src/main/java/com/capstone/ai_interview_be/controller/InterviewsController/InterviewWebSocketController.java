@@ -31,7 +31,26 @@ public class InterviewWebSocketController {
     @MessageMapping("/interview/{sessionId}/answer")
     public void handleAnswer(@DestinationVariable Long sessionId, AnswerMessage answerMessage) {
         try {
-            // Xử lý answer và trả về response từ service
+            log.info("Received answer for session {}, isLastAnswer: {}", sessionId, answerMessage.getIsLastAnswer());
+            
+            // Check if this is the last answer
+            if (Boolean.TRUE.equals(answerMessage.getIsLastAnswer())) {
+                // Save the answer but don't generate next question
+                log.info("Processing last answer for session {}, will not generate next question", sessionId);
+                interviewService.processLastAnswer(sessionId, answerMessage);
+                
+                // Send completion message
+                FeedbackMessage endMessage = new FeedbackMessage();
+                endMessage.setType("end");
+                endMessage.setIsComplete(true);
+                endMessage.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                messagingTemplate.convertAndSend("/topic/interview/" + sessionId, endMessage);
+                
+                log.info("Sent interview completion message for session {}", sessionId);
+                return;
+            }
+            
+            // Normal flow: process answer and generate next question
             var response = interviewService.processAnswerAndGenerateNext(sessionId, answerMessage);
 
             // Nếu có câu hỏi tiếp theo, gửi luôn
@@ -57,6 +76,7 @@ public class InterviewWebSocketController {
             }
 
         } catch (Exception e) {
+            log.error("Error processing answer for session {}", sessionId, e);
             FeedbackMessage error = new FeedbackMessage();
             error.setType("error");
             error.setFeedback("Sorry, there was an error processing your answer. Please try again.");

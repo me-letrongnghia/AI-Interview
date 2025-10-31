@@ -4,6 +4,10 @@ export const ApiInterviews = {
   // Create Interview Session
   createSession: (body) => Https.post("/api/interviews/sessions", body),
 
+  // Get session info (including level)
+  getSessionInfo: (sessionId) =>
+    Https.get(`/api/interviews/sessions/${sessionId}`),
+
   // Get latest question for session
   getSessionQuestions: (sessionId) =>
     Https.get(`/api/interviews/${sessionId}/questions`),

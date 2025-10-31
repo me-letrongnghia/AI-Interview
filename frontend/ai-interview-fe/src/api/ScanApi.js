@@ -62,6 +62,28 @@ export const ScanApi = {
       params: { jdText },
     });
   },
+
+  // Scrape JD text only from URL - NO AI analysis, just get text
+  scrapeJDUrl: (url) => {
+    console.log("Scraping JD text from URL:", url);
+
+    return scanInstance.post("/api/jd/scrape-url", { url }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
+
+  // Scan JD from URL - scrape + AI analysis (optional, if needed)
+  scanJDUrl: (url) => {
+    console.log("Scanning JD from URL with AI:", url);
+
+    return scanInstance.post("/api/jd/scan-url", { url }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
 };
 
 export default ScanApi;

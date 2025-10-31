@@ -166,12 +166,14 @@ export default function OptionPage() {
   const [cvData, setCvData] = useState(null);
   const [cvRawText, setCvRawText] = useState(""); // Store raw CV text for GenQ service
   const [jdText, setJdText] = useState("");
+  const [jdUrl, setJdUrl] = useState(""); // Store JD URL for scraping
+  const [jdInputMode, setJdInputMode] = useState("text"); // "text" or "url"
   const [jdData, setJdData] = useState(null);
   const [customData, setCustomData] = useState({
     position: "",
     experience: "",
     skills: [],
-    language: "en", 
+    language: "en",
   });
 
   const navigate = useNavigate();
@@ -313,10 +315,10 @@ export default function OptionPage() {
 
   const experienceLevels = [
     { value: "intern", label: "Intern", time: "15 mins" },
-    { value: "fresher", label: "Fresher (0-1 years)", time: "20 mins" },
-    { value: "junior", label: "Junior (1-3 years)", time: "30 mins" },
-    { value: "middle", label: "Middle (3-5 years)", time: "45 mins" },
-    { value: "senior", label: "Senior (5+ years)", time: "60 mins" },
+    { value: "fresher", label: "Fresher", time: "20 mins" },
+    { value: "junior", label: "Junior", time: "30 mins" },
+    { value: "middle", label: "Middle", time: "45 mins" },
+    { value: "senior", label: "Senior", time: "60 mins" },
   ];
 
   // Validate uploaded file
@@ -328,10 +330,11 @@ export default function OptionPage() {
     ];
     const maxSize = 5 * 1024 * 1024;
 
-    if (file.size > maxSize)
-      throw new Error("File too large! Please select a file under 5MB");
     if (!allowedTypes.includes(file.type))
       throw new Error("Only PDF, DOC, DOCX files are accepted");
+    if (file.size > maxSize)
+      throw new Error("File too large! Please select a file under 5MB");
+   
   };
 
   // Process API response to standardize data
@@ -346,7 +349,6 @@ export default function OptionPage() {
     ...data,
   });
 
-
   const handleApiError = (error, context) => {
     console.error(`${context} error:`, error);
 
@@ -354,7 +356,7 @@ export default function OptionPage() {
       error.response?.data?.message || error.response?.data || "Unknown error";
     if (error.response) {
       const status = error.response.status;
-      if(status != 401){
+      if (status != 401) {
         toast.error(
           status === 400
             ? `Data error: ${message}`
@@ -382,11 +384,11 @@ export default function OptionPage() {
       const processedData = processApiResponse(response.data);
 
       setCvData(processedData);
-      
+
       if (response.data.extractedText) {
         setCvRawText(response.data.extractedText);
       }
-      
+
       toast.success("CV analysis completed successfully!");
     } catch (error) {
       if (error.message.includes("File") || error.message.includes("Only")) {
@@ -418,6 +420,47 @@ export default function OptionPage() {
     }
   };
 
+  // Handle JD URL scraping - NO AI analysis, just scrape text
+  const handleJDUrlScan = async () => {
+    if (!jdUrl.trim())
+      return toast.error("Please enter Job Description URL!");
+
+    // Basic URL validation
+    if (!jdUrl.startsWith("http://") && !jdUrl.startsWith("https://")) {
+      return toast.error("URL must start with http:// or https://");
+    }
+
+    setLoading(true);
+    try {
+      // Call scrape-only endpoint (NO AI analysis)
+      const response = await ScanApi.scrapeJDUrl(jdUrl);
+      
+      // Get scraped JD text
+      const scrapedText = response.data.jdText;
+      
+      if (scrapedText && scrapedText.trim()) {
+        // Set JD text into textarea
+        setJdText(scrapedText);
+        
+        // Switch to text mode so user can see and edit
+        setJdInputMode("text");
+        
+        toast.success(`Scraped ${scrapedText.length} characters! Now analyze or edit as needed.`);
+      } else {
+        toast.error("Scraped text is empty. Please try another URL.");
+      }
+      
+    } catch (error) {
+      if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        handleApiError(error, "Job Description URL");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle skill toggle for custom option
   const handleSkillToggle = (skill) => {
     setCustomData((prev) => ({
@@ -436,28 +479,36 @@ export default function OptionPage() {
     };
 
     const dataSources = {
-      cv: () =>
-        !cvData
-          ? null
-          : {
-              role: cvData.position || cvData.role || "Developer",
-              level: cvData.level || "Fresher",
-              skill: cvData.skills || cvData.skill || [],
-              language: cvData.language || "English",
-              // Include CV raw text for GenQ service to generate contextual questions
-              cvText: cvRawText || undefined,
-            },
-      jd: () =>
-        !jdData
-          ? null
-          : {
-              role: jdData.position || jdData.role || "Developer",
-              level: jdData.level || "Junior",
-              skill: jdData.skills || jdData.skill || [],
-              language: jdData.language || "English",
-              // Include JD raw text for GenQ service to generate contextual questions
-              jdText: jdText || undefined,
-            },
+      cv: () => {
+        if (!cvData) return null;
+
+        console.log("📄 CV Data from scan:", cvData);
+        console.log("🎯 Level from CV:", cvData.level);
+
+        return {
+          role: cvData.position || cvData.role || "Developer",
+          level: cvData.level || "Junior", // Changed from "Fresher" to "Junior" (30min, 20 questions)
+          skill: cvData.skills || cvData.skill || [],
+          language: cvData.language || "English",
+          // Include CV raw text for GenQ service to generate contextual questions
+          cvText: cvRawText || undefined,
+        };
+      },
+      jd: () => {
+        if (!jdData) return null;
+
+        console.log("📋 JD Data from scan:", jdData);
+        console.log("🎯 Level from JD:", jdData.level);
+
+        return {
+          role: jdData.position || jdData.role || "Developer",
+          level: jdData.level || "Junior",
+          skill: jdData.skills || jdData.skill || [],
+          language: jdData.language || "English",
+          // Include JD raw text for GenQ service to generate contextual questions
+          jdText: jdText || undefined,
+        };
+      },
       custom: () =>
         !customData.position ||
         !customData.experience ||
@@ -482,7 +533,7 @@ export default function OptionPage() {
     if (!sessionData) {
       const messages = {
         cv: "Please upload and analyze CV first!",
-        jd: "Please enter and analyze Job Description first!",
+        jd: "Please scrape JD and fill in all required information (Position, Level, Skills)!",
         custom: "Please fill in all required information!",
       };
       return toast.error(
@@ -535,7 +586,7 @@ export default function OptionPage() {
                   {cvFile.name}
                 </p>
                 <p className='text-sm text-gray-500'>
-                  ✅ Uploaded successfully • Click to change file
+                  Uploaded successfully • Click to change file
                 </p>
               </div>
             </div>
@@ -636,7 +687,7 @@ export default function OptionPage() {
 
               <div>
                 <label className='block text-sm font-bold text-gray-700 mb-2'>
-                  Lĩnh vực:
+                  Domain/Industry:
                 </label>
                 <input
                   type='text'
@@ -645,13 +696,12 @@ export default function OptionPage() {
                   className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
                   placeholder='Ví dụ: Software Development'
                 />
-
               </div>
             </div>
 
             <div className='mt-4'>
               <label className='block text-sm font-bold text-gray-700 mb-2'>
-                Kỹ năng:
+                Skills:
               </label>
               <div className='flex flex-wrap gap-2 mb-3'>
                 {(cvData.skills || cvData.skill || []).map((skill, index) => (
@@ -699,7 +749,7 @@ export default function OptionPage() {
 
           <div className='mt-4 flex items-center text-sm text-blue-600'>
             <CheckCircle className='w-4 h-4 mr-2' />
-            Dữ liệu đã sẵn sàng để tạo phiên phỏng vấn
+            Information extracted from CV. You can edit before creating session.
           </div>
         </div>
       )}
@@ -718,43 +768,127 @@ export default function OptionPage() {
         </p>
       </div>
 
-      <div className='bg-white border-2 border-green-200 rounded-2xl p-6'>
-        <label className='block text-lg font-bold text-gray-800 mb-4'>
-          📝 Job Description Content <span className='text-red-500'>*</span>
-        </label>
-        <div className='relative'>
-          <textarea
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            className='w-full h-48 p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none'
-            placeholder={`Paste the job description text here...`}
-          />
-          <div className='absolute bottom-3 right-3 text-sm text-gray-400'>
-            {jdText.length} characters
-          </div>
+      {/* Tab selector for Text vs URL */}
+      <div className='flex justify-center mb-6'>
+        <div className='inline-flex rounded-xl border-2 border-green-200 bg-green-50 p-1'>
+          <button
+            onClick={() => setJdInputMode("text")}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              jdInputMode === "text"
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
+                : "text-gray-600 hover:text-green-700"
+            }`}
+          >
+            📝 Paste Text
+          </button>
+          <button
+            onClick={() => setJdInputMode("url")}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              jdInputMode === "url"
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
+                : "text-gray-600 hover:text-green-700"
+            }`}
+          >
+            🔗 From URL
+          </button>
         </div>
+      </div>
 
-        <button
-          onClick={handleJDScan}
-          disabled={loading || !jdText.trim()}
-          className={`mt-4 w-full py-3 px-6 rounded-xl font-bold text-lg transition-all ${
-            loading || !jdText.trim()
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl"
-          }`}
-        >
-          {loading ? (
-            <>
-              <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
-              Analyzing JD...
-            </>
-          ) : (
-            <>
-              <FileSearch className='w-5 h-5 inline mr-3' />
-              Analyze Job Description
-            </>
-          )}
-        </button>
+      <div className='bg-white border-2 border-green-200 rounded-2xl p-6'>
+        {jdInputMode === "text" ? (
+          // Text input mode
+          <>
+            <label className='block text-lg font-bold text-gray-800 mb-4'>
+              📝 Nội dung Job Description <span className='text-red-500'>*</span>
+            </label>
+            <div className='relative'>
+              <textarea
+                value={jdText}
+                onChange={(e) => setJdText(e.target.value)}
+                className='w-full h-48 p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none'
+                style={{ whiteSpace: 'pre-wrap' }}
+                placeholder={`Example:
+Position: Frontend Developer
+
+Requirements:
+• 2+ years experience with React, JavaScript
+• TypeScript, HTML/CSS knowledge
+• REST API experience
+
+Job Description:
+• Develop user interfaces
+• Optimize application performance
+• Code review and testing...`}
+              />
+              <div className='absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded'>
+                {jdText.length} characters
+              </div>
+            </div>
+
+            <button
+              onClick={handleJDScan}
+              disabled={loading || !jdText.trim()}
+              className={`mt-4 w-full py-3 px-6 rounded-xl font-bold text-lg transition-all ${
+                loading || !jdText.trim()
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl"
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
+                  Đang phân tích...
+                </>
+              ) : (
+                <>
+                  <FileSearch className='w-5 h-5 inline mr-3' />
+                  Phân tích JD với AI (Tùy chọn)
+                </>
+              )}
+            </button>
+            <p className='mt-2 text-sm text-gray-500 text-center'>
+              💡 Hoặc cuộn xuống để tự điền thông tin
+            </p>
+
+            
+          </>
+        ) : (
+          // URL input mode
+          <>
+            <label className='block text-lg font-bold text-gray-800 mb-4'>
+              🔗 Job Description URL <span className='text-red-500'>*</span>
+            </label>
+            <input
+              type='url'
+              value={jdUrl}
+              onChange={(e) => setJdUrl(e.target.value)}
+              className='w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all'
+              placeholder='https://www.linkedin.com/jobs/view/...'
+            />
+
+            <button
+              onClick={handleJDUrlScan}
+              disabled={loading || !jdUrl.trim()}
+              className={`mt-4 w-full py-3 px-6 rounded-xl font-bold text-lg transition-all ${
+                loading || !jdUrl.trim()
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl"
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
+                  Đang quét dữ liệu...
+                </>
+              ) : (
+                <>
+                  <FileSearch className='w-5 h-5 inline mr-3' />
+                  quét JD từ URL
+                </>
+              )}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -810,7 +944,7 @@ export default function OptionPage() {
                 { value: "", label: "-- Select experience --" },
                 ...experienceLevels.map((exp) => ({
                   value: exp.value,
-                  label: `${exp.label} - ${exp.time}`,
+                  label: `${exp.label}`,
                 })),
               ]}
               required
@@ -1047,17 +1181,19 @@ export default function OptionPage() {
                   <button
                     onClick={() => {
                       setSelectedOption("");
-                      setCvFile(null);
-                      setCvData(null);
-                      setCvRawText(""); // Clear CV raw text
-                      setJdText("");
-                      setJdData(null);
-                      setCustomData({
-                        position: "",
-                        experience: "",
-                        skills: [],
-                        language: "English",
-                      });
+                    setCvFile(null);
+                    setCvData(null);
+                    setCvRawText(""); // Clear CV raw text
+                    setJdText("");
+                    setJdUrl(""); // Clear JD URL
+                    setJdInputMode("text"); // Reset to text mode
+                    setJdData(null);
+                    setCustomData({
+                      position: "",
+                      experience: "",
+                      skills: [],
+                      language: "English",
+                    });
                     }}
                     className='px-8 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium text-gray-700'
                   >
