@@ -45,7 +45,7 @@ export default function DeviceCheckPage() {
     } catch (error) {
       console.error("Error loading devices:", error);
       toast.error(
-        "Không thể lấy danh sách thiết bị. Vui lòng kiểm tra quyền truy cập.",
+        "Unable to retrieve device list. Please check access permissions.",
         { position: "top-right" }
       );
     }
@@ -89,7 +89,7 @@ export default function DeviceCheckPage() {
       console.error("Error initializing media:", error);
       setIsInitializing(false);
       toast.error(
-        "Không thể truy cập thiết bị. Vui lòng cấp quyền cho trình duyệt.",
+        "Cannot access devices. Please grant browser permissions.",
         { position: "top-right" }
       );
     }
@@ -134,13 +134,13 @@ export default function DeviceCheckPage() {
 
   const handleContinue = async () => {
     if (!isLogin || !userProfile) {
-      toast.error("Vui lòng đăng nhập để tiếp tục!", { position: "top-right" });
+      toast.error("Please log in to continue!", { position: "top-right" });
       navigate("/auth/login");
       return;
     }
 
     if (!formData || !formData.sessionId) {
-      toast.error("Không có session phỏng vấn! Vui lòng tạo lại session.", {
+      toast.error("No interview session found! Please create a new session.", {
         position: "top-right",
       });
       navigate("/options");
@@ -148,21 +148,21 @@ export default function DeviceCheckPage() {
     }
 
     if (devices.audioInputs.length === 0) {
-      toast.error("Không tìm thấy microphone. Vui lòng kiểm tra thiết bị!", {
+      toast.error("No microphone found. Please check your device!", {
         position: "top-right",
       });
       return;
     }
 
     if (devices.videoInputs.length === 0) {
-      toast.error("Không tìm thấy camera. Vui lòng kiểm tra thiết bị!", {
+      toast.error("No camera found. Please check your device!", {
         position: "top-right",
       });
       return;
     }
 
     if (!isMicOn || !isCameraOn) {
-      toast.warning("Vui lòng bật camera và microphone trước khi tiếp tục!", {
+      toast.warning("Please enable camera and microphone before continuing!", {
         position: "top-right",
       });
       return;
@@ -174,7 +174,7 @@ export default function DeviceCheckPage() {
       // Delay to show loading state
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // 🧹 Dừng camera/mic trước khi chuyển trang
+      // Stop camera/mic before navigating
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -182,7 +182,7 @@ export default function DeviceCheckPage() {
 
       const interviewId = formData.sessionId;
 
-      toast.success("Bắt đầu phỏng vấn!", {
+      toast.success("Starting interview!", {
         position: "top-right",
         autoClose: 1000,
       });
@@ -193,14 +193,14 @@ export default function DeviceCheckPage() {
       }, 300);
     } catch (error) {
       console.error("Navigation error:", error);
-      toast.error("Có lỗi xảy ra. Vui lòng thử lại.", {
+      toast.error("An error occurred. Please try again.", {
         position: "top-right",
       });
       setLoading(false);
     }
   };
 
-  // 🧹 Cleanup khi rời trang
+  // Cleanup when leaving page
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -234,11 +234,11 @@ export default function DeviceCheckPage() {
           </div>
         </div>
         <h1 className='text-2xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 tracking-tight'>
-          Kiểm tra thiết bị
+          Device Check
         </h1>
         <p className='text-gray-600 max-w-2xl mx-auto leading-relaxed text-sm'>
-          Đảm bảo camera và microphone hoạt động tốt để có trải nghiệm phỏng vấn
-          tốt nhất
+          Ensure your camera and microphone are working properly for the best
+          interview experience
         </p>
 
         {/* Status badges - Compact */}
@@ -255,13 +255,13 @@ export default function DeviceCheckPage() {
                 deviceCheckPassed ? "bg-green-500 animate-pulse" : "bg-gray-400"
               }`}
             ></span>
-            {deviceCheckPassed ? "Sẵn sàng" : "Kiểm tra..."}
+            {deviceCheckPassed ? "Ready" : "Checking..."}
           </div>
 
           {isInitializing && (
             <div className='flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-300 text-xs font-semibold'>
               <div className='w-2.5 h-2.5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin'></div>
-              Khởi tạo...
+              Initializing...
             </div>
           )}
         </div>
@@ -308,7 +308,7 @@ export default function DeviceCheckPage() {
                     </svg>
                   </div>
                   <p className='text-gray-300 text-sm font-medium'>
-                    Camera đã tắt
+                    Camera Off
                   </p>
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function DeviceCheckPage() {
                 <div className='text-center'>
                   <div className='w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3'></div>
                   <p className='text-white text-xs font-medium'>
-                    Đang khởi tạo...
+                    Initializing...
                   </p>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export default function DeviceCheckPage() {
                     ? "bg-white/95 hover:bg-white text-gray-800 shadow-lg hover:shadow-xl hover:scale-110"
                     : "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl hover:scale-110"
                 }`}
-                title={isMicOn ? "Tắt micro" : "Bật micro"}
+                title={isMicOn ? "Mute microphone" : "Unmute microphone"}
               >
                 <svg
                   className='w-4 h-4'
@@ -375,7 +375,7 @@ export default function DeviceCheckPage() {
                     ? "bg-white/95 hover:bg-white text-gray-800 shadow-lg hover:shadow-xl hover:scale-110"
                     : "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl hover:scale-110"
                 }`}
-                title={isCameraOn ? "Tắt camera" : "Bật camera"}
+                title={isCameraOn ? "Turn off camera" : "Turn on camera"}
               >
                 <svg
                   className='w-4 h-4'
@@ -418,7 +418,7 @@ export default function DeviceCheckPage() {
                     clipRule='evenodd'
                   />
                 </svg>
-                <span className='text-xs'>Âm thanh</span>
+                <span className='text-xs'>Audio</span>
               </p>
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
@@ -455,7 +455,7 @@ export default function DeviceCheckPage() {
               className='w-full border border-blue-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
             >
               {devices.audioInputs.length === 0 ? (
-                <option value=''>⚠️ Không tìm thấy microphone</option>
+                <option value=''>⚠️ No microphone found</option>
               ) : (
                 devices.audioInputs.map((device) => (
                   <option key={device.deviceId} value={device.deviceId}>
@@ -488,7 +488,7 @@ export default function DeviceCheckPage() {
               className='w-full border border-purple-300 rounded-lg px-3 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
             >
               {devices.videoInputs.length === 0 ? (
-                <option value=''>⚠️ Không tìm thấy camera</option>
+                <option value=''>⚠️ No camera found</option>
               ) : (
                 devices.videoInputs.map((device) => (
                   <option key={device.deviceId} value={device.deviceId}>
@@ -513,7 +513,7 @@ export default function DeviceCheckPage() {
                   clipRule='evenodd'
                 />
               </svg>
-              Trạng thái
+              Status
             </p>
             <div className='space-y-1.5'>
               <div className='flex items-center justify-between py-1.5 px-2 bg-white rounded-lg'>
@@ -529,7 +529,7 @@ export default function DeviceCheckPage() {
                       isCameraOn ? "text-green-700" : "text-red-700"
                     }`}
                   >
-                    {isCameraOn ? "Bật" : "Tắt"}
+                    {isCameraOn ? "On" : "Off"}
                   </span>
                 </div>
               </div>
@@ -546,7 +546,7 @@ export default function DeviceCheckPage() {
                       isMicOn ? "text-green-700" : "text-red-700"
                     }`}
                   >
-                    {isMicOn ? "Bật" : "Tắt"}
+                    {isMicOn ? "On" : "Off"}
                   </span>
                 </div>
               </div>
@@ -569,12 +569,12 @@ export default function DeviceCheckPage() {
             {loading ? (
               <>
                 <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
-                <span>Đang chuyển...</span>
+                <span>Navigating...</span>
               </>
             ) : isInitializing ? (
               <>
                 <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
-                <span>Khởi tạo...</span>
+                <span>Initializing...</span>
               </>
             ) : !deviceCheckPassed ? (
               <>
@@ -589,7 +589,7 @@ export default function DeviceCheckPage() {
                     clipRule='evenodd'
                   />
                 </svg>
-                <span>Kiểm tra thiết bị...</span>
+                <span>Checking devices...</span>
               </>
             ) : !isMicOn || !isCameraOn ? (
               <>
@@ -604,7 +604,7 @@ export default function DeviceCheckPage() {
                     clipRule='evenodd'
                   />
                 </svg>
-                <span>Bật camera & mic</span>
+                <span>Enable camera & mic</span>
               </>
             ) : (
               <>
@@ -621,7 +621,7 @@ export default function DeviceCheckPage() {
                     d='M14 5l7 7m0 0l-7 7m7-7H3'
                   />
                 </svg>
-                <span>Bắt đầu phỏng vấn</span>
+                <span>Start Interview</span>
               </>
             )}
           </button>
@@ -653,8 +653,8 @@ export default function DeviceCheckPage() {
                 />
               </svg>
               {deviceCheckPassed && isMicOn && isCameraOn
-                ? "✅ Sẵn sàng phỏng vấn!"
-                : "⚠️ Kiểm tra camera & mic"}
+                ? "✅ Ready for interview!"
+                : "⚠️ Check camera & mic"}
             </p>
           </div>
         </div>

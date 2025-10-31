@@ -24,14 +24,14 @@ import {
   ensureConnected,
 } from "../socket/SocketService";
 
-// Helper function để format thời gian nhất quán
+// Helper function to format time consistently
 const formatTime = (date) => {
   const hours = date.getHours();
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 };
-// Video Stream để hiển thị video từ camera
+// Video Stream component to display camera video
 const VideoStream = memo(({ streamRef, muted }) => {
   const videoRef = useRef(null);
 
@@ -52,7 +52,7 @@ const VideoStream = memo(({ streamRef, muted }) => {
   );
 });
 
-// Time để hiển thị đồng hồ đếm ngược (compact version for header)
+// Timer component to display countdown (compact version for header)
 const Timer = memo(({ minutes, seconds }) => (
   <div className='bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200'>
     <div className='flex items-center gap-2'>
@@ -70,7 +70,7 @@ const Timer = memo(({ minutes, seconds }) => (
   </div>
 ));
 
-// Volume Bar để hiển thị mức âm lượng
+// Volume Bar component to display audio level
 const VolumeBar = ({ analyser }) => {
   const barsRef = useRef([]);
 
@@ -108,7 +108,7 @@ const VolumeBar = ({ analyser }) => {
   );
 };
 
-// Custom hook để quản lý đồng hồ đếm ngược
+// Custom hook to manage countdown timer
 function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
   const [display, setDisplay] = useState({
     minutes: initialMinutes,
@@ -903,7 +903,7 @@ export default function InterviewInterface() {
     }, [handleLeaveRoom])
   );
 
-  // Auto disable mic khi AI đang generate câu hỏi
+  // Auto disable mic when AI is generating a question
   useEffect(() => {
     if (typingMessageId && isRecording) {
       setIsRecording(false);
@@ -913,17 +913,17 @@ export default function InterviewInterface() {
 
   // Mic click handler - IMPROVED VERSION
   const handleMicClick = useCallback(() => {
-    // Không cho bật mic khi AI đang generate câu hỏi
+    // Don't allow enabling mic when AI is generating a question
     if (typingMessageId && !isRecording) {
       return;
     }
 
-    // Kiểm tra stream trước khi toggle recording
+    // Check stream before toggling recording
     if (streamRef.current) {
       const videoTracks = streamRef.current.getVideoTracks();
       const audioTracks = streamRef.current.getAudioTracks();
 
-      // Kiểm tra nếu có track nào bị ended
+      // Check if any track has ended
       const hasEndedTracks = [...videoTracks, ...audioTracks].some(
         (t) => t.readyState === "ended"
       );
@@ -943,7 +943,7 @@ export default function InterviewInterface() {
     const newState = !isRecording;
 
     if (newState) {
-      // Đảm bảo stream vẫn active trước khi start
+      // Ensure stream is still active before starting
       if (!streamRef.current) {
         toast.error(
           "Camera/microphone is not available. Please refresh the page."
@@ -951,7 +951,7 @@ export default function InterviewInterface() {
         return;
       }
       setIsRecording(true);
-      // Delay startListening để tránh race condition
+      // Delay startListening to avoid race condition
       setTimeout(() => startListening(), 100);
     } else {
       setIsRecording(false);
@@ -997,7 +997,7 @@ export default function InterviewInterface() {
               },
             ]);
             setTypingMessageId(messageId);
-            // Đọc ngay, typing animation chạy song song
+            // Speak immediately, typing animation runs in parallel
             speak(q.content);
           }
           setIsLoading(false);
@@ -1016,7 +1016,7 @@ export default function InterviewInterface() {
             },
           ]);
           setTypingMessageId(messageId);
-          // Đọc ngay, typing animation chạy song song
+          // Speak immediately, typing animation runs in parallel
           speak(endMessage);
           setIsLoading(false);
 
@@ -1076,7 +1076,7 @@ export default function InterviewInterface() {
               return newHistory;
             });
             setTypingMessageId(messageId);
-            // Đọc ngay, typing animation chạy song song
+            // Speak immediately, typing animation runs in parallel
             speak(msg.content);
           }
           setIsLoading(false);
@@ -1150,7 +1150,7 @@ export default function InterviewInterface() {
               setChatHistory([initialMessage]);
               processedMessagesRef.current.add(`initial-${data.data.id}`);
               setTypingMessageId(`initial-${data.data.id}`);
-              // Đọc ngay, typing animation chạy song song
+              // Speak immediately, typing animation runs in parallel
               speak(data.data.content);
             }
           })
@@ -1168,7 +1168,7 @@ export default function InterviewInterface() {
             processedMessagesRef.current.add("fallback-initial");
             setCurrentQuestionId("default-question-id");
             setTypingMessageId("fallback-initial");
-            // Đọc ngay, typing animation chạy song song
+            // Speak immediately, typing animation runs in parallel
             speak("Hello! Let's start the interview.");
           });
       });
@@ -1188,7 +1188,7 @@ export default function InterviewInterface() {
   const sendMessage = useCallback(() => {
     if (!chatInput.trim()) return;
 
-    // Không cho gửi nếu đang loading hoặc chưa có questionId
+    // Don't allow sending if loading or no question ID yet
     if (isLoading) {
       toast.warn("AI is still processing. Please wait.");
       return;
@@ -1361,7 +1361,7 @@ export default function InterviewInterface() {
 
         streamRef.current = stream;
 
-        // Lắng nghe sự kiện khi track bị ended
+        // Listen for track ended events
         stream.getTracks().forEach((track) => {
           track.onended = () => {
             toast.error(
@@ -1378,7 +1378,7 @@ export default function InterviewInterface() {
         if (v) setIsCameraOn(Boolean(v.enabled));
         if (a) setIsMicOn(Boolean(a.enabled));
 
-        // Khởi tạo audio context cho volume bar
+        // Initialize audio context for volume bar
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyserNode = audioContext.createAnalyser();
         microphone = audioContext.createMediaStreamSource(stream);
@@ -1432,7 +1432,7 @@ export default function InterviewInterface() {
         streamRef.current = null;
       }
     };
-  }, []); // Empty dependency - chỉ chạy khi mount/unmount
+  }, []); // Empty dependency - only runs on mount/unmount
 
   return (
     <InterviewUI
