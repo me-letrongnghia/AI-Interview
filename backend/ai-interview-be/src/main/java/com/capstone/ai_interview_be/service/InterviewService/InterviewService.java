@@ -1,4 +1,4 @@
-﻿package com.capstone.ai_interview_be.service.InterviewService;
+package com.capstone.ai_interview_be.service.InterviewService;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.ProcessAnswerResponse;
