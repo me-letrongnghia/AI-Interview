@@ -31,6 +31,7 @@ const formatTime = (date) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 };
+
 // Video Stream component to display camera video
 const VideoStream = memo(({ streamRef, muted }) => {
   const videoRef = useRef(null);
@@ -846,15 +847,13 @@ export default function InterviewInterface() {
 
   // Handle leave room - MUST be defined before useTimer
   const handleLeaveRoom = useCallback(
-    (autoLeave = false) => {
-      if (!autoLeave) {
-        const confirmLeave = window.confirm(
-          "Are you sure you want to leave the interview? Your progress will be saved and feedback will be generated."
-        );
+    () => {
+      const confirmLeave = window.confirm(
+        "Are you sure you want to end the interview? Your progress will be saved and feedback will be generated automatically."
+      );
 
-        if (!confirmLeave) {
-          return;
-        }
+      if (!confirmLeave) {
+        return;
       }
 
       // Stop speech
@@ -898,7 +897,7 @@ export default function InterviewInterface() {
       // Auto leave when time is up
       toast.warning("Time is up! Ending interview...");
       setTimeout(() => {
-        handleLeaveRoom(true); // true = auto leave
+        handleLeaveRoom();
       }, 2000);
     }, [handleLeaveRoom])
   );
@@ -1022,7 +1021,7 @@ export default function InterviewInterface() {
 
           // Auto leave after end message
           setTimeout(() => {
-            handleLeaveRoom(true);
+            handleLeaveRoom();
           }, 3000);
           break;
         }
@@ -1040,7 +1039,7 @@ export default function InterviewInterface() {
             },
           ]);
           setTypingMessageId(messageId);
-          // Đọc ngay, typing animation chạy song song
+          // Read immediately, typing animation runs in parallel
           speak(errorMsg);
           setIsLoading(false);
           break;
@@ -1069,7 +1068,7 @@ export default function InterviewInterface() {
                   `Reached maximum ${interviewConfig.maxQuestions} questions! Ending interview...`
                 );
                 setTimeout(() => {
-                  handleLeaveRoom(true);
+                  handleLeaveRoom();
                 }, 3000);
               }
 
@@ -1283,7 +1282,7 @@ export default function InterviewInterface() {
 
         // Leave room after speech completes
         setTimeout(() => {
-          handleLeaveRoom(true);
+          handleLeaveRoom();
         }, speakingTime + 2000); // Add 2 extra seconds buffer
 
         return finalHistory;

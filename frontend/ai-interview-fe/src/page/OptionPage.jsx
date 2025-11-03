@@ -186,6 +186,8 @@ export default function OptionPage() {
 
   // Duration options for interview (in minutes)
   const durationOptions = [
+    { value: "5", label: "5 minutes" },
+    { value: "10", label: "10 minutes" },
     { value: "15", label: "15 minutes" },
     { value: "20", label: "20 minutes" },
     { value: "30", label: "30 minutes" },
@@ -598,16 +600,14 @@ export default function OptionPage() {
   // Render CV option UI
   const renderCVOption = () => (
     <div className='space-y-6'>
-      <div className='text-center mb-6'>
-        <h3 className='text-xl font-bold text-gray-800 mb-2'>
-          📄 Upload CV for Analysis
-        </h3>
-        <p className='text-gray-600'>
-          AI will analyze your CV and generate JSON data for customization
-        </p>
-      </div>
-
-      <div className='border-2 border-dashed border-blue-300 rounded-2xl p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-all duration-300'>
+          <div className='text-center mb-6'>
+            <h3 className='text-xl font-bold text-gray-800 mb-2'>
+              Upload CV for Analysis
+            </h3>
+            <p className='text-gray-600'>
+              AI will analyze your CV and generate JSON data for customization
+            </p>
+          </div>      <div className='border-2 border-dashed border-blue-300 rounded-2xl p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-all duration-300'>
         <input
           type='file'
           id='cv-upload'
@@ -663,7 +663,7 @@ export default function OptionPage() {
             </div>
             <div>
               <h4 className='font-bold text-lg text-gray-800'>
-                📋 CV Information
+                CV Information
               </h4>
               <p className='text-sm text-gray-600'>
                 Review and edit the information before creating a session
@@ -689,7 +689,7 @@ export default function OptionPage() {
                     })
                   }
                   className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
-                  placeholder='Ví dụ: Full Stack Developer'
+                  placeholder='e.g., Full Stack Developer'
                 />
               </div>
 
@@ -757,7 +757,7 @@ export default function OptionPage() {
                   value={cvData.language || ""}
                   readOnly
                   className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
-                  placeholder='Ví dụ: English, Vietnamese'
+                  placeholder='e.g., English, Vietnamese'
                 />
               </div>
 
@@ -805,7 +805,7 @@ export default function OptionPage() {
               </div>
               <input
                 type='text'
-                placeholder='Nhập kỹ năng mới và nhấn Enter'
+                placeholder='Enter new skill and press Enter'
                 className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && e.target.value.trim()) {
@@ -837,7 +837,7 @@ export default function OptionPage() {
     <div className='space-y-6'>
       <div className='text-center mb-6'>
         <h3 className='text-xl font-bold text-gray-800 mb-2'>
-          💼 Enter Job Description
+          Enter Job Description
         </h3>
         <p className='text-gray-600'>
           AI will analyze the JD and generate JSON data for customization
@@ -855,7 +855,7 @@ export default function OptionPage() {
                 : "text-gray-600 hover:text-green-700"
             }`}
           >
-            📝 Paste Text
+            Paste Text
           </button>
           <button
             onClick={() => setJdInputMode("url")}
@@ -865,7 +865,7 @@ export default function OptionPage() {
                 : "text-gray-600 hover:text-green-700"
             }`}
           >
-            🔗 From URL
+            From URL
           </button>
         </div>
       </div>
@@ -875,7 +875,7 @@ export default function OptionPage() {
           // Text input mode
           <>
             <label className='block text-lg font-bold text-gray-800 mb-4'>
-              📝 Nội dung Job Description <span className='text-red-500'>*</span>
+              Job Description Content <span className='text-red-500'>*</span>
             </label>
             <div className='relative'>
               <textarea
@@ -913,26 +913,24 @@ Job Description:
               {loading ? (
                 <>
                   <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
-                  Đang phân tích...
+                  Analyzing...
                 </>
               ) : (
                 <>
                   <FileSearch className='w-5 h-5 inline mr-3' />
-                  Phân tích JD với AI (Tùy chọn)
+                  Analyze JD with AI (Optional)
                 </>
               )}
             </button>
             <p className='mt-2 text-sm text-gray-500 text-center'>
-              💡 Hoặc cuộn xuống để tự điền thông tin
+              Or scroll down to fill in information manually
             </p>
-
-            
           </>
         ) : (
           // URL input mode
           <>
             <label className='block text-lg font-bold text-gray-800 mb-4'>
-              🔗 Job Description URL <span className='text-red-500'>*</span>
+              Job Description URL <span className='text-red-500'>*</span>
             </label>
             <input
               type='url'
@@ -954,18 +952,200 @@ Job Description:
               {loading ? (
                 <>
                   <div className='animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3'></div>
-                  Đang quét dữ liệu...
+                  Scanning data...
                 </>
               ) : (
                 <>
                   <FileSearch className='w-5 h-5 inline mr-3' />
-                  quét JD từ URL
+                  Scan JD from URL
                 </>
               )}
             </button>
           </>
         )}
       </div>
+
+      {loading && (
+        <div className='flex items-center justify-center p-8'>
+          <div className='animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mr-3'></div>
+          <span className='text-green-600 font-medium'>Analyzing JD...</span>
+        </div>
+      )}
+
+      {jdData && (
+        <div className='bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200'>
+          <div className='flex items-center gap-3 mb-6'>
+            <div className='w-10 h-10 bg-green-500 rounded-full flex items-center justify-center'>
+              <FileSearch className='w-5 h-5 text-white' />
+            </div>
+            <div>
+              <h4 className='font-bold text-lg text-gray-800'>
+                JD Information
+              </h4>
+              <p className='text-sm text-gray-600'>
+                Review and edit information before creating interview session
+              </p>
+            </div>
+          </div>
+
+          {/* Summary view */}
+          <div className='bg-white rounded-xl p-6 mb-4 border border-green-200'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Job Position:
+                </label>
+                <input
+                  type='text'
+                  value={jdData.position || jdData.role || ""}
+                  onChange={(e) =>
+                    setJdData({
+                      ...jdData,
+                      position: e.target.value,
+                      role: e.target.value,
+                    })
+                  }
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
+                  placeholder='Ví dụ: Full Stack Developer'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Experience Level:
+                </label>
+                <select
+                  value={jdData.level || "Fresher"}
+                  onChange={(e) =>
+                    setJdData({ ...jdData, level: e.target.value })
+                  }
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
+                >
+                  <option value='Intern'>Intern</option>
+                  <option value='Fresher'>Fresher</option>
+                  <option value='Junior'>Junior</option>
+                  <option value='Middle'>Middle</option>
+                  <option value='Senior'>Senior</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Interview Duration: <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={jdDuration}
+                  onChange={(e) => setJdDuration(e.target.value)}
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
+                >
+                  <option value=''>-- Select duration --</option>
+                  {durationOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Number of Questions: <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={jdQuestionCount}
+                  onChange={(e) => setJdQuestionCount(e.target.value)}
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
+                >
+                  <option value=''>-- Select questions --</option>
+                  {questionCountOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Language:
+                </label>
+                <input
+                  type='text'
+                  value={jdData.language || ""}
+                  readOnly
+                  className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
+                  placeholder='Ví dụ: English, Vietnamese'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Industry/Domain:
+                </label>
+                <input
+                  type='text'
+                  value={jdData.domain || "Software Development"}
+                  readOnly
+                  className='w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed'
+                  placeholder='Ví dụ: Software Development'
+                />
+              </div>
+            </div>
+
+            <div className='mt-4'>
+              <label className='block text-sm font-bold text-gray-700 mb-2'>
+                Skills:
+              </label>
+              <div className='flex flex-wrap gap-2 mb-3'>
+                {(jdData.skills || jdData.skill || []).map((skill, index) => (
+                  <span
+                    key={index}
+                    className='px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center gap-1'
+                  >
+                    {skill}
+                    <button
+                      onClick={() => {
+                        const skills = jdData.skills || jdData.skill || [];
+                        const newSkills = skills.filter((_, i) => i !== index);
+                        setJdData({
+                          ...jdData,
+                          skills: newSkills,
+                          skill: newSkills,
+                        });
+                      }}
+                      className='ml-1 text-green-600 hover:text-red-500'
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type='text'
+                placeholder='Enter new skill and press Enter'
+                className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500'
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && e.target.value.trim()) {
+                    const skills = jdData.skills || jdData.skill || [];
+                    const newSkills = [...skills, e.target.value.trim()];
+                    setJdData({
+                      ...jdData,
+                      skills: newSkills,
+                      skill: newSkills,
+                    });
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <div className='mt-4 flex items-center text-sm text-green-600'>
+            <CheckCircle className='w-4 h-4 mr-2' />
+            Information extracted from JD. You can edit before creating session.
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -982,7 +1162,7 @@ Job Description:
       <div className='space-y-6'>
         <div className='text-center mb-6'>
           <h3 className='text-xl font-bold text-gray-800 mb-2'>
-            ⚙️ Customize interview information
+            Customize interview information
           </h3>
           <p className='text-gray-600'>
             Fill in the necessary information to create an interview session
@@ -1072,7 +1252,7 @@ Job Description:
             </label>
             {customData.position ? (
               <p className='text-sm text-green-600 mb-4 bg-green-50 p-3 rounded-lg border border-green-200'>
-                ✨ Recommended skills for <strong>{customData.position}</strong>
+                Recommended skills for <strong>{customData.position}</strong>
               </p>
             ) : (
               <p className='text-sm text-gray-600 mb-4'>
@@ -1359,24 +1539,24 @@ Job Description:
                   <div className='mt-4 text-sm'>
                     {selectedOption === "cv" && !cvData && (
                       <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                        ⚠️ Please upload and analyze the CV before creating the
+                        Please upload and analyze the CV before creating the
                         interview session.
                       </p>
                     )}
                     {selectedOption === "cv" && cvData && (!cvDuration || !cvQuestionCount) && (
                       <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                        ⚠️ Please select interview duration and number of questions.
+                        Please select interview duration and number of questions.
                       </p>
                     )}
                     {selectedOption === "jd" && !jdData && (
                       <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                        ⚠️ Please enter and analyze the Job Description before
+                        Please enter and analyze the Job Description before
                         creating the interview session.
                       </p>
                     )}
                     {selectedOption === "jd" && jdData && (!jdDuration || !jdQuestionCount) && (
                       <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                        ⚠️ Please select interview duration and number of questions.
+                        Please select interview duration and number of questions.
                       </p>
                     )}
                     {selectedOption === "custom" &&
@@ -1386,7 +1566,7 @@ Job Description:
                         !customDuration ||
                         !customQuestionCount) && (
                         <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
-                          ⚠️ Please fill in all required fields: Position,
+                          Please fill in all required fields: Position,
                           Experience, Duration, Questions, and at least one skill.
                         </p>
                       )}
