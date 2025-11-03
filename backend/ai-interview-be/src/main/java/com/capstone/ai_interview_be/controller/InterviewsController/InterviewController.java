@@ -76,7 +76,9 @@ public class InterviewController {
             session.getDescription(),
             session.getStatus(),
             session.getCreatedAt(),
-            session.getUpdatedAt()
+            session.getUpdatedAt(),
+            session.getDuration(),
+            session.getQuestionCount()
         );
         
         return ResponseEntity.ok(response);

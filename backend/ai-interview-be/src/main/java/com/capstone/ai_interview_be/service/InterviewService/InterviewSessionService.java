@@ -47,6 +47,12 @@ public class InterviewSessionService {
         log.info("CV text present: {}, JD text present: {}", 
                 request.getCvText() != null, request.getJdText() != null);
         
+        // Lưu duration và questionCount từ user selection
+        session.setDuration(request.getDuration());
+        session.setQuestionCount(request.getQuestionCount());
+        log.info("Duration: {} minutes, Question count: {}", 
+                request.getDuration(), request.getQuestionCount());
+        
         // Tạo description từ skills
         if (request.getSkill() != null && !request.getSkill().isEmpty()) {
             String skillsText = String.join(", ", request.getSkill());

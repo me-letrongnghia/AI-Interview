@@ -1,125 +1,125 @@
 package com.capstone.ai_interview_be.service.AIService;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import com.capstone.ai_interview_be.dto.openrouter.OpenRouterRequest;
-import com.capstone.ai_interview_be.dto.openrouter.OpenRouterResponse;
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.OverallFeedbackData;
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
-import reactor.netty.http.client.HttpClient;
 
 @Service
 @Slf4j
-public class OpenRouterService {
+public class GeminiService {
 
     private static final String DEFAULT_ERROR_MESSAGE = "Sorry, I couldn't generate a response at the moment.";
     private static final String API_ERROR_MESSAGE = "Sorry, there was an error with the AI service.";
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30); // 30s timeout
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
-    private final String siteUrl;
-    private final String appName;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Khởi tạo OpenRouter service với cấu hình API và WebClient
-    public OpenRouterService(@Value("${openrouter.api-key}") String apiKey,
-            @Value("${openrouter.api-url}") String apiUrl,
-            @Value("${openrouter.model}") String model,
-            @Value("${openrouter.site-url}") String siteUrl,
-            @Value("${openrouter.app-name}") String appName) {
+    // Khởi tạo Gemini service với WebClient
+    public GeminiService(@Value("${gemini.api-key}") String apiKey,
+            @Value("${gemini.model}") String model) {
         this.apiKey = apiKey;
         this.model = model;
-        this.siteUrl = siteUrl;
-        this.appName = appName;
-
-        // Configure HttpClient with timeout
-        HttpClient httpClient = HttpClient.create()
-                .responseTimeout(REQUEST_TIMEOUT);
-
-        // Cấu hình WebClient với headers mặc định cho OpenRouter API
         this.webClient = WebClient.builder()
-                .baseUrl(apiUrl)
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                .defaultHeader("HTTP-Referer", siteUrl)
-                .defaultHeader("X-Title", appName)
+                .baseUrl(GEMINI_BASE_URL)
                 .build();
+        
+        log.info("Initialized GeminiService with model: {}", model);
     }
 
-    // Gửi request tới OpenRouter API và xử lý response
-    public String generateResponse(List<OpenRouterRequest.Message> messages) {
+    // Gửi request tới Gemini API và xử lý response (tối ưu với Map thay vì DTO)
+    public String generateResponse(String systemPrompt, String userPrompt) {
         try {
             long startTime = System.currentTimeMillis();
+            
+            String combinedPrompt = systemPrompt + "\n\n" + userPrompt;
 
-            // Chuẩn bị request payload cho OpenRouter API
-            OpenRouterRequest request = new OpenRouterRequest();
-            request.setModel(model);
-            request.setMessages(messages);
-            request.setMaxTokens(1000); // Tăng từ 100 lên 500 tokens
-            request.setTemperature(0.1);
+            // Build request body inline với Map (gọn hơn DTO)
+            Map<String, Object> requestBody = Map.of(
+                "contents", List.of(
+                    Map.of("parts", List.of(Map.of("text", combinedPrompt)))
+                ),
+                "generationConfig", Map.of(
+                    "temperature", 0.1,
+                    "maxOutputTokens", 4000,
+                    "topP", 0.95,
+                    "topK", 40
+                )
+            );
 
-            log.info("Sending request to OpenRouter with model: {} and {} messages", model, messages.size());
+            log.info("Sending request to Gemini with model: {}", model);
 
-            // Gửi request và nhận response từ OpenRouter với timeout
-            OpenRouterResponse response = webClient.post()
-                    .bodyValue(request)
+            // Call API - Use x-goog-api-key header instead of query parameter
+            String url = String.format("/v1beta/models/%s:generateContent", model);
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.post()
+                    .uri(url)
+                    .header("x-goog-api-key", apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
                     .retrieve()
-                    .bodyToMono(OpenRouterResponse.class)
+                    .bodyToMono(Map.class)
                     .timeout(REQUEST_TIMEOUT)
                     .block();
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("OpenRouter API responded in {}ms", duration);
+            log.info("Gemini API responded in {}ms", duration);
 
-            // Xử lý response và trích xuất nội dung AI trả về
-            if (response != null) {
-                if (response.getChoices() != null && !response.getChoices().isEmpty()) {
-                    String content = response.getChoices().get(0).getMessage().getContent();
-                    if (content != null && !content.trim().isEmpty()) {
-                        log.info("Received response from OpenRouter: {}", content.substring(0, Math.min(100, content.length())));
-                        return content.trim();
-                    } else {
-                        log.warn("OpenRouter returned empty content in choices");
-                    }
-                } else {
-                    log.warn("OpenRouter returned response with empty choices. Full response: {}", response);
-                }
-            } else {
-                log.warn("OpenRouter returned null response");
+            // Extract text from response
+            String content = extractTextFromResponse(response);
+            
+            if (content != null && !content.trim().isEmpty()) {
+                log.info("Received response from Gemini: {}", content.substring(0, Math.min(100, content.length())));
+                return content.trim();
             }
 
-            // Trường hợp response rỗng
-            log.warn("Empty or invalid response from OpenRouter, using default");
+            log.warn("Empty response from Gemini");
             return DEFAULT_ERROR_MESSAGE;
 
-        } catch (WebClientResponseException e) {
-            // Xử lý lỗi HTTP từ OpenRouter API
-            log.error("OpenRouter API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            return API_ERROR_MESSAGE;
         } catch (Exception e) {
-            // Xử lý các lỗi khác (network, timeout, etc.)
-            log.error("Unexpected error calling OpenRouter API", e);
-            return DEFAULT_ERROR_MESSAGE;
+            log.error("Error calling Gemini API: {}", e.getMessage(), e);
+            return API_ERROR_MESSAGE;
         }
     }
- 
+
+    // Helper method để extract text từ Gemini response
+    @SuppressWarnings("unchecked")
+    private String extractTextFromResponse(Map<String, Object> response) {
+        try {
+            if (response != null && response.containsKey("candidates")) {
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+                if (!candidates.isEmpty()) {
+                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+                    if (content != null) {
+                        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                        if (parts != null && !parts.isEmpty()) {
+                            return (String) parts.get(0).get("text");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error extracting text from response", e);
+        }
+        return null;
+    }
+
     // Tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
         String skillsText = (skills == null || skills.isEmpty())
@@ -143,23 +143,19 @@ public class OpenRouterService {
                 level != null ? level : "Junior",
                 skillsText);
 
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-                new OpenRouterRequest.Message("system", systemPrompt),
-                new OpenRouterRequest.Message("user", userPrompt));
-
-        return generateResponse(messages);
+        return generateResponse(systemPrompt, userPrompt);
     }
 
     // Tạo câu hỏi tiếp theo
-    public String generateNextQuestion(String role, List<String> skills, String language, String level, String previousQuestion, String previousAnswer) {
+    public String generateNextQuestion(String role, List<String> skills, String language, String level, 
+                                      String previousQuestion, String previousAnswer) {
 
         String skillsText = (skills == null || skills.isEmpty())
                 ? "None"
                 : String.join(", ", skills);
 
         String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer. " +
-                "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". "
-                +
+                "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". " +
                 "Tailor it to the candidate's previous answer, role, skills, and level.\n" +
                 "Rules:\n" +
                 "- The question must build upon the candidate's last answer or probe a related concept.\n" +
@@ -177,22 +173,18 @@ public class OpenRouterService {
                 previousQuestion != null ? previousQuestion : "N/A",
                 previousAnswer != null ? previousAnswer : "N/A");
 
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-                new OpenRouterRequest.Message("system", systemPrompt),
-                new OpenRouterRequest.Message("user", userPrompt));
-
-        return generateResponse(messages);
+        return generateResponse(systemPrompt, userPrompt);
     }
 
-    public String generateData(String cvText){
+    public String generateData(String cvText) {
         // Truncate content if too long to avoid token limits
-        final int MAX_CONTENT_LENGTH = 2000; // Limit for free tier
+        final int MAX_CONTENT_LENGTH = 8000;
         String truncatedText = cvText;
         if (cvText != null && cvText.length() > MAX_CONTENT_LENGTH) {
             truncatedText = cvText.substring(0, MAX_CONTENT_LENGTH);
             log.info("Content truncated from {} to {} characters for AI analysis", cvText.length(), MAX_CONTENT_LENGTH);
         }
-        
+
         String systemPrompt =
             "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
             "Analyze the CV carefully and extract the following information:\n\n" +
@@ -235,17 +227,15 @@ public class OpenRouterService {
             truncatedText != null ? truncatedText : ""
         );
 
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-                new OpenRouterRequest.Message("system", systemPrompt),
-                new OpenRouterRequest.Message("user", userPrompt));
-
-        return generateResponse(messages);
+        return generateResponse(systemPrompt, userPrompt);
     }
 
     // Generate feedback cho một câu trả lời cụ thể
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
 
-        String prompt = String.format("""
+        String systemPrompt = "You are a precise and analytical evaluator. Always respond with valid JSON only.";
+
+        String userPrompt = String.format("""
                 You are an expert technical interviewer evaluating a candidate's answer with precise scoring standards.
 
                 Position: %s (%s level)
@@ -323,18 +313,12 @@ public class OpenRouterService {
                 IMPORTANT: Score strictly and fairly. Don't inflate scores. Be honest but constructive.
                 """, role, level, question, answer);
 
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-                new OpenRouterRequest.Message("system", "You are a precise and analytical evaluator. Always respond with valid JSON only."),
-                new OpenRouterRequest.Message("user", prompt)
-        );
-
         try {
-            String jsonResponse = generateResponse(messages);
+            String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
             return objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
-            // Return default feedback on error
             return AnswerFeedbackData.builder()
                     .score(1.0)
                     .feedback("Unable to generate detailed feedback at this moment.")
@@ -350,9 +334,10 @@ public class OpenRouterService {
     }
 
     // Generate overall feedback cho toàn bộ buổi phỏng vấn
-    public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role, String level, List<String> skills) {
+    public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role, 
+                                                      String level, List<String> skills) {
         
-        // Build conversation summary with individual scores if available
+        // Build conversation summary
         StringBuilder conversationSummary = new StringBuilder();
         int totalQuestionsAnswered = 0;
         
@@ -369,7 +354,9 @@ public class OpenRouterService {
         
         String skillsText = (skills == null || skills.isEmpty()) ? "General" : String.join(", ", skills);
         
-        String prompt = String.format("""
+        String systemPrompt = "You are a comprehensive interview evaluator. Always respond with valid JSON only.";
+        
+        String userPrompt = String.format("""
                 You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
 
                 CANDIDATE PROFILE:
@@ -408,53 +395,18 @@ public class OpenRouterService {
                    - Key observations from the interview flow
 
                 3. STRENGTHS (List 3-5 specific strengths):
-                   Identify concrete positive aspects:
-                   - Specific technical knowledge areas where candidate excelled
-                   - Strong problem-solving demonstrations
-                   - Effective communication patterns
-                   - Good understanding of best practices
-                   - Appropriate depth for the level
-                   
-                   Format: Be specific with examples from their answers
-                   Example: "Demonstrated solid understanding of REST API principles with clear explanation of HTTP methods"
+                   Identify concrete positive aspects with examples
 
                 4. WEAKNESSES (List 2-4 areas for improvement):
-                   Identify specific gaps or areas needing development:
-                   - Technical knowledge gaps
-                   - Incomplete or incorrect explanations
-                   - Lack of depth in certain areas
-                   - Communication issues
-                   - Missing best practices awareness
-                   
-                   Format: Be constructive and specific
-                   Example: "Could improve understanding of database indexing strategies and their performance implications"
+                   Identify specific gaps or areas needing development
 
                 5. RECOMMENDATIONS:
-                   Provide actionable 3-5 sentence guidance:
-                   - Specific topics to study
-                   - Skills to practice
-                   - Resources or approaches to improve
-                   - How to reach the next level
-                   - Timeline suggestions for improvement
-
-                LEVEL-SPECIFIC EXPECTATIONS:
-                - Intern: Basic concepts, willingness to learn, foundational knowledge
-                - Fresher: Solid fundamentals, some practical exposure, learning capability
-                - Junior: Good technical foundation, practical experience, can implement solutions
-                - Mid-level: Deep knowledge, design patterns, best practices, trade-off analysis
-                - Senior: Expert knowledge, architecture, optimization, mentoring, leadership
-
-                EVALUATION PRINCIPLES:
-                - Be honest and fair - don't inflate scores
-                - Be specific - reference actual answers when possible
-                - Be constructive - frame weaknesses as growth opportunities
-                - Be comprehensive - consider the entire interview holistically
-                - Be level-appropriate - judge against expectations for their level
+                   Provide actionable 3-5 sentence guidance
 
                 Provide detailed feedback in JSON format:
                 {
                     "overallScore": 7.5,
-                    "assessment": "Throughout the interview, the candidate demonstrated... [comprehensive 4-6 sentence analysis]",
+                    "assessment": "Throughout the interview, the candidate demonstrated...",
                     "strengths": [
                         "Specific strength with example from interview",
                         "Another specific technical strength",
@@ -464,29 +416,19 @@ public class OpenRouterService {
                         "Specific gap with example",
                         "Another area needing improvement"
                     ],
-                    "recommendations": "To advance in your career and improve your interview performance, focus on... [detailed actionable guidance with specific topics and approaches]"
+                    "recommendations": "To advance in your career and improve your interview performance, focus on..."
                 }
 
-                IMPORTANT: 
-                - Score strictly based on actual performance vs. level expectations
-                - Provide specific, actionable feedback
-                - Reference actual interview content
-                - Be encouraging but honest
+                IMPORTANT: Score strictly based on actual performance vs. level expectations.
                 """,
                 role, level, skillsText, totalQuestionsAnswered, conversationSummary.toString());
 
-        List<OpenRouterRequest.Message> messages = Arrays.asList(
-                new OpenRouterRequest.Message("system", "You are a comprehensive interview evaluator. Always respond with valid JSON only."),
-                new OpenRouterRequest.Message("user", prompt)
-        );
-
         try {
-            String jsonResponse = generateResponse(messages);
+            String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
             return objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
         } catch (Exception e) {
             log.error("Error parsing overall feedback response", e);
-            // Return default feedback on error
             return OverallFeedbackData.builder()
                     .overallScore(1.0)
                     .assessment("Thank you for completing the interview. Your performance showed potential.")
@@ -506,14 +448,21 @@ public class OpenRouterService {
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null) return "{}";
         
-        // Find JSON object in response
-        int start = jsonResponse.indexOf("{");
-        int end = jsonResponse.lastIndexOf("}");
+        // Remove markdown code fences (```json, ```, etc.)
+        String cleaned = jsonResponse
+            .replaceAll("```json\\s*", "")  // Remove ```json
+            .replaceAll("```\\s*", "")       // Remove trailing ```
+            .trim();
+        
+        // Extract JSON object
+        int start = cleaned.indexOf("{");
+        int end = cleaned.lastIndexOf("}");
         
         if (start != -1 && end != -1 && end > start) {
-            return jsonResponse.substring(start, end + 1);
+            return cleaned.substring(start, end + 1);
         }
         
-        return jsonResponse.trim();
+        return cleaned;
     }
 }
+
