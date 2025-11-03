@@ -258,19 +258,19 @@ export default function HomePage() {
             {[
               {
                 quote: "PandaPrep helped me ace my Google interview! The AI questions were incredibly realistic and the feedback was spot-on.",
-                name: "Nguyễn Văn A",
+                name: "John Smith",
                 role: "Software Engineer at Google",
                 rating: 5
               },
               {
                 quote: "Best interview practice tool I've used. The real-time AI interaction feels just like talking to a real interviewer.",
-                name: "Trần Thị B",
+                name: "Sarah Johnson",
                 role: "Frontend Developer",
                 rating: 5
               },
               {
                 quote: "Improved my interview skills dramatically. Got 3 job offers after using PandaPrep for just 2 weeks!",
-                name: "Lê Văn C",
+                name: "Michael Chen",
                 role: "Full Stack Developer",
                 rating: 5
               }
@@ -389,7 +389,7 @@ export default function HomePage() {
           </div>
 
           <p className="mt-8 text-green-50 text-sm">
-            ✨ No credit card required • 🚀 Start in 30 seconds • 🔒 100% secure
+            No credit card required • Start in 30 seconds • 100% secure
           </p>
         </div>
       </section>
