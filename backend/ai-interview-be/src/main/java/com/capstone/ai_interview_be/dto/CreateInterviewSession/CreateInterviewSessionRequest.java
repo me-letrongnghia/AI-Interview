@@ -35,4 +35,9 @@ public class CreateInterviewSessionRequest {
     
     private String jdText;
 
+    // Duration in minutes and question count from user selection
+    private Integer duration;
+    
+    private Integer questionCount;
+
 }

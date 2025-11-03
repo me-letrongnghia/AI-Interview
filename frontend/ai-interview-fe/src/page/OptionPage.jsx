@@ -175,8 +175,36 @@ export default function OptionPage() {
     skills: [],
     language: "en",
   });
+  const [cvDuration, setCvDuration] = useState("");
+  const [cvQuestionCount, setCvQuestionCount] = useState("");
+  const [jdDuration, setJdDuration] = useState("");
+  const [jdQuestionCount, setJdQuestionCount] = useState("");
+  const [customDuration, setCustomDuration] = useState("");
+  const [customQuestionCount, setCustomQuestionCount] = useState("");
 
   const navigate = useNavigate();
+
+  // Duration options for interview (in minutes)
+  const durationOptions = [
+    { value: "15", label: "15 minutes" },
+    { value: "20", label: "20 minutes" },
+    { value: "30", label: "30 minutes" },
+    { value: "45", label: "45 minutes" },
+    { value: "60", label: "60 minutes" },
+    { value: "90", label: "90 minutes" },
+  ];
+
+  // Question count options
+  const questionCountOptions = [
+    { value: "5", label: "5 questions" },
+    { value: "10", label: "10 questions" },
+    { value: "15", label: "15 questions" },
+    { value: "20", label: "20 questions" },
+    { value: "25", label: "25 questions" },
+    { value: "30", label: "30 questions" },
+    { value: "40", label: "40 questions" },
+    { value: "50", label: "50 questions" },
+  ];
 
   const positions = [
     "Java Backend",
@@ -314,11 +342,11 @@ export default function OptionPage() {
   };
 
   const experienceLevels = [
-    { value: "intern", label: "Intern", time: "15 mins" },
-    { value: "fresher", label: "Fresher", time: "20 mins" },
-    { value: "junior", label: "Junior", time: "30 mins" },
-    { value: "middle", label: "Middle", time: "45 mins" },
-    { value: "senior", label: "Senior", time: "60 mins" },
+    { value: "Intern", label: "Intern" },
+    { value: "Fresher", label: "Fresher" },
+    { value: "Junior", label: "Junior" },
+    { value: "Middle", label: "Middle" },
+    { value: "Senior", label: "Senior" },
   ];
 
   // Validate uploaded file
@@ -480,31 +508,39 @@ export default function OptionPage() {
 
     const dataSources = {
       cv: () => {
-        if (!cvData) return null;
+        if (!cvData || !cvDuration || !cvQuestionCount) return null;
 
         console.log("📄 CV Data from scan:", cvData);
         console.log("🎯 Level from CV:", cvData.level);
+        console.log("⏱️ Duration:", cvDuration, "minutes");
+        console.log("❓ Questions:", cvQuestionCount);
 
         return {
           role: cvData.position || cvData.role || "Developer",
-          level: cvData.level || "Junior", // Changed from "Fresher" to "Junior" (30min, 20 questions)
+          level: cvData.level || "Junior",
           skill: cvData.skills || cvData.skill || [],
           language: cvData.language || "English",
+          duration: parseInt(cvDuration),
+          questionCount: parseInt(cvQuestionCount),
           // Include CV raw text for GenQ service to generate contextual questions
           cvText: cvRawText || undefined,
         };
       },
       jd: () => {
-        if (!jdData) return null;
+        if (!jdData || !jdDuration || !jdQuestionCount) return null;
 
         console.log("📋 JD Data from scan:", jdData);
         console.log("🎯 Level from JD:", jdData.level);
+        console.log("⏱️ Duration:", jdDuration, "minutes");
+        console.log("❓ Questions:", jdQuestionCount);
 
         return {
           role: jdData.position || jdData.role || "Developer",
           level: jdData.level || "Junior",
           skill: jdData.skills || jdData.skill || [],
           language: jdData.language || "English",
+          duration: parseInt(jdDuration),
+          questionCount: parseInt(jdQuestionCount),
           // Include JD raw text for GenQ service to generate contextual questions
           jdText: jdText || undefined,
         };
@@ -512,13 +548,17 @@ export default function OptionPage() {
       custom: () =>
         !customData.position ||
         !customData.experience ||
-        !customData.skills.length
+        !customData.skills.length ||
+        !customDuration ||
+        !customQuestionCount
           ? null
           : {
               role: customData.position,
               level: customData.experience,
               skill: customData.skills,
               language: customData.language,
+              duration: parseInt(customDuration),
+              questionCount: parseInt(customQuestionCount),
             },
     };
 
@@ -532,9 +572,9 @@ export default function OptionPage() {
 
     if (!sessionData) {
       const messages = {
-        cv: "Please upload and analyze CV first!",
-        jd: "Please scrape JD and fill in all required information (Position, Level, Skills)!",
-        custom: "Please fill in all required information!",
+        cv: "Please upload and analyze CV, then select duration and number of questions!",
+        jd: "Please analyze JD and fill in all required information (Position, Level, Skills, Duration, Questions)!",
+        custom: "Please fill in all required information including duration and number of questions!",
       };
       return toast.error(
         messages[selectedOption] || "Please select an option!"
@@ -669,6 +709,42 @@ export default function OptionPage() {
                   <option value='Junior'>Junior</option>
                   <option value='Middle'>Middle</option>
                   <option value='Senior'>Senior</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Interview Duration: <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={cvDuration}
+                  onChange={(e) => setCvDuration(e.target.value)}
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+                >
+                  <option value=''>-- Select duration --</option>
+                  {durationOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-bold text-gray-700 mb-2'>
+                  Number of Questions: <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={cvQuestionCount}
+                  onChange={(e) => setCvQuestionCount(e.target.value)}
+                  className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+                >
+                  <option value=''>-- Select questions --</option>
+                  {questionCountOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -915,7 +991,7 @@ Job Description:
 
         <div className='bg-white border-2 border-green-200 rounded-2xl p-6'>
           {/* Basic Info Grid */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6'>
             <FormSelect
               label='Position Applied For'
               value={customData.position}
@@ -957,6 +1033,34 @@ Job Description:
                 setCustomData((prev) => ({ ...prev, language: value }))
               }
               options={[{ value: "English", label: "English" }]}
+              required
+            />
+
+            <FormSelect
+              label='Interview Duration'
+              value={customDuration}
+              onChange={(value) => setCustomDuration(value)}
+              options={[
+                { value: "", label: "-- Select duration --" },
+                ...durationOptions.map((opt) => ({
+                  value: opt.value,
+                  label: opt.label,
+                })),
+              ]}
+              required
+            />
+
+            <FormSelect
+              label='Number of Questions'
+              value={customQuestionCount}
+              onChange={(value) => setCustomQuestionCount(value)}
+              options={[
+                { value: "", label: "-- Select questions --" },
+                ...questionCountOptions.map((opt) => ({
+                  value: opt.value,
+                  label: opt.label,
+                })),
+              ]}
               required
             />
           </div>
@@ -1184,16 +1288,22 @@ Job Description:
                     setCvFile(null);
                     setCvData(null);
                     setCvRawText(""); // Clear CV raw text
+                    setCvDuration("");
+                    setCvQuestionCount("");
                     setJdText("");
                     setJdUrl(""); // Clear JD URL
                     setJdInputMode("text"); // Reset to text mode
                     setJdData(null);
+                    setJdDuration("");
+                    setJdQuestionCount("");
                     setCustomData({
                       position: "",
                       experience: "",
                       skills: [],
                       language: "English",
                     });
+                    setCustomDuration("");
+                    setCustomQuestionCount("");
                     }}
                     className='px-8 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium text-gray-700'
                   >
@@ -1205,12 +1315,14 @@ Job Description:
                     onClick={handleCreateSession}
                     disabled={
                       loading ||
-                      (selectedOption === "cv" && !cvData) ||
-                      (selectedOption === "jd" && !jdData) ||
+                      (selectedOption === "cv" && (!cvData || !cvDuration || !cvQuestionCount)) ||
+                      (selectedOption === "jd" && (!jdData || !jdDuration || !jdQuestionCount)) ||
                       (selectedOption === "custom" &&
                         (!customData.position ||
                           !customData.experience ||
-                          customData.skills.length === 0))
+                          customData.skills.length === 0 ||
+                          !customDuration ||
+                          !customQuestionCount))
                     }
                     className={`flex-1 py-4 px-8 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl ${
                       loading ||
@@ -1251,19 +1363,31 @@ Job Description:
                         interview session.
                       </p>
                     )}
+                    {selectedOption === "cv" && cvData && (!cvDuration || !cvQuestionCount) && (
+                      <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
+                        ⚠️ Please select interview duration and number of questions.
+                      </p>
+                    )}
                     {selectedOption === "jd" && !jdData && (
                       <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
                         ⚠️ Please enter and analyze the Job Description before
                         creating the interview session.
                       </p>
                     )}
+                    {selectedOption === "jd" && jdData && (!jdDuration || !jdQuestionCount) && (
+                      <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
+                        ⚠️ Please select interview duration and number of questions.
+                      </p>
+                    )}
                     {selectedOption === "custom" &&
                       (!customData.position ||
                         !customData.experience ||
-                        customData.skills.length === 0) && (
+                        customData.skills.length === 0 ||
+                        !customDuration ||
+                        !customQuestionCount) && (
                         <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>
                           ⚠️ Please fill in all required fields: Position,
-                          Experience, and at least one skill.
+                          Experience, Duration, Questions, and at least one skill.
                         </p>
                       )}
                   </div>

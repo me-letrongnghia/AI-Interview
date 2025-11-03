@@ -29,12 +29,9 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-openrouter:
-  api-key: ${OPENROUTER_API_KEY}
-  api-url: ${OPENROUTER_API_URL}
-  model: ${OPENROUTER_MODEL}
-  site-url: ${OPENROUTER_SITE_URL}
-  app-name: ${OPENROUTER_APP_NAME}
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: ${GEMINI_MODEL}
 
 # GenQ Service Configuration
 genq:

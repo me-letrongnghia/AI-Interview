@@ -22,4 +22,6 @@ public class InterviewSessionInfoResponse {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer duration; // in minutes
+    private Integer questionCount; // number of questions
 }

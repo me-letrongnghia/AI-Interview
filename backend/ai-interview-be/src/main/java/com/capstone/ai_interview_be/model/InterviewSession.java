@@ -48,6 +48,12 @@ public class InterviewSession {
     @Column(name = "jd_text", columnDefinition = "TEXT")
     private String jdText;
 
+    @Column(name = "duration")
+    private Integer duration; // in minutes
+    
+    @Column(name = "question_count")
+    private Integer questionCount; // number of questions
+
     
     @Enumerated(EnumType.STRING)
     private Source source = Source.Custom;

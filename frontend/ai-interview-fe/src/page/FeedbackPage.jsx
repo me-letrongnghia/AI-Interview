@@ -34,7 +34,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (!sessionId) {
-      setError("Session ID không hợp lệ");
+      setError("Invalid Session ID");
       setLoading(false);
       return;
     }
@@ -45,7 +45,7 @@ export default function FeedbackPage() {
         setData(res);
       } catch (err) {
         console.error(err);
-        toast.error(err?.message || "Lỗi khi lấy feedback");
+        toast.error(err?.message || "Error fetching feedback");
         setError(err?.message);
       } finally {
         setLoading(false);
@@ -58,7 +58,7 @@ export default function FeedbackPage() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Đang tải feedback...
+        Loading feedback...
       </div>
     );
 
@@ -70,7 +70,7 @@ export default function FeedbackPage() {
           onClick={() => navigate("/")}
           className="px-4 py-2 bg-emerald-600 text-white rounded"
         >
-          Quay về
+          Go Back
         </button>
       </div>
     );
@@ -78,7 +78,7 @@ export default function FeedbackPage() {
   if (!data)
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Không có dữ liệu feedback
+        No feedback data
       </div>
     );
 
