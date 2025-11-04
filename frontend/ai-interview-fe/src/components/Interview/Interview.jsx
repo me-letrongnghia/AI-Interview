@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect } from "react";
 
 // ===== VideoStream =====
-export const VideoStream = memo(({ streamRef, muted }) => {
+export const VideoStream = memo(({ streamRef, muted, className = "" }) => {
   const videoRef = useRef(null);
   useEffect(() => {
     if (videoRef.current && streamRef.current) {
@@ -15,7 +15,7 @@ export const VideoStream = memo(({ streamRef, muted }) => {
       autoPlay
       playsInline
       muted={muted}
-      className="w-full h-full object-cover -scale-x-100"
+      className={className || "w-full h-full object-cover -scale-x-100"}
     />
   );
 });
@@ -28,6 +28,7 @@ export const VolumeBar = ({ analyser }) => {
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     let rafId = null;
     const update = () => {
+      if (!analyser) return;
       analyser.getByteFrequencyData(dataArray);
       let values = 0;
       for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
@@ -51,7 +52,7 @@ export const VolumeBar = ({ analyser }) => {
         <div
           key={i}
           ref={(el) => (barsRef.current[i] = el)}
-          className="flex-1 h-2 rounded-sm bg-gray-300"
+          className="flex-1 h-2 rounded-sm bg-gray-300 transition-colors duration-150"
         />
       ))}
     </div>

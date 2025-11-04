@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import pandaImage2 from "../assets/pandahome.png";
 import { VideoStream, VolumeBar } from "../components/Interview/Interview";
 import { UseAppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
@@ -12,13 +11,14 @@ export default function DeviceCheckPage() {
   const { userProfile, isLogin } = UseAppContext();
 
   const streamRef = useRef(null);
+  const audioContextRef = useRef(null);
   const [analyser, setAnalyser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [devices, setDevices] = useState({ audioInputs: [], videoInputs: [] });
   const [selectedAudio, setSelectedAudio] = useState("");
   const [selectedVideo, setSelectedVideo] = useState("");
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn] = useState(true);
+  const [isCameraOn] = useState(true);
   const [deviceCheckPassed, setDeviceCheckPassed] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -30,31 +30,62 @@ export default function DeviceCheckPage() {
 
       setDevices({ audioInputs, videoInputs });
 
-      // Auto-select first device if available
-      if (audioInputs.length > 0 && !selectedAudio) {
-        setSelectedAudio(audioInputs[0].deviceId);
-      }
-      if (videoInputs.length > 0 && !selectedVideo) {
-        setSelectedVideo(videoInputs[0].deviceId);
-      }
-
       // Check if devices are available
       if (audioInputs.length > 0 && videoInputs.length > 0) {
         setDeviceCheckPassed(true);
       }
+
+      // Return default device IDs
+      return {
+        audioId: audioInputs.length > 0 ? audioInputs[0].deviceId : null,
+        videoId: videoInputs.length > 0 ? videoInputs[0].deviceId : null,
+      };
     } catch (error) {
       console.error("Error loading devices:", error);
       toast.error(
         "Unable to retrieve device list. Please check access permissions.",
         { position: "top-right" }
       );
+      return { audioId: null, videoId: null };
+    }
+  };
+
+  const cleanupMedia = () => {
+    // Cleanup analyser first
+    setAnalyser(null);
+
+    // Cleanup audio context
+    if (audioContextRef.current) {
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (e) {
+        console.error("Error closing audio context:", e);
+      }
+      audioContextRef.current = null;
+    }
+
+    // Cleanup stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.error("Error stopping track:", e);
+        }
+      });
+      streamRef.current = null;
     }
   };
 
   const initMedia = async (audioDeviceId, videoDeviceId) => {
-    let audioContext, analyserNode;
     try {
       setIsInitializing(true);
+
+      // Cleanup previous resources first
+      cleanupMedia();
+
       const constraints = {
         audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         video: videoDeviceId
@@ -70,8 +101,15 @@ export default function DeviceCheckPage() {
       streamRef.current = stream;
 
       // Setup audio analyser
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyserNode = audioContext.createAnalyser();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      
+      // Resume audio context if suspended (required for some browsers)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      const analyserNode = audioContext.createAnalyser();
       const mic = audioContext.createMediaStreamSource(stream);
       analyserNode.fftSize = 256;
       analyserNode.smoothingTimeConstant = 0.8;
@@ -79,15 +117,13 @@ export default function DeviceCheckPage() {
       setAnalyser(analyserNode);
 
       setIsInitializing(false);
-
-      return () => {
-        if (audioContext) audioContext.close();
-        if (streamRef.current)
-          streamRef.current.getTracks().forEach((t) => t.stop());
-      };
     } catch (error) {
       console.error("Error initializing media:", error);
       setIsInitializing(false);
+      
+      // Cleanup on error
+      cleanupMedia();
+      
       toast.error(
         "Cannot access devices. Please grant browser permissions.",
         { position: "top-right" }
@@ -97,40 +133,39 @@ export default function DeviceCheckPage() {
 
   useEffect(() => {
     const initialize = async () => {
-      await initMedia();
-      await loadDevices();
+      // First load devices to get the list
+      const defaultDevices = await loadDevices();
+      
+      // Then initialize media with default devices
+      if (defaultDevices.audioId || defaultDevices.videoId) {
+        setSelectedAudio(defaultDevices.audioId || "");
+        setSelectedVideo(defaultDevices.videoId || "");
+        await initMedia(defaultDevices.audioId, defaultDevices.videoId);
+      } else {
+        setIsInitializing(false);
+        toast.warning(
+          "No camera or microphone found. Please connect devices.",
+          { position: "top-right" }
+        );
+      }
     };
     initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (selectedAudio || selectedVideo) {
-      if (streamRef.current)
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      initMedia(selectedAudio, selectedVideo);
-    }
+    // Skip if this is during initial setup
+    if (isInitializing) return;
+    if (!selectedAudio && !selectedVideo) return;
+    
+    // Re-initialize media when device selection changes
+    const reinitialize = async () => {
+      await initMedia(selectedAudio, selectedVideo);
+    };
+    
+    reinitialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAudio, selectedVideo]);
-
-  const toggleMicrophone = () => {
-    if (streamRef.current) {
-      const audioTrack = streamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMicOn(audioTrack.enabled);
-      }
-    }
-  };
-
-  const toggleCamera = () => {
-    if (streamRef.current) {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCameraOn(videoTrack.enabled);
-      }
-    }
-  };
 
   const handleContinue = async () => {
     if (!isLogin || !userProfile) {
@@ -171,26 +206,20 @@ export default function DeviceCheckPage() {
     try {
       setLoading(true);
 
-      // Delay to show loading state
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Stop camera/mic before navigating
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
+      // Cleanup media resources
+      cleanupMedia();
 
       const interviewId = formData.sessionId;
 
       toast.success("Starting interview!", {
         position: "top-right",
-        autoClose: 1000,
+        autoClose: 800,
       });
 
-      // Navigate after a short delay
+      // Navigate with minimal delay
       setTimeout(() => {
         navigate(`/interview/${interviewId}`);
-      }, 300);
+      }, 200);
     } catch (error) {
       console.error("Navigation error:", error);
       toast.error("An error occurred. Please try again.", {
@@ -203,75 +232,29 @@ export default function DeviceCheckPage() {
   // Cleanup when leaving page
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          try {
-            track.stop();
-          } catch {
-            /* ignore */
-          }
-        });
-        streamRef.current = null;
-      }
+      cleanupMedia();
     };
   }, []);
 
   return (
-    <div className='min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4 py-6 overflow-hidden'>
-      {/* Header - Compact */}
-      <div className='text-center mb-4'>
-        <div className='flex justify-center mb-3'>
-          <div className='relative group'>
-            <div className='absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300 rounded-full'></div>
-            <img
-              src={pandaImage2}
-              alt='logo'
-              className='relative h-16 w-16 transition-all duration-300 hover:scale-110 drop-shadow-2xl'
-            />
-            <div className='absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white shadow-xl animate-pulse flex items-center justify-center'>
-              <span className='text-white text-[10px] font-bold'>✓</span>
-            </div>
-          </div>
+    <div className='min-h-screen w-full bg-gradient-to-br from-emerald-50 via-white to-green-50 p-4 lg:p-6 overflow-hidden'>
+      {/* Main Content - Centered */}
+      <div className='flex flex-col items-center justify-center min-h-screen'>
+        {/* Title */}
+        <div className='text-center mb-6'>
+          <h1 className='text-3xl lg:text-4xl font-black bg-black to-teal-600 bg-clip-text text-transparent mb-2 tracking-tight'>
+            Device Check
+          </h1>
+          <p className='text-gray-600 text-sm lg:text-base max-w-xl mx-auto'>
+            Ensure your camera and microphone are working properly
+          </p>
         </div>
-        <h1 className='text-2xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 tracking-tight'>
-          Device Check
-        </h1>
-        <p className='text-gray-600 max-w-2xl mx-auto leading-relaxed text-sm'>
-          Ensure your camera and microphone are working properly for the best
-          interview experience
-        </p>
 
-        {/* Status badges - Compact */}
-        <div className='flex items-center justify-center gap-2 mt-3'>
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-              deviceCheckPassed
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-gray-100 text-gray-500 border border-gray-300"
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                deviceCheckPassed ? "bg-green-500 animate-pulse" : "bg-gray-400"
-              }`}
-            ></span>
-            {deviceCheckPassed ? "Ready" : "Checking..."}
-          </div>
-
-          {isInitializing && (
-            <div className='flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-300 text-xs font-semibold'>
-              <div className='w-2.5 h-2.5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin'></div>
-              Initializing...
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content Box - Compact */}
-      <div className='flex flex-col lg:flex-row items-start justify-between gap-4 bg-white shadow-2xl rounded-2xl p-4 lg:p-5 w-full max-w-6xl border-2 border-green-100 max-h-[calc(100vh-200px)]'>
+        {/* Content Box - Compact */}
+        <div className='flex flex-col lg:flex-row items-start justify-between gap-4 bg-white shadow-2xl rounded-2xl p-4 lg:p-5 w-full max-w-6xl border-2 border-emerald-100'>
         {/* Left: Video Preview */}
         <div className='flex flex-col items-center w-full lg:w-3/5 space-y-3'>
-          <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-200 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-xl'>
+          <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-emerald-200 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-xl'>
             {streamRef.current && (
               <VideoStream
                 streamRef={streamRef}
@@ -317,7 +300,7 @@ export default function DeviceCheckPage() {
             {isInitializing && (
               <div className='absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm'>
                 <div className='text-center'>
-                  <div className='w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3'></div>
+                  <div className='w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3'></div>
                   <p className='text-white text-xs font-medium'>
                     Initializing...
                   </p>
@@ -331,103 +314,44 @@ export default function DeviceCheckPage() {
                 PREVIEW
               </span>
             </div>
-
-            {/* Control buttons - Compact */}
-            <div className='absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2'>
-              <button
-                onClick={toggleMicrophone}
-                disabled={isInitializing}
-                className={`group relative p-2.5 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isMicOn
-                    ? "bg-white/95 hover:bg-white text-gray-800 shadow-lg hover:shadow-xl hover:scale-110"
-                    : "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl hover:scale-110"
-                }`}
-                title={isMicOn ? "Mute microphone" : "Unmute microphone"}
-              >
-                <svg
-                  className='w-4 h-4'
-                  fill='currentColor'
-                  viewBox='0 0 20 20'
-                >
-                  {isMicOn ? (
-                    <path d='M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z' />
-                  ) : (
-                    <>
-                      <path d='M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z' />
-                      <line
-                        x1='4'
-                        y1='4'
-                        x2='16'
-                        y2='16'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                      />
-                    </>
-                  )}
-                </svg>
-              </button>
-
-              <button
-                onClick={toggleCamera}
-                disabled={isInitializing}
-                className={`group relative p-2.5 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isCameraOn
-                    ? "bg-white/95 hover:bg-white text-gray-800 shadow-lg hover:shadow-xl hover:scale-110"
-                    : "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl hover:scale-110"
-                }`}
-                title={isCameraOn ? "Turn off camera" : "Turn on camera"}
-              >
-                <svg
-                  className='w-4 h-4'
-                  fill='currentColor'
-                  viewBox='0 0 20 20'
-                >
-                  {isCameraOn ? (
-                    <path d='M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z' />
-                  ) : (
-                    <>
-                      <path d='M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z' />
-                      <line
-                        x1='4'
-                        y1='4'
-                        x2='16'
-                        y2='16'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                      />
-                    </>
-                  )}
-                </svg>
-              </button>
-            </div>
           </div>
 
           {/* Volume bar - Compact */}
-          <div className='w-full bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-3 border border-green-200 shadow-md'>
+          <div className='w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-xl p-3 border border-emerald-200 shadow-md'>
             <div className='flex items-center justify-between mb-2'>
               <p className='text-xs font-bold text-gray-800 flex items-center gap-1.5'>
-                <svg
-                  className='w-3.5 h-3.5 text-green-600'
-                  fill='currentColor'
-                  viewBox='0 0 20 20'
-                >
-                  <path d='M10 12a2 2 0 100-4 2 2 0 000 4z' />
-                  <path
-                    fillRule='evenodd'
-                    d='M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z'
-                    clipRule='evenodd'
-                  />
-                </svg>
-                <span className='text-xs'>Audio</span>
+                <div className={`w-7 h-7 bg-gradient-to-br rounded-lg flex items-center justify-center shadow-sm transition-all duration-300 ${
+                  isMicOn ? 'from-emerald-500 to-green-600' : 'from-gray-400 to-gray-500'
+                }`}>
+                  <svg className='w-3.5 h-3.5 text-white' fill='currentColor' viewBox='0 0 20 20'>
+                    {isMicOn ? (
+                      <path d='M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z' />
+                    ) : (
+                      <>
+                        <path d='M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z' />
+                        <line x1='4' y1='4' x2='16' y2='16' stroke='currentColor' strokeWidth='2' />
+                      </>
+                    )}
+                  </svg>
+                </div>
+                <span className='text-xs'>{isMicOn ? 'Audio Level' : 'Mic Muted'}</span>
               </p>
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isMicOn ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  isMicOn ? "bg-green-500 animate-pulse shadow-lg shadow-green-300" : "bg-gray-400"
                 }`}
               ></span>
             </div>
-            <div className='bg-white rounded-lg p-2 shadow-inner border border-green-100'>
-              <VolumeBar analyser={analyser} />
+            <div className='bg-white rounded-lg p-2 shadow-inner border border-emerald-100'>
+              {analyser && isMicOn ? (
+                <VolumeBar analyser={analyser} />
+              ) : (
+                <div className='flex items-center gap-1 h-2'>
+                  {[...Array(10)].map((_, i) => (
+                    <div key={i} className='flex-1 h-2 rounded-sm bg-gray-300' />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -435,9 +359,9 @@ export default function DeviceCheckPage() {
         {/* Right: Device Select - Compact */}
         <div className='flex flex-col w-full lg:w-2/5 space-y-3'>
           {/* Microphone select - Compact */}
-          <div className='bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200 shadow-md'>
+          <div className='bg-gradient-to-br rounded-xl p-3 border shadow-md'>
             <label className='block text-xs font-bold text-gray-800 mb-2 flex items-center gap-2'>
-              <div className='w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md'>
+              <div className='w-7 h-7 bg-gradient-to-br from-green-500 to-green-500 rounded-lg flex items-center justify-center shadow-md'>
                 <svg
                   className='w-3.5 h-3.5 text-white'
                   fill='currentColor'
@@ -452,7 +376,7 @@ export default function DeviceCheckPage() {
               value={selectedAudio}
               onChange={(e) => setSelectedAudio(e.target.value)}
               disabled={devices.audioInputs.length === 0}
-              className='w-full border border-blue-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
+              className='w-full border border-green-300 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
             >
               {devices.audioInputs.length === 0 ? (
                 <option value=''>⚠️ No microphone found</option>
@@ -468,9 +392,9 @@ export default function DeviceCheckPage() {
           </div>
 
           {/* Camera select - Compact */}
-          <div className='bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-3 border border-purple-200 shadow-md'>
+          <div className='bg-gradient-to-br rounded-xl p-3 border shadow-md'>
             <label className='block text-xs font-bold text-gray-800 mb-2 flex items-center gap-2'>
-              <div className='w-7 h-7 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md'>
+              <div className='w-7 h-7 bg-green-500 rounded-lg flex items-center justify-center shadow-md'>
                 <svg
                   className='w-3.5 h-3.5 text-white'
                   fill='currentColor'
@@ -485,10 +409,10 @@ export default function DeviceCheckPage() {
               value={selectedVideo}
               onChange={(e) => setSelectedVideo(e.target.value)}
               disabled={devices.videoInputs.length === 0}
-              className='w-full border border-purple-300 rounded-lg px-3 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
+              className='w-full border border-green-300 rounded-lg px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white shadow-sm font-medium text-gray-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed'
             >
               {devices.videoInputs.length === 0 ? (
-                <option value=''>⚠️ No camera found</option>
+                <option value=''>⚠️ No camera found</option>  
               ) : (
                 devices.videoInputs.map((device) => (
                   <option key={device.deviceId} value={device.deviceId}>
@@ -563,7 +487,7 @@ export default function DeviceCheckPage() {
               !isMicOn ||
               !isCameraOn
             }
-            className='w-full bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:via-emerald-700 hover:to-teal-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 relative overflow-hidden group'
+            className='w-full bg-green-500 to-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:from-emerald-600 hover:via-green-700 hover:to-teal-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 relative overflow-hidden group'
           >
             <div className='absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700'></div>
             {loading ? (
@@ -653,12 +577,15 @@ export default function DeviceCheckPage() {
                 />
               </svg>
               {deviceCheckPassed && isMicOn && isCameraOn
-                ? "✅ Ready for interview!"
-                : "⚠️ Check camera & mic"}
+                ? "Ready for interview!"
+                : "Check camera & mic"}
             </p>
           </div>
         </div>
       </div>
+      {/* End of Content Box */}
+      </div>
+      {/* End of Main Content Container */}
     </div>
   );
 }

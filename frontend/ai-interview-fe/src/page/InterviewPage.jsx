@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import imgBG from "../assets/backgroundI.png";
 import pandaImage2 from "../assets/LinhVat.png";
 import TypingText from "../components/TypingText";
 import { useSpeechToText } from "../hooks/useSpeechToText";
@@ -162,7 +161,6 @@ function useTimer(initialMinutes, initialSeconds, isActive, onFinish) {
 // Interview UI
 const InterviewUI = memo(
   ({
-    imgBG,
     streamRef,
     analyser,
     timerDisplay,
@@ -173,7 +171,6 @@ const InterviewUI = memo(
     chatInput,
     setChatInput,
     sendMessage,
-    setIsRecording,
     interimTranscript,
     speechError,
     isLoading,
@@ -181,57 +178,23 @@ const InterviewUI = memo(
     setTypingMessageId,
     speechRate,
     handleLeaveRoom,
-    handleToggleCamera,
-    toggleMicrophone,
-    isCameraOn,
-    isMicOn,
     userProfile,
     pandaImage,
     interviewConfig,
   }) => (
-    <div className='h-screen flex flex-col bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 relative overflow-hidden'>
-      {/* Animated background elements */}
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 left-0 w-96 h-96 bg-green-300/30 rounded-full blur-3xl animate-pulse'></div>
-        <div
-          className='absolute bottom-0 right-0 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl animate-pulse'
-          style={{ animationDelay: "1s" }}
-        ></div>
-        <div
-          className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl animate-pulse'
-          style={{ animationDelay: "2s" }}
-        ></div>
-      </div>
+    <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden'>
 
       <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
         {/* Main Video Area */}
-        <div className='flex-1 relative rounded-3xl overflow-hidden shadow-2xl border-2 border-green-200/50 backdrop-blur-xl bg-white/50'>
-          <img
-            src={imgBG}
-            alt='Background'
-            className='absolute inset-0 w-full h-full object-cover opacity-50'
-          />
-
-          {/* Decorative grid pattern overlay */}
-          <div
-            className='absolute inset-0 opacity-10'
-            style={{
-              backgroundImage:
-                "linear-gradient(0deg, transparent 24%, rgba(16, 185, 129, .3) 25%, rgba(16, 185, 129, .3) 26%, transparent 27%, transparent 74%, rgba(16, 185, 129, .3) 75%, rgba(16, 185, 129, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(16, 185, 129, .3) 25%, rgba(16, 185, 129, .3) 26%, transparent 27%, transparent 74%, rgba(16, 185, 129, .3) 75%, rgba(16, 185, 129, .3) 76%, transparent 77%, transparent)",
-              backgroundSize: "50px 50px",
-            }}
-          ></div>
+        <div className='flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white'>
 
           {/* Header Bar */}
-          <div className='absolute top-0 left-0 right-0 bg-gradient-to-b from-green-500/80 via-emerald-500/60 to-transparent backdrop-blur-md p-6 flex items-center justify-between z-10'>
+          <div className='absolute top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 p-3.5 flex items-center justify-between z-10'>
             <button
               onClick={handleLeaveRoom}
-              className='group flex items-center gap-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95'
+              className='group flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-200 border border-white/20 hover:border-white/30'
             >
-              <LogOut
-                size={20}
-                className='group-hover:rotate-12 transition-transform duration-300'
-              />
+              <LogOut size={18} />
               <span>End Interview</span>
             </button>
 
@@ -243,48 +206,14 @@ const InterviewUI = memo(
           </div>
 
           {/* Main Content Area */}
-          <div className='relative h-full flex flex-col items-center justify-center p-8 pt-20'>
-            {/* Video Grid - Larger and centered */}
-            <div className='grid grid-cols-2 gap-8 max-w-7xl w-full'>
+          <div className='relative h-full flex flex-col items-center justify-start p-8 pt-24'>
+            {/* Video Grid */}
+            <div className='grid grid-cols-2 gap-6 max-w-6xl w-full mt-8'>
               {/* Your Video */}
-              <div className='group relative aspect-video bg-gray-900 rounded-2xl shadow-lg overflow-hidden border-2 border-green-500 transition-all duration-300'>
+              <div className='group relative aspect-video bg-gray-900 rounded-xl overflow-hidden border-2 border-green-500'>
                 {streamRef.current && (
                   <VideoStream streamRef={streamRef} muted />
                 )}
-
-                {/* Live Badge */}
-                <div className='absolute top-3 left-3 flex items-center gap-2 bg-red-500 px-3 py-1.5 rounded-lg shadow-md'>
-                  <div className='w-2 h-2 bg-white rounded-full animate-pulse'></div>
-                  <span className='text-white text-xs font-semibold'>LIVE</span>
-                </div>
-
-                {/* Camera Controls */}
-                <div className='absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
-                  <button
-                    onClick={handleToggleCamera}
-                    className={`p-3 rounded-lg transition-all ${
-                      isCameraOn
-                        ? "bg-white/20 hover:bg-white/30 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
-                    title={isCameraOn ? "Turn off camera" : "Turn on camera"}
-                  >
-                    {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
-                  </button>
-
-                  <button
-                    onClick={toggleMicrophone}
-                    className={`p-3 rounded-lg transition-all ${
-                      isMicOn
-                        ? "bg-white/20 hover:bg-white/30 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
-                    title={isMicOn ? "Mute microphone" : "Unmute microphone"}
-                  >
-                    {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
-                  </button>
-                </div>
-
                 {/* Name Label */}
                 <div className='absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg'>
                   <span className='text-gray-800 text-sm font-semibold'>
@@ -294,7 +223,7 @@ const InterviewUI = memo(
               </div>
 
               {/* AI Interviewer Video */}
-              <div className='relative aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg overflow-hidden border-2 border-emerald-500'>
+              <div className='relative aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl overflow-hidden border-2 border-emerald-500'>
                 {/* AI Avatar */}
                 <div className='absolute inset-0 flex items-center justify-center'>
                   <div className='relative w-32 h-32'>
@@ -341,14 +270,66 @@ const InterviewUI = memo(
                 )}
               </div>
             </div>
+
+            {/* Voice Controls Section - Below Video Grid */}
+            <div className='max-w-7xl w-full mt-8'>
+              <div className='flex items-center justify-center gap-6'>
+                {/* Voice Input Button */}
+                <button
+                  onClick={handleMicClick}
+                  disabled={typingMessageId && !isRecording}
+                  className={`px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                    isRecording
+                      ? "bg-red-500 hover:bg-red-600"
+                      : "bg-green-500 hover:bg-green-600"
+                  }`}
+                  title={isRecording ? "Stop recording" : "Voice input"}
+                >
+                  <Mic size={20} className={`text-white ${isRecording ? "animate-pulse" : ""}`} />
+                  <span className='text-white font-semibold text-sm'>
+                    Voice Input
+                  </span>
+                </button>
+
+                {/* Recording Indicator - Compact */}
+                {isRecording && (
+                  <div className='bg-white rounded-lg border-2 border-red-300 animate-fadeIn px-6 py-3 flex items-center gap-4'>
+                    <div className='flex items-center gap-2'>
+                      <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
+                      <span className='text-sm font-semibold text-gray-800'>Recording</span>
+                    </div>
+                    <div className='w-32'>
+                      <VolumeBar analyser={analyser} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Transcript Display */}
+              {isRecording && (interimTranscript || chatInput) && (
+                <div className='mt-4 max-w-2xl mx-auto p-3 bg-white rounded-lg border border-black-200 animate-fadeIn'>
+                  <p className='text-sm text-gray-700'>
+                    {chatInput}
+                    <span className='text-green-600 italic'>{interimTranscript}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {isRecording && speechError && (
+                <div className='mt-2 max-w-2xl mx-auto text-xs text-red-600 bg-red-50 p-2 rounded-lg'>
+                  {speechError}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Progress Bar - Bottom Fixed */}
-          <div className='absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-green-500/80 via-emerald-500/60 to-transparent backdrop-blur-md z-10'>
-            <div className='max-w-7xl mx-auto'>
-              <div className='bg-white/90 backdrop-blur-sm rounded-full h-4 overflow-hidden border-2 border-white/50 shadow-lg'>
+          <div className='absolute bottom-0 left-0 right-0 p-4 z-10'>
+            <div className='max-w-6xl mx-auto'>
+              <div className='border-2 border-black-700 bg-green/20 rounded-full h-3 overflow-hidden'>
                 <div
-                  className='h-full bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 rounded-full transition-all duration-1000 shadow-lg relative overflow-hidden'
+                  className='h-full bg-green-500 rounded-full transition-all duration-500'
                   style={{
                     width: `${Math.min(
                       (chatHistory.filter((m) => m.type === "ai").length /
@@ -358,16 +339,14 @@ const InterviewUI = memo(
                     )}%`,
                   }}
                 >
-                  <div className='absolute inset-0 bg-white/30 animate-pulse'></div>
                 </div>
               </div>
-              <div className='flex justify-between mt-3 px-3'>
-                <span className='text-sm text-white font-bold drop-shadow-lg'>
-                  Interview Progress
+              <div className='flex justify-between mt-2 px-1'>
+                <span className='text-sm text-green font-medium'>
+                  Progress
                 </span>
-                <span className='text-sm text-white font-bold drop-shadow-lg'>
-                  {chatHistory.filter((m) => m.type === "ai").length}/
-                  {interviewConfig.maxQuestions} Questions
+                <span className='text-sm text-black font-medium'>
+                  {chatHistory.filter((m) => m.type === "ai").length}/{interviewConfig.maxQuestions}
                 </span>
               </div>
             </div>
@@ -375,51 +354,31 @@ const InterviewUI = memo(
         </div>
 
         {/* Chat Sidebar */}
-        <div className='w-[450px] bg-white/90 backdrop-blur-xl shadow-2xl flex flex-col border-2 border-green-300/50 rounded-3xl overflow-hidden'>
-          {/* Chat Header - Enhanced */}
-          <div className='bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 p-5 text-white relative overflow-hidden'>
-            {/* Animated background pattern */}
-            <div className='absolute inset-0 opacity-20'>
-              <div
-                className='absolute inset-0'
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.1) 10px, rgba(255,255,255,.1) 20px)",
-                }}
-              ></div>
-            </div>
-
-            <div className='relative flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <div className='p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg'>
-                  <svg
-                    className='w-6 h-6'
-                    fill='currentColor'
-                    viewBox='0 0 20 20'
-                  >
-                    <path
-                      fillRule='evenodd'
-                      d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
-                      clipRule='evenodd'
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className='text-lg font-bold tracking-wide'>
-                    Interview Chat
-                  </h2>
-                  <p className='text-xs text-white/90 font-medium'>
-                    Real-time conversation
-                  </p>
-                </div>
+        <div className='w-[450px] bg-white shadow-xl flex flex-col border border-green-100 rounded-2xl overflow-hidden'>
+          {/* Chat Header */}
+          <div className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 bg-white/20 rounded-lg'>
+                <svg
+                  className='w-5 h-5'
+                  fill='currentColor'
+                  viewBox='0 0 20 20'
+                >
+                  <path
+                    fillRule='evenodd'
+                    d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
+                    clipRule='evenodd'
+                  />
+                </svg>
               </div>
+              <h2 className='text-lg font-semibold'>Interview Chat</h2>
             </div>
           </div>
 
-          {/* Messages Container - Enhanced */}
+          {/* Messages Container */}
           <div
             ref={messagesRef}
-            className='flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-green-50/50 via-emerald-50/30 to-white/50'
+            className='flex-1 overflow-y-auto p-6 space-y-4 bg-green-50/30'
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: "#10b981 #f0fdf4",
@@ -455,7 +414,7 @@ const InterviewUI = memo(
                             {chat.time}
                           </span>
                         </div>
-                        <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md border-2 border-green-200 hover:shadow-lg transition-shadow'>
+                        <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200'>
                           <p className='text-sm leading-relaxed text-gray-800'>
                             {chat.id === typingMessageId ? (
                               <TypingText
@@ -487,7 +446,7 @@ const InterviewUI = memo(
                               "You"}
                           </span>
                         </div>
-                        <div className='bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl rounded-tr-sm px-4 py-3 shadow-md hover:shadow-lg transition-shadow'>
+                        <div className='bg-green-600 rounded-2xl rounded-tr-sm px-4 py-3'>
                           <p className='text-sm leading-relaxed text-white'>
                             {chat.text}
                           </p>
@@ -495,12 +454,20 @@ const InterviewUI = memo(
                       </div>
 
                       {/* User Avatar */}
-                      <div className='flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+                      <div className='flex-shrink-0 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center overflow-hidden'>
                         {userProfile?.picture ? (
                           <img
                             src={userProfile.picture}
                             alt={userProfile.fullName || userProfile.name}
                             className='w-full h-full object-cover'
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://ui-avatars.com/api/?name=" + 
+                                encodeURIComponent(userProfile?.fullName || userProfile?.name || "User") + 
+                                "&background=22c55e&color=fff";
+                            }}
                           />
                         ) : (
                           <span className='text-white text-sm font-bold'>
@@ -527,7 +494,7 @@ const InterviewUI = memo(
                       className='w-full h-full object-contain'
                     />
                   </div>
-                  <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md border-2 border-green-200'>
+                  <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200'>
                     <div className='flex items-center gap-2'>
                       <span className='text-sm text-gray-600'>
                         Panda is thinking
@@ -550,15 +517,15 @@ const InterviewUI = memo(
             )}
           </div>
 
-          {/* Input Area - Enhanced */}
-          <div className='p-5 border-t-2 border-green-200 bg-gradient-to-br from-green-50/70 via-emerald-50/50 to-teal-50/30 backdrop-blur-sm'>
+          {/* Input Area */}
+          <div className='p-4 bg-white border-t border-green-100'>
             <div className='flex flex-col gap-4'>
               {/* Text input with character counter */}
               <div className='flex gap-3'>
                 <div className='flex-1 min-w-0 relative'>
                   <textarea
                     placeholder='Type your answer here...'
-                    className='w-full px-4 py-3.5 pr-16 rounded-2xl border-2 border-green-200 focus:outline-none focus:ring-0 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-md resize-none min-h-[56px] max-h-32 text-sm placeholder:text-gray-400'
+                    className='w-full px-4 py-3 rounded-lg border border-black-200 focus:outline-none focus:border-green-500 transition-colors bg-white resize-none min-h-[56px] max-h-32 text-sm placeholder:text-gray-400 overflow-hidden'
                     value={chatInput}
                     rows={1}
                     onChange={(e) => setChatInput(e.target.value)}
@@ -578,88 +545,13 @@ const InterviewUI = memo(
                 <button
                   onClick={sendMessage}
                   disabled={!chatInput.trim() || isLoading}
-                  className='group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-4 rounded-2xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95 disabled:transform-none self-start'
+                  className='bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors self-start'
                   title='Send message (Enter)'
                 >
-                  <Send
-                    size={20}
-                    className='group-hover:translate-x-0.5 transition-transform'
-                  />
+                  <Send size={20} />
                 </button>
               </div>
-
-              {/* Voice Controls - Compact */}
-              <button
-                onClick={handleMicClick}
-                disabled={typingMessageId && !isRecording}
-                className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isRecording
-                    ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
-                    : "bg-white border border-green-300 text-green-600 hover:border-green-400"
-                }`}
-                title={isRecording ? "Stop recording" : "Start voice input"}
-              >
-                <Mic size={18} className={isRecording ? "animate-pulse" : ""} />
-                <span className='font-medium text-sm'>
-                  {isRecording ? "Recording..." : "Voice Input"}
-                </span>
-              </button>
             </div>
-
-            {/* Recording Indicator - Enhanced */}
-            {isRecording && (
-              <div className='mt-4 p-4 bg-white rounded-2xl border-2 border-red-200 shadow-xl animate-fadeIn'>
-                <div className='flex items-center justify-between mb-3'>
-                  <div className='flex items-center gap-3'>
-                    <div className='relative'>
-                      <div className='absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75'></div>
-                      <div className='relative p-2 rounded-full bg-gradient-to-r from-red-500 to-rose-600'>
-                        <Mic size={16} className='text-white' />
-                      </div>
-                    </div>
-                    <div>
-                      <div className='text-sm font-bold text-gray-800 flex items-center gap-2'>
-                        Recording...
-                      </div>
-                      <div className='text-xs text-gray-500'>
-                        Speak clearly into your microphone
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsRecording(false)}
-                    className='text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg'
-                  >
-                    <span className='text-xl font-bold'>✖</span>
-                  </button>
-                </div>
-
-                <div className='mb-3'>
-                  <VolumeBar analyser={analyser} />
-                </div>
-
-                {(interimTranscript || chatInput) && (
-                  <div className='p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 shadow-inner'>
-                    <div className='text-xs text-green-700 font-bold mb-1 flex items-center gap-1'>
-                      <span>Transcript:</span>
-                    </div>
-                    <p className='text-sm text-gray-700'>
-                      {chatInput}
-                      <span className='text-green-600 italic font-medium'>
-                        {interimTranscript}
-                      </span>
-                    </p>
-                  </div>
-                )}
-
-                {speechError && (
-                  <div className='mt-2 text-xs text-red-700 bg-red-50 p-3 rounded-xl border-2 border-red-200 flex items-center gap-2 font-semibold'>
-                    <span>{speechError}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -681,18 +573,18 @@ const InterviewUI = memo(
 
         /* Custom scrollbar for chat */
         *::-webkit-scrollbar {
-          width: 8px;
+          width: 6px;
         }
         *::-webkit-scrollbar-track {
           background: #f0fdf4;
-          border-radius: 10px;
+          border-radius: 3px;
         }
         *::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #10b981, #059669);
-          border-radius: 10px;
+          background: #10b981;
+          border-radius: 3px;
         }
         *::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #059669, #047857);
+          background: #059669;
         }
       `}</style>
     </div>
@@ -1451,7 +1343,6 @@ export default function InterviewInterface() {
 
   return (
     <InterviewUI
-      imgBG={imgBG}
       pandaImage={pandaImage2}
       userProfile={userProfile}
       streamRef={streamRef}
