@@ -1,66 +1,81 @@
 package com.capstone.ai_interview_be.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-// import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler để xử lý các lỗi trong toàn bộ application
+ */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     
-    // Xử lý lỗi validation từ @Valid annotation trong request body
+    /**
+     * Xử lý validation errors
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         
         Map<String, String> errors = new HashMap<>();
-        
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
         
-        return ResponseEntity.badRequest().body(errors);
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", "Validation failed");
+        response.put("errors", errors);
+        
+        log.warn("Validation error: {}", errors);
+        
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", ex.getStatusCode().value());
-        error.put("error", ((HttpStatus) ex.getStatusCode()).getReasonPhrase());
-        error.put("message", ex.getReason());
-        return new ResponseEntity<>(error, ex.getStatusCode());
-    }
-
-    // handler cho DisabledException
-    @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<Map<String, Object>> handleDisabledException(DisabledException ex) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.FORBIDDEN.value());
-        error.put("error", "Forbidden");
-        error.put("message", "Account is disabled");
-        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
-    }
-
-    // Bắt lỗi tổng quát khác
+    
+    /**
+     * Xử lý các exception chưa được handle
+     */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        error.put("error", "Internal Server Error");
-        error.put("message", ex.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", "An error occurred: " + ex.getMessage());
+        
+        log.error("Unhandled exception", ex);
+        
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
+    }
+    
+    /**
+     * Xử lý IllegalArgumentException
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
+            IllegalArgumentException ex) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", ex.getMessage());
+        
+        log.warn("Invalid argument: {}", ex.getMessage());
+        
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
 }

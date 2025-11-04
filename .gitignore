@@ -1,8 +1,44 @@
-node_modules
-local.env
-<<<<<<< HEAD
+# Dependencies
+node_modules/
 package-lock.json
-=======
+
+# Environment variables
+local.env
+.env
+.env.local
+
+# Firebase credentials
 firebase-service-account.json
 backend/ai-interview-be/src/main/resources/firebase-service-account.json
->>>>>>> 6fc74aa57142effc3627562c3ba7ffbbeff73d16
+
+# AI Model (large files)
+Ai-model/model/
+Ai-model/cache/
+Ai-model/temp/
+Ai-model/hf_cache/
+Ai-model/offload_temp/
+Ai-model/__pycache__/
+Ai-model.rar
+
+# Java build artifacts
+backend/ai-interview-be/target/
+backend/ai-interview-be/.mvn/
+*.class
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/

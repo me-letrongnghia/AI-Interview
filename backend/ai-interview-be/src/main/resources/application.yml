@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
   mail:
     host: smtp.gmail.com
@@ -23,13 +23,22 @@ spring:
           auth: true
           starttls:
             enable: true
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
 
-openrouter:
-  api-key: ${OPENROUTER_API_KEY}
-  api-url: ${OPENROUTER_API_URL}
-  model: ${OPENROUTER_MODEL}
-  site-url: ${OPENROUTER_SITE_URL}
-  app-name: ${OPENROUTER_APP_NAME}
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: ${GEMINI_MODEL}
+
+# GenQ Service Configuration
+genq:
+  service:
+    url: ${GENQ_SERVICE_URL:http://localhost:8000}
+    timeout: ${GENQ_SERVICE_TIMEOUT:30}
+    enabled: ${GENQ_SERVICE_ENABLED:true}
 
 setTime:
   accessToken: 2 # hours
@@ -37,3 +46,9 @@ setTime:
 firebase:
   service-account:
     path: ${FIREBASE_SERVICE_ACCOUNT_PATH}
+
+ocr:
+  enabled: true
+  tessdata-path: "/usr/share/tesseract-ocr/5/tessdata"
+  languages: "eng+vie"
+  dpi: 300

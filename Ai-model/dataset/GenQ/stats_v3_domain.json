@@ -1,0 +1,478 @@
+[
+  [
+    "Programming Languages",
+    127
+  ],
+  [
+    "Frontend",
+    126
+  ],
+  [
+    "DevSecOps",
+    101
+  ],
+  [
+    "Edge AI",
+    86
+  ],
+  [
+    "Java Backend",
+    84
+  ],
+  [
+    "Python Backend",
+    78
+  ],
+  [
+    "Behavioral/Soft Skills",
+    70
+  ],
+  [
+    "Node.js Backend",
+    69
+  ],
+  [
+    "Data/AI",
+    65
+  ],
+  [
+    "Mobile Development",
+    64
+  ],
+  [
+    "Security",
+    63
+  ],
+  [
+    "Cloud/DevOps",
+    60
+  ],
+  [
+    "Testing/QA",
+    58
+  ],
+  [
+    "Messaging/Streaming",
+    56
+  ],
+  [
+    "Performance/Scalability",
+    54
+  ],
+  [
+    "Embedded/IoT",
+    53
+  ],
+  [
+    "Backend",
+    52
+  ],
+  [
+    "Data Engineering",
+    50
+  ],
+  [
+    "Quantum Computing",
+    50
+  ],
+  [
+    "Blockchain/Web3",
+    49
+  ],
+  [
+    "Telecom/5G/Edge",
+    49
+  ],
+  [
+    "Go",
+    48
+  ],
+  [
+    "Game Development",
+    48
+  ],
+  [
+    "Security Advanced",
+    48
+  ],
+  [
+    "Product/PM Tech",
+    48
+  ],
+  [
+    "MLOps/DataOps",
+    47
+  ],
+  [
+    "AR/VR",
+    47
+  ],
+  [
+    "Big Data/Streaming Advanced",
+    46
+  ],
+  [
+    "Swift",
+    46
+  ],
+  [
+    "Cloud Azure/GCP",
+    46
+  ],
+  [
+    "Data Visualization/BI",
+    45
+  ],
+  [
+    "SRE/Resilience",
+    45
+  ],
+  [
+    "C++",
+    45
+  ],
+  [
+    "Federated Learning",
+    45
+  ],
+  [
+    "AI/LLM",
+    45
+  ],
+  [
+    "AR/VR Advanced",
+    44
+  ],
+  [
+    "Mobile Advanced",
+    43
+  ],
+  [
+    "Data Privacy & Governance",
+    43
+  ],
+  [
+    "Java",
+    42
+  ],
+  [
+    "JavaScript",
+    42
+  ],
+  [
+    "C#",
+    42
+  ],
+  [
+    "Kotlin",
+    42
+  ],
+  [
+    "Testing Advanced",
+    42
+  ],
+  [
+    "Python",
+    41
+  ],
+  [
+    "Blockchain Scaling & DeFi",
+    40
+  ],
+  [
+    "Frontend Extended",
+    39
+  ],
+  [
+    "Rust",
+    39
+  ],
+  [
+    "TypeScript",
+    39
+  ],
+  [
+    "Smart Cities",
+    38
+  ],
+  [
+    "NoSQL & Graph Databases",
+    38
+  ],
+  [
+    "Fintech/Payments",
+    37
+  ],
+  [
+    "AR/VR & Metaverse",
+    36
+  ],
+  [
+    "DevOps",
+    36
+  ],
+  [
+    "Aerospace/Avionics",
+    36
+  ],
+  [
+    "Robotics",
+    35
+  ],
+  [
+    "Edge Networking/CDN",
+    35
+  ],
+  [
+    "Smart Manufacturing/Industry 4.0",
+    35
+  ],
+  [
+    "Observability",
+    35
+  ],
+  [
+    "Blockchain & Web3",
+    34
+  ],
+  [
+    "Energy/SCADA",
+    34
+  ],
+  [
+    "Digital Forensics",
+    34
+  ],
+  [
+    "Human Augmentation",
+    34
+  ],
+  [
+    "Search/IR Systems",
+    32
+  ],
+  [
+    "Healthcare Digital Twin",
+    32
+  ],
+  [
+    "Database Systems",
+    31
+  ],
+  [
+    "Healthcare Tech",
+    31
+  ],
+  [
+    "Quantum Cryptography",
+    31
+  ],
+  [
+    "SpaceTech/Satellite",
+    31
+  ],
+  [
+    "Edge AI & IoT",
+    30
+  ],
+  [
+    "Healthcare Imaging AI",
+    30
+  ],
+  [
+    "Bioinformatics AI",
+    29
+  ],
+  [
+    "ClimateTech/Renewables",
+    29
+  ],
+  [
+    "Digital Twins",
+    29
+  ],
+  [
+    "Autonomous Drones",
+    29
+  ],
+  [
+    "Conversational AI",
+    29
+  ],
+  [
+    "Autonomous Ships",
+    28
+  ],
+  [
+    "Automotive/ADAS",
+    28
+  ],
+  [
+    "Cybersecurity Advanced",
+    28
+  ],
+  [
+    "Synthetic Data/Simulation AI",
+    27
+  ],
+  [
+    "Digital Identity / SSI",
+    25
+  ],
+  [
+    "Ads/Recommendation Systems",
+    25
+  ],
+  [
+    "Gaming Backend",
+    24
+  ],
+  [
+    "Space Exploration",
+    22
+  ],
+  [
+    "Smart Grid Security",
+    21
+  ],
+  [
+    "Nanotech",
+    20
+  ],
+  [
+    "Financial Trading Systems",
+    19
+  ],
+  [
+    "Energy Systems / SCADA",
+    18
+  ],
+  [
+    "Cyber-Physical Systems",
+    18
+  ],
+  [
+    "Supply Chain/Logistics",
+    17
+  ],
+  [
+    "AgriTech",
+    15
+  ],
+  [
+    "RegTech/Compliance Tech",
+    14
+  ],
+  [
+    "Green IT & Sustainable Computing",
+    14
+  ],
+  [
+    "Media/Streaming",
+    12
+  ],
+  [
+    "Robotic Process Automation (RPA)",
+    11
+  ],
+  [
+    "High-Performance C++",
+    11
+  ],
+  [
+    "IoT Security",
+    11
+  ],
+  [
+    "Serverless Architectures",
+    11
+  ],
+  [
+    "Digital Identity/SSI",
+    11
+  ],
+  [
+    "AR Cloud",
+    9
+  ],
+  [
+    "AI Safety",
+    9
+  ],
+  [
+    "Neurotech/BCI",
+    8
+  ],
+  [
+    "RPA",
+    8
+  ],
+  [
+    "Disaster Response",
+    7
+  ],
+  [
+    "Geo/Mapping Systems",
+    7
+  ],
+  [
+    "Supply Chain Resilience",
+    7
+  ],
+  [
+    "LegalTech",
+    6
+  ],
+  [
+    "EdTech",
+    6
+  ],
+  [
+    ".NET Backend",
+    5
+  ],
+  [
+    "Battery Tech",
+    5
+  ],
+  [
+    "Space Robotics",
+    5
+  ],
+  [
+    "Wearables & Health IoT",
+    4
+  ],
+  [
+    "Metaverse",
+    3
+  ],
+  [
+    "Human-Robot Interaction",
+    3
+  ],
+  [
+    "System Design",
+    3
+  ],
+  [
+    "PharmaTech",
+    3
+  ],
+  [
+    "5G/6G Research",
+    3
+  ],
+  [
+    "Biotech/Genomics",
+    3
+  ],
+  [
+    "Financial Fraud AI",
+    2
+  ],
+  [
+    "Green IT",
+    2
+  ]
+]
