@@ -65,21 +65,23 @@ public class InterviewController {
         InterviewSession session = sessionService.getSessionById(sessionId);
         
         // Map to DTO response
-        InterviewSessionInfoResponse response = new InterviewSessionInfoResponse(
-            session.getId(),
-            session.getUserId(),
-            session.getRole(),
-            session.getLevel(),
-            session.getSkill(),
-            session.getLanguage(),
-            session.getTitle(),
-            session.getDescription(),
-            session.getStatus(),
-            session.getCreatedAt(),
-            session.getUpdatedAt(),
-            session.getDuration(),
-            session.getQuestionCount()
-        );
+        InterviewSessionInfoResponse response =
+                InterviewSessionInfoResponse.builder()
+            .id(session.getId())
+            .userId(session.getUserId())
+            .role(session.getRole())
+            .level(session.getLevel())
+            .skill(session.getSkill())
+            .language(session.getLanguage())
+            .title(session.getTitle())
+            .description(session.getDescription())
+            .source(session.getSource().toString())
+            .status(session.getStatus())
+            .createdAt(session.getCreatedAt())
+            .updatedAt(session.getUpdatedAt())
+            .duration(session.getDuration())
+            .questionCount(session.getQuestionCount())
+            .build();
         
         return ResponseEntity.ok(response);
     }
