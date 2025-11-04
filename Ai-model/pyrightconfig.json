@@ -1,0 +1,23 @@
+{
+  "include": [
+    "src",
+    "app.py",
+    "main.py",
+    "test_modules.py"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "dataset",
+    "model"
+  ],
+  "extraPaths": [
+    "."
+  ],
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false
+}

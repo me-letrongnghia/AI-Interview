@@ -77,13 +77,12 @@ public class AuthService {
         return "Registration successful";
     }
     public UserProfileResponse loginWithFirebase(FireRequest fireRequest) {
-        String email = null;
+        String email = fireRequest.getEmail();
         String uId = null;
         String fullName = null;
         String picture = null;
         try{
             FirebaseToken firebaseToken = FirebaseAuth.getInstance().verifyIdToken(fireRequest.getIdToken()); // authentication IdToken with Firebase Admin
-            email = firebaseToken.getEmail();  // get email to idToken
             uId = firebaseToken.getUid();       // get uId to idToken
             fullName = firebaseToken.getName();
             picture = firebaseToken.getPicture();

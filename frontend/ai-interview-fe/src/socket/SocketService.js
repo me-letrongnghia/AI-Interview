@@ -3,38 +3,7 @@ import Stomp from "stompjs";
 
 let stompClient = null;
 let isConnected = false;
-
-/**
- * Phát audio từ Base64 string
- */
-export const playAudioFromBase64 = (base64Audio) => {
-  try {
-    // Convert Base64 to Blob
-    const byteCharacters = atob(base64Audio);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'audio/wav' });
-    
-    // Tạo URL và phát audio
-    const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    
-    audio.play()
-      .then(() => console.log('Playing question audio...'))
-      .catch(err => console.error('Error playing audio:', err));
-    
-    // Clean up URL sau khi phát xong
-    audio.onended = () => {
-      URL.revokeObjectURL(audioUrl);
-      console.log('Audio finished playing');
-    };
-  } catch (error) {
-    console.error('Error playing audio from Base64:', error);
-  }
-};
+let isConnecting = false;
 
 /**
  * Kết nối WebSocket
@@ -42,9 +11,33 @@ export const playAudioFromBase64 = (base64Audio) => {
  */
 export const connectSocket = (sessionId, onMessageReceived) => {
   return new Promise((resolve, reject) => {
+    // If already connected with a valid client, just resolve
+    if (stompClient && stompClient.connected && isConnected) {
+      console.log("✅ Socket already connected, reusing connection");
+      resolve();
+      return;
+    }
+
+    // Prevent multiple concurrent connections
+    if (isConnecting) {
+      console.warn("⚠️ Socket is already connecting, please wait");
+      resolve();
+      return;
+    }
+
+    // Clean up any stale client
+    if (stompClient && !stompClient.connected) {
+      console.log("🧹 Cleaning up stale socket client");
+      stompClient = null;
+      isConnected = false;
+    }
+
+    isConnecting = true;
+    console.log("🔌 Connecting to WebSocket for session:", sessionId);
+
     // Lấy token từ localStorage
     const token = localStorage.getItem("accessToken");
-    
+
     const socket = new SockJS("http://localhost:8080/ws/interview");
     stompClient = Stomp.over(socket);
 
@@ -61,27 +54,31 @@ export const connectSocket = (sessionId, onMessageReceived) => {
     stompClient.connect(
       headers,
       () => {
+        isConnecting = false;
         isConnected = true;
-        
+
+        console.log(
+          "✅ WebSocket connected successfully for session:",
+          sessionId
+        );
+
         // Subscribe kênh nhận message
         stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
+          console.log("📥 Received WebSocket message:", message);
           if (message.body) {
             const body = JSON.parse(message.body);
-            
-            // TẠO VÀ PHÁT AUDIO TẠI ĐÂY NẾU CÓ
-            if (body.type === 'question' && body.audioData) {
-              console.log('Received question with audio');
-              playAudioFromBase64(body.audioData);
-            }
-            
+            console.log("📨 Parsed message body:", body);
             onMessageReceived(body);
           }
         });
 
+        console.log("✅ Subscribed to /topic/interview/" + sessionId);
         resolve();
       },
       (error) => {
+        isConnecting = false;
         isConnected = false;
+        console.error("❌ WebSocket connection failed:", error);
         reject(error);
       }
     );
@@ -92,14 +89,45 @@ export const connectSocket = (sessionId, onMessageReceived) => {
  * Gửi answer lên server
  */
 export const sendAnswer = (sessionId, answerMessage) => {
-  if (stompClient && isConnected) {
-    stompClient.send(
-      `/app/interview/${sessionId}/answer`,
-      {},
-      JSON.stringify(answerMessage)
-    );
+  console.log("🔌 WebSocket send attempt:", {
+    sessionId,
+    isConnected,
+    hasClient: !!stompClient,
+    clientConnected: stompClient?.connected,
+    message: answerMessage,
+  });
+
+  // Check both our flag AND the actual stomp connection status
+  if (stompClient && stompClient.connected) {
+    console.log("✅ Sending message via WebSocket...");
+    try {
+      stompClient.send(
+        `/app/interview/${sessionId}/answer`, // map với @MessageMapping server
+        {},
+        JSON.stringify(answerMessage)
+      );
+      console.log("✅ Message sent successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
+      // Reset connection state if send fails
+      isConnected = false;
+      return false;
+    }
   } else {
-    console.error("Cannot send, socket not connected yet!");
+    console.error("❌ Cannot send, socket not connected!", {
+      hasClient: !!stompClient,
+      isConnected,
+      clientConnected: stompClient?.connected,
+    });
+
+    // Fix state if out of sync
+    if (isConnected && (!stompClient || !stompClient.connected)) {
+      console.warn("🔧 Fixing out-of-sync connection state");
+      isConnected = false;
+    }
+
+    return false;
   }
 };
 
@@ -107,9 +135,67 @@ export const sendAnswer = (sessionId, answerMessage) => {
  * Ngắt kết nối WebSocket
  */
 export const disconnectSocket = () => {
-  if (stompClient && isConnected) {
-    stompClient.disconnect(() => {
-      isConnected = false;
-    });
+  console.log("🔌 Disconnecting socket...", {
+    hasClient: !!stompClient,
+    isConnected,
+    isConnecting,
+  });
+
+  // Always reset flags first
+  isConnected = false;
+  isConnecting = false;
+
+  if (stompClient) {
+    try {
+      // Try to disconnect gracefully if connected
+      if (stompClient.connected) {
+        stompClient.disconnect(() => {
+          console.log("✅ Socket disconnected successfully");
+          stompClient = null;
+        });
+      } else {
+        // Just clean up if not connected
+        console.log("🧹 Cleaning up disconnected socket");
+        stompClient = null;
+      }
+    } catch (error) {
+      console.warn("⚠️ Error during socket disconnect:", error);
+      stompClient = null;
+    }
+  } else {
+    console.log("⚠️ No socket client to disconnect");
   }
+};
+
+/**
+ * Get connection status (useful for debugging)
+ */
+export const getConnectionStatus = () => ({
+  isConnected,
+  isConnecting,
+  hasClient: !!stompClient,
+  clientConnected: stompClient?.connected,
+});
+
+/**
+ * Force reconnect if needed (useful for recovery)
+ */
+export const ensureConnected = async (sessionId, onMessageReceived) => {
+  const status = getConnectionStatus();
+  console.log("🔍 Checking connection status:", status);
+
+  // If client exists and is connected, we're good
+  if (stompClient && stompClient.connected) {
+    console.log("✅ Connection is healthy");
+    return Promise.resolve();
+  }
+
+  // If state is out of sync or client is dead, reconnect
+  console.log("🔄 Connection needs repair, reconnecting...");
+  disconnectSocket(); // Clean up first
+
+  // Wait a bit for cleanup
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  return connectSocket(sessionId, onMessageReceived);
 };

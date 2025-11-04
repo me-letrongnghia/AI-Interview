@@ -41,30 +41,37 @@ public class JwtService {
         claims.put("tokenType","refresh");
         return generateToken(authentication,refresh_tokenExpiration,claims);
     }
+    
     // validate token user
     public boolean validateToken(String token, UserDetails userDetails) {
         String email = extractEmailToToken(token);
         return email != null && email.equals(userDetails.getUsername());
     }
+    
     // validate refresh token
     public boolean validateRefreshToken(String token) {
         Claims claims = extractAllClaims(token);
         if(claims == null) return false;
         return "refresh".equals(claims.get("tokenType"));
     }
+    
     // validate token
     public boolean isValidateToken(String token) {
         return extractAllClaims(token) != null;
     }
+    
+    // generate token
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Instant now = Instant.now();
-        Instant expiry = now.plus(Duration.ofHours(jwtExpiration));   
+        Instant expiry = now.plus(Duration.ofHours(jwtExpiration)); 
+        var roles = userDetails.getAuthorities();  
         return Jwts.builder()
                 .header()
                 .add("typ","jwt")
                 .and()
                 .subject(userDetails.getUsername())
+                .claim("roles", roles)
                 .claims(claims)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
@@ -80,7 +87,8 @@ public class JwtService {
         }
         return null;
     }
-    
+
+    // extract all claims from token
     private Claims extractAllClaims(String token) {
         if (token == null || token.trim().isEmpty()) {
             return null;
@@ -97,6 +105,7 @@ public class JwtService {
         }
     }
 
+    // extract email from token
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }

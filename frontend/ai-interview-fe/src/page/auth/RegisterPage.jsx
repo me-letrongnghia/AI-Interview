@@ -139,20 +139,18 @@ const RegisterPage = () => {
   };
 
   const handleSuccess = async (data) => {
-    const response = await Auth.LoginFirebase(data);
+    const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
     if (response.status === 200) {
-      toast.success("Login successful!", { position: "top-right" });
-      setUserProfile(response.data.user);
+      const user = {
+        id: response.data.id,
+        email: response.data.email,
+        fullName: response.data.fullName,
+        picture: response.data.picture,
+      };
+      setUserProfile(user);
       setIsLogin(true);
       localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: response.data.email,
-          fullName: response.data.fullName,
-          picture: response.data.picture,
-        })
-      );
+      localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("isLogin", JSON.stringify(true));
       Navigate("/");
     }
@@ -172,10 +170,13 @@ const RegisterPage = () => {
       try {
         const response = await Auth.Register(userData);
         if (response.status === 200) {
-          toast.success("Registration successful! Please check your email to verify your account before logging in.", { 
-            position: "top-right",
-            autoClose: 5000
-          });
+          toast.success(
+            "Registration successful! Please check your email to verify your account before logging in.",
+            {
+              position: "top-right",
+              autoClose: 5000,
+            }
+          );
           Navigate("/auth/login");
         }
       } catch {
@@ -312,14 +313,25 @@ const RegisterPage = () => {
           type="submit"
           disabled={isLoading}
           className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
-            isLoading ? "bg-green-600 cursor-not-allowed" : "bg-green-500 hover:bg-green-700"
+            isLoading
+              ? "bg-green-600 cursor-not-allowed"
+              : "bg-green-500 hover:bg-green-700"
           }`}
         >
           {isLoading ? (
             <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <div
+                className="w-2 h-2 bg-white rounded-full animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-white rounded-full animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-white rounded-full animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></div>
             </div>
           ) : (
             "Register"

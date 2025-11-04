@@ -11,11 +11,17 @@ import DeviceCheckPage from "./page/DeviceCheckPage";
 import ResetPassword from "./page/auth/ResetPassword";
 import OtpPage from "./page/auth/OtpPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { AboutPage } from "./page/AboutPage";
+import FeedbackPage from "./page/FeedbackPage";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+  },
+  {
+    path: "/about",
+    element: <AboutPage />,
   },
   {
     path: "/interview/:sessionId",
@@ -56,11 +62,21 @@ export const router = createBrowserRouter([
       {
         path: "verify-email",
         element: <OtpPage />,
-      }
+      },
     ],
   },
+
   {
-    path: "device-check",
+    path: "/feedback/:sessionId",
+    element: (
+      <ProtectedRoute>
+        <FeedbackPage />
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/device-check",
     element: (
       <ProtectedRoute>
         <DeviceCheckPage />
