@@ -1306,7 +1306,7 @@ Job Description:
       <Header />
       <div className='pt-24 pb-8 px-4 md:px-8'>
         <div className='bg-white rounded-3xl shadow-2xl w-full max-w-7xl mx-auto overflow-hidden border border-green-100'>
-          <div className='bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 p-8 md:p-12 text-white text-center'>
+          <div className='bg-gradient-to-r from-green-500 to-green-500 p-8 md:p-12 text-white text-center'>
             <div className='max-w-3xl mx-auto'>
               <h1 className='text-3xl md:text-5xl font-bold mb-4'>
                 PandaPrep AI Interview Setup
