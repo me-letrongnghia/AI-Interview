@@ -50,7 +50,7 @@ Http.instance.interceptors.response.use(
         // Refresh token thất bại → đăng xuất
         console.error("Refresh token failed, please login again!");
         localStorage.removeItem("access_token");
-        // window.location.href = "/auth/login";
+        window.location.href = "/auth/login";
         return Promise.reject(refreshError);
       }
     }
