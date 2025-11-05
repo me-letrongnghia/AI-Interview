@@ -107,8 +107,8 @@ public class FeedbackService {
         );
         
         // Lưu overall feedback vào DB
+        InterviewFeedback feedback = new InterviewFeedback();
         try {
-            InterviewFeedback feedback = new InterviewFeedback();
             feedback.setSessionId(sessionId);
             feedback.setOverallScore(overallData.getOverallScore());
             feedback.setOverallAssessment(overallData.getAssessment());
@@ -124,7 +124,7 @@ public class FeedbackService {
         // Update session status
         session.setStatus("completed");
         session.setCompletedAt(LocalDateTime.now());
-        session.setFeedbackGenerated(true);
+        session.setFeedbackId(feedback.getId());
         sessionRepository.save(session);
         
         // Build response

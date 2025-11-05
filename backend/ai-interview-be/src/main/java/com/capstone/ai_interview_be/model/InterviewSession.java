@@ -64,8 +64,8 @@ public class InterviewSession {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
     
-    @Column(name = "feedback_generated")
-    private Boolean feedbackGenerated = false;
+    @Column(name = "feedback_id")
+    private Long feedbackId;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;

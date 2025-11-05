@@ -53,7 +53,7 @@ public class SessionController {
         try {
             List<InterviewSession> sessions = sessionService.getSessionsWithFilters(
                     userId, source, role, status);
-            
+            log.info("Found {} sessions for userId: {}", sessions);
             List<InterviewSessionInfoResponse> responses = sessions.stream()
                     .map(this::convertToResponse)
                     .collect(Collectors.toList());
@@ -106,23 +106,23 @@ public class SessionController {
 
     
     // Chuyển đổi InterviewSession entity sang InterviewSessionInfoResponse DTO
-    
     private InterviewSessionInfoResponse convertToResponse(InterviewSession session) {
-        return new InterviewSessionInfoResponse(
-                session.getId(),
-                session.getUserId(),
-                session.getRole(),
-                session.getLevel(),
-                session.getSkill(),
-                session.getLanguage(),
-                session.getTitle(),
-                session.getDescription(),
-                session.getSource() != null ? session.getSource().name() : "Custom",
-                session.getStatus(),
-                session.getCreatedAt(),
-                session.getUpdatedAt(),
-                session.getDuration(),
-                session.getQuestionCount()
-        );
+        return InterviewSessionInfoResponse.builder()
+                .id(session.getId())
+                .userId(session.getUserId())
+                .role(session.getRole())
+                .level(session.getLevel())
+                .skill(session.getSkill())
+                .language(session.getLanguage())
+                .title(session.getTitle())
+                .description(session.getDescription())
+                .source(session.getSource() != null ? session.getSource().name() : "Custom")
+                .status(session.getStatus())
+                .createdAt(session.getCreatedAt())
+                .updatedAt(session.getUpdatedAt())
+                .duration(session.getDuration())
+                .questionCount(session.getQuestionCount())
+                .feedbackId(session.getFeedbackId())
+                .build();
     }
 }
