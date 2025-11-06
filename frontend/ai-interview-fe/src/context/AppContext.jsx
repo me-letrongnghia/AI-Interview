@@ -10,46 +10,68 @@ export const AppProvider = ({ children }) => {
   const [isLogin, setIsLogin] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  // Sync with Firebase Auth State
+  // Initialize from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("access_token");
+    const storedIsLogin = localStorage.getItem("isLogin");
+
+    if (storedUser && storedToken && storedIsLogin === "true") {
+      try {
+        const user = JSON.parse(storedUser);
+        setUserProfile(user);
+        setIsLogin(true);
+      } catch (error) {
+        console.error("Error parsing stored user:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("isLogin");
+      }
+    }
+    setIsAuthChecking(false);
+  }, []);
+
+  // Sync with Firebase Auth State (only for Firebase login)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in with Firebase
-        try {
-          const storedUser = localStorage.getItem("user");
-          const storedToken = localStorage.getItem("access_token");
-          
-          if (storedUser && storedToken) {
-            // Verify stored data matches Firebase user
+        // User is signed in with Firebase (Google/GitHub login)
+        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("access_token");
+        
+        if (storedUser && storedToken) {
+          try {
             const user = JSON.parse(storedUser);
+            // Verify stored data matches Firebase user
             if (user.email === firebaseUser.email) {
               setUserProfile(user);
               setIsLogin(true);
-            } else {
-              // Mismatch - clear everything
-              localStorage.clear();
+            }
+          } catch (error) {
+            console.error("Error syncing Firebase auth:", error);
+          }
+        }
+      } else {
+        // Firebase user signed out - only clear if it was a Firebase login
+        // Check if current user email exists in Firebase format
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            // Only clear if this was a Firebase/OAuth login (has picture from OAuth)
+            // Regular email/password login won't be affected
+            if (user.picture && user.picture.includes("googleusercontent.com")) {
+              localStorage.removeItem("user");
+              localStorage.removeItem("access_token");
+              localStorage.removeItem("isLogin");
               setUserProfile(null);
               setIsLogin(false);
             }
-          } else {
-            // No stored data but Firebase user exists - might be stale
-            localStorage.clear();
-            setUserProfile(null);
-            setIsLogin(false);
+          } catch (error) {
+            console.error("Error checking user type:", error);
           }
-        } catch (error) {
-          console.error("Error syncing auth state:", error);
-          localStorage.clear();
-          setUserProfile(null);
-          setIsLogin(false);
         }
-      } else {
-        // No Firebase user - clear everything
-        localStorage.clear();
-        setUserProfile(null);
-        setIsLogin(false);
       }
-      setIsAuthChecking(false);
     });
 
     return () => unsubscribe();
@@ -58,7 +80,10 @@ export const AppProvider = ({ children }) => {
   const logout = () => {
     setUserProfile(null);
     setIsLogin(false);
-    localStorage.clear();
+    // Only clear auth-related items
+    localStorage.removeItem("user");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("isLogin");
     auth.signOut();
   };
 

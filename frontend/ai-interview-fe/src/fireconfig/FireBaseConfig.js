@@ -1,11 +1,5 @@
 import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  setPersistence,
-  browserSessionPersistence,
-} from "firebase/auth";
+import { getAuth, GoogleAuthProvider, GithubAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnm78Wwlo_ou94xPgiwJLW8R4MUEVsejA",
@@ -23,10 +17,11 @@ const app = initializeApp(firebaseConfig);
 // Khởi tạo Firebase Authentication và lấy tham chiếu đến service
 export const auth = getAuth(app);
 
-// Set persistence to SESSION - auth state will be cleared when browser/tab is closed
-setPersistence(auth, browserSessionPersistence).catch((error) => {
-  console.error("Error setting auth persistence:", error);
-});
+// Set persistence to LOCAL - auth state persists even after browser is closed
+setPersistence(auth, browserLocalPersistence)
+  .catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
 
 // Cấu hình Google Provider
 export const googleProvider = new GoogleAuthProvider();
