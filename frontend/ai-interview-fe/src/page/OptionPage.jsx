@@ -504,7 +504,7 @@ export default function OptionPage() {
   const getSessionData = () => {
     const user = JSON.parse(localStorage.getItem("user"));
     const baseData = {
-      userId: parseInt(user.id) || 1,
+      userId: parseInt(user.id),
       source: selectedOption,
     };
 
