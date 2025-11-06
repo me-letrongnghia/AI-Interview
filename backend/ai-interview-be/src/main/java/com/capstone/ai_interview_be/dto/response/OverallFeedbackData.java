@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OverallFeedbackData {
     
-    private Double overallScore;
+    private String overview;
     
     private String assessment;
 

@@ -27,5 +27,7 @@ public class InterviewSessionInfoResponse {
     private LocalDateTime updatedAt;
     private Integer duration; // in minutes
     private Integer questionCount; // number of questions
+    private Boolean isPractice;
+    private Long originalSessionId;
     private Long feedbackId;
 }

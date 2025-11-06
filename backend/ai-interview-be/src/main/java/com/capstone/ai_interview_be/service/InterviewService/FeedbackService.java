@@ -81,13 +81,8 @@ public class FeedbackService {
                             .question(entry.getQuestionContent())
                             .answerId(entry.getAnswerId())
                             .userAnswer(entry.getAnswerContent())
-                            .score(answerFeedback.getScore())
                             .feedback(answerFeedback.getFeedbackText())
                             .sampleAnswer(answerFeedback.getSampleAnswer())
-                            .criteriaScores(objectMapper.readValue(
-                                answerFeedback.getCriteriaScores(),
-                                new TypeReference<java.util.Map<String, Double>>() {}
-                            ))
                             .build());
                     } catch (Exception e) {
                         log.error("Error parsing criteria scores for answer {}", entry.getAnswerId(), e);
@@ -110,7 +105,7 @@ public class FeedbackService {
         InterviewFeedback feedback = new InterviewFeedback();
         try {
             feedback.setSessionId(sessionId);
-            feedback.setOverallScore(overallData.getOverallScore());
+            feedback.setOverview(overallData.getOverview());
             feedback.setOverallAssessment(overallData.getAssessment());
             feedback.setStrengths(objectMapper.writeValueAsString(overallData.getStrengths()));
             feedback.setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
@@ -177,13 +172,8 @@ public class FeedbackService {
                             .question(entry.getQuestionContent())
                             .answerId(entry.getAnswerId())
                             .userAnswer(entry.getAnswerContent())
-                            .score(answerFeedback.getScore())
                             .feedback(answerFeedback.getFeedbackText())
                             .sampleAnswer(answerFeedback.getSampleAnswer())
-                            .criteriaScores(objectMapper.readValue(
-                                answerFeedback.getCriteriaScores(),
-                                new TypeReference<java.util.Map<String, Double>>() {}
-                            ))
                             .build());
                     } catch (Exception e) {
                         log.error("Error parsing criteria scores for answer {}", entry.getAnswerId(), e);
@@ -196,7 +186,7 @@ public class FeedbackService {
         OverallFeedback overallFeedback = null;
         try {
             overallFeedback = OverallFeedback.builder()
-                .overallScore(feedback.getOverallScore())
+                .overview(feedback.getOverview())
                 .assessment(feedback.getOverallAssessment())
                 .strengths(objectMapper.readValue(
                     feedback.getStrengths(),
@@ -245,7 +235,7 @@ public class FeedbackService {
     
     private OverallFeedback buildOverallFeedback(OverallFeedbackData data) {
         return OverallFeedback.builder()
-            .overallScore(data.getOverallScore())
+            .overview(data.getOverview())
             .assessment(data.getAssessment())
             .strengths(data.getStrengths())
             .weaknesses(data.getWeaknesses())

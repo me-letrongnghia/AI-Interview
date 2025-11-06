@@ -25,8 +25,8 @@ public class InterviewFeedback {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
     
-    @Column(name = "overall_score")
-    private Double overallScore;
+    @Column(name = "overview", columnDefinition = "TEXT")
+    private String overview;
     
     @Column(name = "overall_assessment", columnDefinition = "TEXT")
     private String overallAssessment;

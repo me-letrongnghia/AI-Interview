@@ -63,7 +63,12 @@ public class InterviewSession {
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
-    
+
+    @Column(name = "is_practice")
+    private Boolean isPractice = false;
+
+    @Column(name = "original_session_id")
+    private Long originalSessionId;
     @Column(name = "feedback_id")
     private Long feedbackId;
     

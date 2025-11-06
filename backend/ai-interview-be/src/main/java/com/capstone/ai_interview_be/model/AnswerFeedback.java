@@ -27,17 +27,11 @@ public class AnswerFeedback {
     @Column(name = "answer_id", nullable = false)
     private Long answerId;
     
-    @Column(name = "score")
-    private Double score;
-    
     @Column(name = "feedback_text", columnDefinition = "TEXT")
     private String feedbackText;
     
     @Column(name = "sample_answer", columnDefinition = "TEXT")
     private String sampleAnswer;
-    
-    @Column(name = "criteria_scores", columnDefinition = "TEXT")
-    private String criteriaScores;
     
     @CreatedDate
     @Column(name = "created_at")

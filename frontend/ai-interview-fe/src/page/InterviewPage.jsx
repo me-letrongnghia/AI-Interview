@@ -626,6 +626,7 @@ export default function InterviewInterface() {
 
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
+  const [isPracticeSession, setIsPracticeSession] = useState(false);
 
   // Interview config based on level - default to intern
   const [interviewConfig, setInterviewConfig] = useState({
@@ -994,6 +995,12 @@ export default function InterviewInterface() {
         console.log("📊 Session response:", sessionResponse);
         if (sessionResponse && sessionResponse.data) {
           const sessionData = sessionResponse.data;
+
+          // Check if this is a practice session - NEW
+          setIsPracticeSession(Boolean(sessionData.isPractice));
+          if (sessionData.isPractice) {
+            console.log("🔄 Practice mode detected!");
+          }
           
           // Use duration and questionCount from user selection
           if (sessionData.duration && sessionData.questionCount) {

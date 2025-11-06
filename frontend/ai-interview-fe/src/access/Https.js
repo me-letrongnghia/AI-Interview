@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAllAuthData } from "../utils/authUtils";
 
 class Http {
   static instance = axios.create({
@@ -47,10 +48,14 @@ Http.instance.interceptors.response.use(
         // Gọi lại request ban đầu với token mới
         return Http.instance(originalRequest);
       } catch (refreshError) {
-        // Refresh token thất bại → đăng xuất
-        console.error("Refresh token failed, please login again!");
-        localStorage.removeItem("access_token");
-        window.location.href = "/auth/login";
+        // Refresh token thất bại → đăng xuất hoàn toàn
+        console.error("Refresh token failed, logging out...");
+        
+        // Clear all auth data including Firebase
+        clearAllAuthData();
+        
+        // Redirect to login with session expired message
+        window.location.href = "/auth/login?reason=session_expired";
         return Promise.reject(refreshError);
       }
     }
