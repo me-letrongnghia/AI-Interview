@@ -793,27 +793,22 @@ export default function OptionPage() {
                 {(cvData.skills || cvData.skill || []).map((skill, index) => (
                   <span
                     key={index}
-                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${
+                    onClick={() => {
+                      const skills = cvData.skills || cvData.skill || [];
+                      const newSkills = skills.filter((_, i) => i !== index);
+                      setCvData({
+                        ...cvData,
+                        skills: newSkills,
+                        skill: newSkills,
+                      });
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-all hover:scale-105 ${
                       (cvData.skills || cvData.skill || []).length > 10
-                        ? "bg-red-100 text-red-800 border-2 border-red-300"
-                        : "bg-blue-100 text-blue-800"
+                        ? "bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200"
+                        : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                     }`}
                   >
                     {skill}
-                    <button
-                      onClick={() => {
-                        const skills = cvData.skills || cvData.skill || [];
-                        const newSkills = skills.filter((_, i) => i !== index);
-                        setCvData({
-                          ...cvData,
-                          skills: newSkills,
-                          skill: newSkills,
-                        });
-                      }}
-                      className='ml-1 text-blue-600 hover:text-red-500'
-                    >
-                      ×
-                    </button>
                   </span>
                 ))}
               </div>
@@ -1128,27 +1123,22 @@ Job Description:
                 {(jdData.skills || jdData.skill || []).map((skill, index) => (
                   <span
                     key={index}
-                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${
+                    onClick={() => {
+                      const skills = jdData.skills || jdData.skill || [];
+                      const newSkills = skills.filter((_, i) => i !== index);
+                      setJdData({
+                        ...jdData,
+                        skills: newSkills,
+                        skill: newSkills,
+                      });
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-all hover:scale-105 ${
                       (jdData.skills || jdData.skill || []).length > 10
-                        ? "bg-red-100 text-red-800 border-2 border-red-300"
-                        : "bg-green-100 text-green-800"
+                        ? "bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200"
+                        : "bg-green-100 text-green-800 hover:bg-green-200"
                     }`}
                   >
                     {skill}
-                    <button
-                      onClick={() => {
-                        const skills = jdData.skills || jdData.skill || [];
-                        const newSkills = skills.filter((_, i) => i !== index);
-                        setJdData({
-                          ...jdData,
-                          skills: newSkills,
-                          skill: newSkills,
-                        });
-                      }}
-                      className='ml-1 text-green-600 hover:text-red-500'
-                    >
-                      ×
-                    </button>
                   </span>
                 ))}
               </div>
@@ -1685,6 +1675,7 @@ Job Description:
                       (!customData.position ||
                         !customData.experience ||
                         customData.skills.length === 0 ||
+                        customData.skills.length > 10 ||
                         !customDuration ||
                         !customQuestionCount) && (
                         <p className='text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200'>

@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Auth } from "../../api/AuthApi";
 import { UseAppContext } from "../../context/AppContext";
 import GgAuth from "../../components/Header/GgAuth";
 import { toast } from "react-toastify";
 export default function LoginPage() {
   const { setUserProfile, setIsLogin } = UseAppContext();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +17,27 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const Navigate = useNavigate();
+
+  // Check for session expiration message
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    
+    if (reason === 'session_expired') {
+      toast.warning('Your session has expired. Please login again.', {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      // Remove query parameter after showing message
+      setSearchParams({});
+    } else if (reason === 'token_expired') {
+      toast.info('Your session has expired due to inactivity. Please login again.', {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      // Remove query parameter after showing message
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const validateEmail = (value) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

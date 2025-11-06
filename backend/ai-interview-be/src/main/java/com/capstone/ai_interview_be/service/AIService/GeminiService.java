@@ -38,7 +38,7 @@ public class GeminiService {
         this.webClient = WebClient.builder()
                 .baseUrl(GEMINI_BASE_URL)
                 .build();
-        
+
         log.info("Initialized GeminiService with model: {}", model);
     }
 
@@ -46,27 +46,24 @@ public class GeminiService {
     public String generateResponse(String systemPrompt, String userPrompt) {
         try {
             long startTime = System.currentTimeMillis();
-            
+
             String combinedPrompt = systemPrompt + "\n\n" + userPrompt;
 
             // Build request body inline với Map (gọn hơn DTO)
             Map<String, Object> requestBody = Map.of(
-                "contents", List.of(
-                    Map.of("parts", List.of(Map.of("text", combinedPrompt)))
-                ),
-                "generationConfig", Map.of(
-                    "temperature", 0.1,
-                    "maxOutputTokens", 4000,
-                    "topP", 0.95,
-                    "topK", 40
-                )
-            );
+                    "contents", List.of(
+                            Map.of("parts", List.of(Map.of("text", combinedPrompt)))),
+                    "generationConfig", Map.of(
+                            "temperature", 0.1,
+                            "maxOutputTokens", 4000,
+                            "topP", 0.95,
+                            "topK", 40));
 
             log.info("Sending request to Gemini with model: {}", model);
 
             // Call API - Use x-goog-api-key header instead of query parameter
             String url = String.format("/v1beta/models/%s:generateContent", model);
-            
+
             @SuppressWarnings("unchecked")
             Map<String, Object> response = webClient.post()
                     .uri(url)
@@ -83,7 +80,7 @@ public class GeminiService {
 
             // Extract text from response
             String content = extractTextFromResponse(response);
-            
+
             if (content != null && !content.trim().isEmpty()) {
                 log.info("Received response from Gemini: {}", content.substring(0, Math.min(100, content.length())));
                 return content.trim();
@@ -147,15 +144,16 @@ public class GeminiService {
     }
 
     // Tạo câu hỏi tiếp theo
-    public String generateNextQuestion(String role, List<String> skills, String language, String level, 
-                                      String previousQuestion, String previousAnswer) {
+    public String generateNextQuestion(String role, List<String> skills, String language, String level,
+            String previousQuestion, String previousAnswer) {
 
         String skillsText = (skills == null || skills.isEmpty())
                 ? "None"
                 : String.join(", ", skills);
 
         String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer. " +
-                "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". " +
+                "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". "
+                +
                 "Tailor it to the candidate's previous answer, role, skills, and level.\n" +
                 "Rules:\n" +
                 "- The question must build upon the candidate's last answer or probe a related concept.\n" +
@@ -246,47 +244,12 @@ public class GeminiService {
                 Question: %s
                 Candidate's Answer: %s
 
-                EVALUATION CRITERIA (Score 0-10 for each):
-
-                1. CLARITY (0-10):
-                   - 9-10: Crystal clear, well-structured, easy to follow
-                   - 7-8: Clear but could be better organized
-                   - 5-6: Somewhat unclear, lacks structure
-                   - 3-4: Confusing, hard to follow
-                   - 0-2: Very unclear or incomprehensible
-
-                2. ACCURACY (0-10):
-                   - 9-10: Completely correct, no technical errors
-                   - 7-8: Mostly correct with minor inaccuracies
-                   - 5-6: Partially correct, some significant errors
-                   - 3-4: Many errors, fundamental misunderstandings
-                   - 0-2: Completely incorrect or irrelevant
-
-                3. DEPTH (0-10):
-                   - 9-10: Exceptional depth, covers advanced concepts, shows mastery
-                   - 7-8: Good depth, explains key concepts well
-                   - 5-6: Adequate depth, covers basics only
-                   - 3-4: Superficial, lacks important details
-                   - 0-2: Very shallow or no meaningful content
-
-                4. RELEVANCE (0-10):
-                   - 9-10: Perfectly addresses the question, stays on topic
-                   - 7-8: Mostly relevant, minor tangents
-                   - 5-6: Somewhat relevant but misses key points
-                   - 3-4: Partially off-topic
-                   - 0-2: Not relevant to the question
-
                 LEVEL-SPECIFIC EXPECTATIONS:
                 - Intern: Basic understanding, can explain fundamental concepts
                 - Fresher: Solid foundation, some practical knowledge
                 - Junior: Good understanding, practical experience, can explain implementation
                 - Mid-level: Deep knowledge, best practices, design patterns, trade-offs
                 - Senior: Expert level, architectural decisions, optimization, mentoring ability
-
-                OVERALL SCORE CALCULATION:
-                - Average the 4 criteria scores
-                - Adjust based on level expectations (+/- 1.0)
-                - Round to 1 decimal place
 
                 FEEDBACK REQUIREMENTS:
                 - Be specific and constructive
@@ -303,18 +266,9 @@ public class GeminiService {
 
                 Provide detailed feedback in JSON format:
                 {
-                    "score": 7.5,
                     "feedback": "Your answer demonstrates... [3-5 sentences with specific observations]",
-                    "sampleAnswer": "A strong answer would include... [comprehensive model answer]",
-                    "criteriaScores": {
-                        "clarity": 8.0,
-                        "accuracy": 7.0,
-                        "depth": 7.5,
-                        "relevance": 8.0
-                    }
+                    "sampleAnswer": "A strong answer would include... [comprehensive model answer]"
                 }
-
-                IMPORTANT: Score strictly and fairly. Don't inflate scores. Be honest but constructive.
                 """, role, level, question, answer);
 
         try {
@@ -324,42 +278,35 @@ public class GeminiService {
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
             return AnswerFeedbackData.builder()
-                    .score(1.0)
                     .feedback("Unable to generate detailed feedback at this moment.")
                     .sampleAnswer("Please review the question and try to provide more specific details.")
-                    .criteriaScores(java.util.Map.of(
-                        "clarity", 1.0,
-                        "accuracy", 1.0,
-                        "depth", 1.0,
-                        "relevance", 1.0
-                    ))
                     .build();
         }
     }
 
     // Generate overall feedback cho toàn bộ buổi phỏng vấn
-    public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role, 
-                                                      String level, List<String> skills) {
-        
+    public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role,
+            String level, List<String> skills) {
+
         // Build conversation summary
         StringBuilder conversationSummary = new StringBuilder();
         int totalQuestionsAnswered = 0;
-        
+
         for (ConversationEntry entry : conversation) {
             if (entry.getAnswerId() != null) {
                 totalQuestionsAnswered++;
                 conversationSummary.append(String.format("Q%d: %s\nA%d: %s\n\n",
-                    entry.getSequenceNumber(),
-                    entry.getQuestionContent(),
-                    entry.getSequenceNumber(),
-                    entry.getAnswerContent()));
+                        entry.getSequenceNumber(),
+                        entry.getQuestionContent(),
+                        entry.getSequenceNumber(),
+                        entry.getAnswerContent()));
             }
         }
-        
+
         String skillsText = (skills == null || skills.isEmpty()) ? "General" : String.join(", ", skills);
-        
+
         String systemPrompt = "You are a comprehensive interview evaluator. Always respond with valid JSON only.";
-        
+
         String userPrompt = String.format("""
                 You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
 
@@ -370,61 +317,62 @@ public class GeminiService {
                 - Total Questions Answered: %d
 
                 COMPLETE INTERVIEW TRANSCRIPT:
-                %s
+                         %s
 
-                EVALUATION FRAMEWORK:
+                         EVALUATION FRAMEWORK:
 
-                1. OVERALL SCORE (0-10):
-                   Calculate by analyzing:
-                   - Technical accuracy across all answers
-                   - Depth of knowledge demonstrated
-                   - Communication clarity and structure
-                   - Problem-solving approach
-                   - Consistency throughout the interview
-                   - Appropriate level for the position
-                   
-                   Scoring Guide:
-                   - 9-10: Outstanding - Exceeds expectations for the level
-                   - 7-8: Strong - Meets or slightly exceeds expectations
-                   - 5-6: Satisfactory - Meets basic expectations with gaps
-                   - 3-4: Below expectations - Significant improvement needed
-                   - 0-2: Poor - Does not meet minimum requirements
+                         1. OVERVIEW RATING:
+                            Evaluate the candidate's overall interview performance and assign ONE of these ratings:
+                            - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
+                            - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
+                            - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
+                            - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
+                            - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
 
-                2. ASSESSMENT:
-                   Provide a comprehensive 4-6 sentence analysis covering:
-                   - Overall performance summary
-                   - Technical competency evaluation
-                   - Communication effectiveness
-                   - Suitability for the role and level
-                   - Key observations from the interview flow
 
-                3. STRENGTHS (List 3-5 specific strengths):
-                   Identify concrete positive aspects with examples
+                         2. ASSESSMENT:
+                            Provide a comprehensive 4-6 sentence analysis covering:
+                            - Overall performance summary
+                            - Technical competency evaluation
+                            - Communication effectiveness
+                            - Suitability for the role and level
+                            - Key observations from the interview flow
 
-                4. WEAKNESSES (List 2-4 areas for improvement):
-                   Identify specific gaps or areas needing development
+                         3. STRENGTHS (List 3-5 specific strengths):
+                            Identify concrete positive aspects with examples
 
-                5. RECOMMENDATIONS:
-                   Provide actionable 3-5 sentence guidance
+                         4. WEAKNESSES (List 2-4 areas for improvement):
+                            Identify specific gaps or areas needing development
 
-                Provide detailed feedback in JSON format:
-                {
-                    "overallScore": 7.5,
-                    "assessment": "Throughout the interview, the candidate demonstrated...",
-                    "strengths": [
-                        "Specific strength with example from interview",
-                        "Another specific technical strength",
-                        "Communication or approach strength"
-                    ],
-                    "weaknesses": [
-                        "Specific gap with example",
-                        "Another area needing improvement"
-                    ],
-                    "recommendations": "To advance in your career and improve your interview performance, focus on..."
-                }
+                         5. RECOMMENDATIONS:
+                            Provide actionable 3-5 sentence guidance
 
-                IMPORTANT: Score strictly based on actual performance vs. level expectations.
-                """,
+                        IMPORTANT SCORING CRITERIA:
+                        - EXCELLENT: 90%%+ correct answers, deep technical understanding, excellent communication
+                        - GOOD: 70-89%% correct answers, solid technical knowledge, good communication
+                        - AVERAGE: 50-69%% correct answers, basic understanding, adequate communication
+                        - BELOW AVERAGE: 30-49%% correct answers, limited knowledge, poor communication
+                        - POOR: <30%% correct answers, insufficient knowledge, very weak responses
+
+                         Provide detailed feedback in JSON format:
+                         {
+                             "overview": "GOOD",
+                             "assessment": "Throughout the interview, the candidate demonstrated...",
+                             "strengths": [
+                                 "Specific strength with example from interview",
+                                 "Another specific technical strength",
+                                 "Communication or approach strength"
+                             ],
+                             "weaknesses": [
+                                 "Specific gap with example",
+                                 "Another area needing improvement"
+                             ],
+                             "recommendations": "To advance in your career and improve your interview performance, focus on..."
+                         }
+
+                         CRITICAL: The 'overview' field MUST be EXACTLY one of: EXCELLENT, GOOD, AVERAGE, BELOW AVERAGE, or POOR
+                        Score strictly based on actual performance vs. level expectations.
+             """,
                 role, level, skillsText, totalQuestionsAnswered, conversationSummary.toString());
 
         try {
@@ -434,39 +382,38 @@ public class GeminiService {
         } catch (Exception e) {
             log.error("Error parsing overall feedback response", e);
             return OverallFeedbackData.builder()
-                    .overallScore(1.0)
+                    .overview("AVERAGE")
                     .assessment("Thank you for completing the interview. Your performance showed potential.")
                     .strengths(java.util.Arrays.asList(
-                        "Participated in the interview",
-                        "Attempted to answer questions"
-                    ))
+                            "Participated in the interview",
+                            "Attempted to answer questions"))
                     .weaknesses(java.util.Arrays.asList(
-                        "Could provide more detailed responses"
-                    ))
-                    .recommendations("Continue practicing technical interview questions and focus on providing detailed, structured answers.")
+                            "Could provide more detailed responses"))
+                    .recommendations(
+                            "Continue practicing technical interview questions and focus on providing detailed, structured answers.")
                     .build();
         }
     }
 
     // Helper method to clean JSON response
     private String cleanJsonResponse(String jsonResponse) {
-        if (jsonResponse == null) return "{}";
-        
+        if (jsonResponse == null)
+            return "{}";
+
         // Remove markdown code fences (```json, ```, etc.)
         String cleaned = jsonResponse
-            .replaceAll("```json\\s*", "")  // Remove ```json
-            .replaceAll("```\\s*", "")       // Remove trailing ```
-            .trim();
-        
+                .replaceAll("```json\\s*", "") // Remove ```json
+                .replaceAll("```\\s*", "") // Remove trailing ```
+                .trim();
+
         // Extract JSON object
         int start = cleaned.indexOf("{");
         int end = cleaned.lastIndexOf("}");
-        
+
         if (start != -1 && end != -1 && end > start) {
             return cleaned.substring(start, end + 1);
         }
-        
+
         return cleaned;
     }
 }
-

@@ -4,11 +4,15 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import com.capstone.ai_interview_be.model.UserEntity;
+import com.capstone.ai_interview_be.repository.UserRepository;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
+
+    private final UserRepository userRepository;
+
     @Value("${JWT_SECRET}")
     private String jwtSecret;
     
@@ -64,7 +72,7 @@ public class JwtService {
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Instant now = Instant.now();
-        Instant expiry = now.plus(Duration.ofHours(jwtExpiration)); 
+        Instant expiry = now.plus(Duration.ofHours(jwtExpiration));
         var roles = userDetails.getAuthorities();  
         return Jwts.builder()
                 .header()
@@ -108,5 +116,21 @@ public class JwtService {
     // extract email from token
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // extract user id from token
+    public Long extractUserId(String token) {
+        String email = extractEmailToToken(token);
+        if (email == null) {
+            throw new RuntimeException("Invalid token: cannot extract email");
+        }
+
+        UserEntity user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new RuntimeException("Invalid token: cannot extract user");
+        }
+        
+        return user.getId();
     }
 }

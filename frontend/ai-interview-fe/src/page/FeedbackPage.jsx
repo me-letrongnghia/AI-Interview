@@ -12,9 +12,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   ClipboardList,
+  Trophy,
+  Sparkles,
 } from "lucide-react";
-import Point from "../components/Point";
 import { FeedbackApi } from "../api/FeedbackAPI";
+import { ApiPractice } from "../api/ApiPractice";
 import { toast } from "react-toastify";
 
 export default function FeedbackPage() {
@@ -25,11 +27,83 @@ export default function FeedbackPage() {
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  const getLevelColor = (score) => {
-    if (score >= 8) return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    if (score >= 6) return "bg-blue-50 text-blue-700 border-blue-200";
-    if (score >= 4) return "bg-amber-50 text-amber-700 border-amber-200";
-    return "bg-rose-50 text-rose-700 border-rose-200";
+  // Function to get styling based on overview rating
+  const getOverviewStyle = (overview) => {
+    const rating = overview?.toUpperCase() || "AVERAGE";
+    
+    const styles = {
+      EXCELLENT: {
+        bg: "bg-gradient-to-r from-purple-50 to-pink-50",
+        border: "border-purple-300",
+        text: "text-purple-700",
+        icon: "text-purple-600",
+        badge: "bg-purple-100 text-purple-800 border-purple-300"
+      },
+      GOOD: {
+        bg: "bg-gradient-to-r from-emerald-50 to-green-50",
+        border: "border-emerald-300",
+        text: "text-emerald-700",
+        icon: "text-emerald-600",
+        badge: "bg-emerald-100 text-emerald-800 border-emerald-300"
+      },
+      AVERAGE: {
+        bg: "bg-gradient-to-r from-blue-50 to-cyan-50",
+        border: "border-blue-300",
+        text: "text-blue-700",
+        icon: "text-blue-600",
+        badge: "bg-blue-100 text-blue-800 border-blue-300"
+      },
+      "BELOW AVERAGE": {
+        bg: "bg-gradient-to-r from-amber-50 to-yellow-50",
+        border: "border-amber-300",
+        text: "text-amber-700",
+        icon: "text-amber-600",
+        badge: "bg-amber-100 text-amber-800 border-amber-300"
+      },
+      POOR: {
+        bg: "bg-gradient-to-r from-rose-50 to-red-50",
+        border: "border-rose-300",
+        text: "text-rose-700",
+        icon: "text-rose-600",
+        badge: "bg-rose-100 text-rose-800 border-rose-300"
+      }
+    };
+
+    return styles[rating] || styles.AVERAGE;
+  };
+
+  // Function to get icon based on rating
+  const getOverviewIcon = (overview) => {
+    const rating = overview?.toUpperCase() || "AVERAGE";
+    const iconProps = { className: "w-8 h-8", strokeWidth: 2 };
+
+    switch (rating) {
+      case "EXCELLENT":
+        return <Trophy {...iconProps} />;
+      case "GOOD":
+        return <Sparkles {...iconProps} />;
+      case "AVERAGE":
+        return <Star {...iconProps} />;
+      case "BELOW AVERAGE":
+        return <TrendingUp {...iconProps} />;
+      case "POOR":
+        return <ThumbsDown {...iconProps} />;
+      default:
+        return <Star {...iconProps} />;
+    }
+  };
+
+  // Add handler function for practicing again
+  const handlePracticeAgain = async () => {
+    try {
+      const response = await ApiPractice.createPracticeSession(sessionId);
+      if (response.success) {
+        toast.success("Practice session created!");
+        navigate(`/interview/${response.data.practiceSessionId}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to create practice session");
+    }
   };
 
   useEffect(() => {
@@ -83,6 +157,7 @@ export default function FeedbackPage() {
     );
 
   const { sessionInfo, overallFeedback, conversationHistory } = data;
+  const overviewStyle = getOverviewStyle(overallFeedback?.overview);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50/50 to-white py-10 px-4">
@@ -98,7 +173,18 @@ export default function FeedbackPage() {
         {/* Header */}
         <div className="bg-white/80 rounded-2xl border border-emerald-100 shadow-md p-8 mb-8">
           <div className="flex items-center gap-4 mb-5">
-            <Point score={overallFeedback?.overallScore || 0} />
+            {/* Overview Rating Badge */}
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl border-2 ${overviewStyle.bg} ${overviewStyle.border} shadow-lg`}>
+              <div className={overviewStyle.icon}>
+                {getOverviewIcon(overallFeedback?.overview)}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overall Rating</p>
+                <p className={`text-2xl font-bold ${overviewStyle.text}`}>
+                  {overallFeedback?.overview || "AVERAGE"}
+                </p>
+              </div>
+            </div>
 
             <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-emerald-600" />
@@ -160,13 +246,7 @@ export default function FeedbackPage() {
           </div>
 
           <div className="mb-4">
-            <p className="text-gray-700 mb-2">
-              <strong>Score:</strong>{" "}
-              <span className="text-emerald-700 font-semibold">
-                {overallFeedback?.overallScore ?? "-"}
-              </span>
-            </p>
-            <p className="inline-block px-4 py-2 bg-emerald-50 text-emerald-700 font-semibold rounded-lg border border-emerald-200">
+            <p className={`inline-block px-5 py-3 rounded-xl font-semibold text-lg border-2 ${overviewStyle.badge}`}>
               {overallFeedback?.assessment || "-"}
             </p>
           </div>
@@ -178,7 +258,7 @@ export default function FeedbackPage() {
                 <ThumbsUp className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-semibold text-emerald-800">Strengths</h3>
               </div>
-              <ul className="list-disc list-inside text-gray-700">
+              <ul className="list-disc list-inside text-gray-700 space-y-1">
                 {(overallFeedback?.strengths || []).map((s, i) => (
                   <li key={i}>{s}</li>
                 ))}
@@ -190,7 +270,7 @@ export default function FeedbackPage() {
                 <ThumbsDown className="w-5 h-5 text-rose-600" />
                 <h3 className="font-semibold text-rose-800">Weaknesses</h3>
               </div>
-              <ul className="list-disc list-inside text-gray-700">
+              <ul className="list-disc list-inside text-gray-700 space-y-1">
                 {(overallFeedback?.weaknesses || []).map((w, i) => (
                   <li key={i}>{w}</li>
                 ))}
@@ -224,13 +304,6 @@ export default function FeedbackPage() {
                   <p className="text-sm font-semibold text-emerald-600">
                     Question {idx + 1}
                   </p>
-                  <span
-                    className={`px-3 py-1 rounded-lg text-sm font-medium border ${getLevelColor(
-                      item.score ?? 0
-                    )}`}
-                  >
-                    Score: {item.score ?? "-"}
-                  </span>
                 </div>
 
                 <p className="text-gray-900 font-medium mb-3">
@@ -250,26 +323,11 @@ export default function FeedbackPage() {
                 </div>
 
                 {item.sampleAnswer && (
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 mb-3">
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                     <p className="text-sm text-blue-700 font-semibold mb-1">
                       Sample Answer:
                     </p>
                     <p className="text-blue-800">{item.sampleAnswer}</p>
-                  </div>
-                )}
-
-                {item.criteriaScores && (
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">
-                      Criteria Scores:
-                    </p>
-                    <ul className="grid md:grid-cols-2 gap-1 text-gray-600">
-                      {Object.entries(item.criteriaScores).map(([k, v], i) => (
-                        <li key={i}>
-                          {k}: <strong>{v}</strong>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 )}
               </div>
@@ -284,6 +342,12 @@ export default function FeedbackPage() {
             className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-all shadow-sm"
           >
             Download Report
+          </button>
+          <button
+            onClick={handlePracticeAgain}
+            className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+          >
+            Practice This Interview Again
           </button>
           <button
             onClick={() => navigate("/")}

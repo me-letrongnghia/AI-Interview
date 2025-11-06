@@ -13,6 +13,7 @@ import OtpPage from "./page/auth/OtpPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AboutPage } from "./page/AboutPage";
 import FeedbackPage from "./page/FeedbackPage";
+import HistoryPage from "./page/HistoryPage";
 
 export const router = createBrowserRouter([
   {
@@ -80,6 +81,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DeviceCheckPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/history",
+    element: (
+      <ProtectedRoute>
+        <HistoryPage />
       </ProtectedRoute>
     ),
   },

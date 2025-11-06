@@ -2,7 +2,6 @@ package com.capstone.ai_interview_be.dto.response;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,7 +37,7 @@ public class InterviewFeedbackResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OverallFeedback {
-        private Double overallScore;
+        private String overview;
         private String assessment;
         private List<String> strengths;
         private List<String> weaknesses;
@@ -54,9 +53,7 @@ public class InterviewFeedbackResponse {
         private String question;
         private Long answerId;
         private String userAnswer;
-        private Double score;
         private String feedback;
         private String sampleAnswer;
-        private Map<String, Double> criteriaScores;
     }
 }

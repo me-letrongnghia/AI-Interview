@@ -24,10 +24,7 @@ public class InterviewSessionService {
     private final ConversationService conversationService;
     private final AIService aiService;
     
-    /**
-     * Tạo phiên phỏng vấn mới và câu hỏi đầu tiên
-     * Sử dụng AI (GenQ service hoặc OpenRouter) để tạo câu hỏi đầu tiên
-     */
+    // Tạo một interview session mới
     @Transactional
     public CreateInterviewSessionResponse createSession(CreateInterviewSessionRequest request) {
         log.info("Creating new interview session for role: {}, level: {}", request.getRole(), request.getLevel());
@@ -102,13 +99,93 @@ public class InterviewSessionService {
         return new CreateInterviewSessionResponse(savedSession.getId());
     }
 
-    /**
-     * Lấy thông tin session theo ID
-     */
+    // Lấy thông tin session theo ID
     public InterviewSession getSessionById(Long sessionId) {
         log.info("Getting session info for sessionId: {}", sessionId);
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
+    }
+    
+    // Lấy danh sách session với các bộ lọc
+    public java.util.List<InterviewSession> getSessionsWithFilters(
+            Long userId, String source, String role, String status) {
+        log.info("Getting sessions - userId: {}, source: {}, role: {}, status: {}", 
+                userId, source, role, status);
+        
+        // Parse source string sang enum
+        InterviewSession.Source sourceEnum = null;
+        if (source != null) {
+            try {
+                sourceEnum = InterviewSession.Source.fromString(source);
+            } catch (Exception e) {
+                log.warn("Invalid source value: {}", source);
+            }
+        }
+        
+        return sessionRepository.findByUserIdWithFilters(userId, sourceEnum, role, status);
+    }
+    
+    // Cập nhật trạng thái session
+    @Transactional
+    public void updateSessionStatus(Long sessionId, String status) {
+        log.info("Updating status for sessionId: {} to {}", sessionId, status);
+        InterviewSession session = getSessionById(sessionId);
+        session.setStatus(status);
+        
+        if ("completed".equalsIgnoreCase(status)) {
+            session.setCompletedAt(java.time.LocalDateTime.now());
+        }
+        
+        sessionRepository.save(session);
+        log.info("Session status updated successfully");
+    }
+    
+    // Xóa session theo ID
+    @Transactional
+    public void deleteSession(Long sessionId) {
+        log.info("Deleting sessionId: {}", sessionId);
+        InterviewSession session = getSessionById(sessionId);
+        sessionRepository.delete(session);
+        log.info("Session deleted successfully");
+    }
+    
+    // Lấy thống kê session cho user
+    public java.util.Map<String, Object> getUserSessionStatistics(Long userId) {
+        log.info("Getting session statistics for userId: {}", userId);
+        java.util.List<InterviewSession> sessions = getSessionsWithFilters(userId, null, null, null);
+        
+        java.util.Map<String, Object> statistics = new java.util.HashMap<>();
+        statistics.put("totalSessions", sessions.size());
+        statistics.put("completedSessions", sessions.stream()
+                .filter(s -> "completed".equalsIgnoreCase(s.getStatus()))
+                .count());
+        statistics.put("inProgressSessions", sessions.stream()
+                .filter(s -> "in_progress".equalsIgnoreCase(s.getStatus()))
+                .count());
+        statistics.put("totalInterviewTime", sessions.stream()
+                .filter(s -> s.getDuration() != null)
+                .mapToInt(InterviewSession::getDuration)
+                .sum());
+        
+        // Thống kê theo level
+        java.util.Map<String, Long> levelStats = sessions.stream()
+                .filter(s -> s.getLevel() != null)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        InterviewSession::getLevel,
+                        java.util.stream.Collectors.counting()
+                ));
+        statistics.put("sessionsByLevel", levelStats);
+        
+        // Thống kê theo role
+        java.util.Map<String, Long> roleStats = sessions.stream()
+                .filter(s -> s.getRole() != null)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        InterviewSession::getRole,
+                        java.util.stream.Collectors.counting()
+                ));
+        statistics.put("sessionsByRole", roleStats);
+        
+        return statistics;
     }
     
 }

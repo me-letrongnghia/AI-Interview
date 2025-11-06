@@ -141,15 +141,8 @@ public class AIService {
         } catch (Exception e) {
             log.error("Error generating answer feedback with Gemini, using fallback", e);
             return AnswerFeedbackData.builder()
-                    .score(5.0)
                     .feedback("Unable to generate detailed feedback at this moment.")
                     .sampleAnswer("Please review the question and try to provide more specific details.")
-                    .criteriaScores(java.util.Map.of(
-                        "clarity", 5.0,
-                        "accuracy", 5.0,
-                        "depth", 5.0,
-                        "relevance", 5.0
-                    ))
                     .build();
         }
     }
@@ -170,7 +163,7 @@ public class AIService {
         } catch (Exception e) {
             log.error("Error generating overall feedback with Gemini, using fallback", e);
             return OverallFeedbackData.builder()
-                    .overallScore(6.0)
+                    .overview("Hiiiiiiiiii")
                     .assessment("Thank you for completing the interview. Your performance showed potential.")
                     .strengths(java.util.Arrays.asList(
                         "Participated in the interview",
