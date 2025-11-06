@@ -18,6 +18,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Set persistence to LOCAL - auth state persists even after browser is closed
+// Note: This creates 'firebase:authUser:...' keys in localStorage
+// These keys must be manually cleared on logout
 setPersistence(auth, browserLocalPersistence)
   .catch((error) => {
     console.error("Error setting auth persistence:", error);

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { auth } from "../fireconfig/FireBaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { clearAllAuthData, isTokenExpired, getTimeUntilExpiration } from "../utils/authUtils";
 
 const AppContext = createContext();
 export const UseAppContext = () => useContext(AppContext);
@@ -9,6 +10,24 @@ export const AppProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [isLogin, setIsLogin] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const tokenCheckIntervalRef = useRef(null);
+
+  // Logout function - defined early to avoid dependency issues
+  const logout = useCallback(async () => {
+    try {
+      // Sign out from Firebase first
+      await auth.signOut();
+    } catch (error) {
+      console.error("Error signing out from Firebase:", error);
+    } finally {
+      // Clear all auth state
+      setUserProfile(null);
+      setIsLogin(false);
+      
+      // Clear all auth data including Firebase persistence
+      clearAllAuthData();
+    }
+  }, []);
 
   // Initialize from localStorage on mount
   useEffect(() => {
@@ -19,17 +38,71 @@ export const AppProvider = ({ children }) => {
     if (storedUser && storedToken && storedIsLogin === "true") {
       try {
         const user = JSON.parse(storedUser);
-        setUserProfile(user);
-        setIsLogin(true);
+        
+        // Check if token is already expired
+        if (isTokenExpired(storedToken)) {
+          console.log("Token expired on init, clearing auth data");
+          clearAllAuthData();
+          setUserProfile(null);
+          setIsLogin(false);
+        } else {
+          setUserProfile(user);
+          setIsLogin(true);
+        }
       } catch (error) {
         console.error("Error parsing stored user:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("isLogin");
+        clearAllAuthData();
       }
     }
     setIsAuthChecking(false);
   }, []);
+
+  // Auto-check token expiration periodically
+  useEffect(() => {
+    if (!isLogin) {
+      // Clear interval if user is logged out
+      if (tokenCheckIntervalRef.current) {
+        clearInterval(tokenCheckIntervalRef.current);
+        tokenCheckIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Function to check token expiration
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem("access_token");
+      
+      if (!token) {
+        console.log("No token found, logging out");
+        logout();
+        return;
+      }
+
+      if (isTokenExpired(token)) {
+        console.log("Token expired, logging out");
+        logout();
+        // Redirect to login page with session expired message
+        window.location.href = "/auth/login?reason=token_expired";
+      } else {
+        // Log time remaining (optional, for debugging)
+        const timeRemaining = getTimeUntilExpiration(token);
+        console.log(`Token valid for ${Math.floor(timeRemaining / 1000)} more seconds`);
+      }
+    };
+
+    // Check immediately
+    checkTokenExpiration();
+
+    // Check every 30 seconds
+    tokenCheckIntervalRef.current = setInterval(checkTokenExpiration, 30000);
+
+    // Cleanup on unmount or when isLogin changes
+    return () => {
+      if (tokenCheckIntervalRef.current) {
+        clearInterval(tokenCheckIntervalRef.current);
+      }
+    };
+  }, [isLogin, logout]);
 
   // Sync with Firebase Auth State (only for Firebase login)
   useEffect(() => {
@@ -61,9 +134,7 @@ export const AppProvider = ({ children }) => {
             // Only clear if this was a Firebase/OAuth login (has picture from OAuth)
             // Regular email/password login won't be affected
             if (user.picture && user.picture.includes("googleusercontent.com")) {
-              localStorage.removeItem("user");
-              localStorage.removeItem("access_token");
-              localStorage.removeItem("isLogin");
+              clearAllAuthData();
               setUserProfile(null);
               setIsLogin(false);
             }
@@ -76,16 +147,6 @@ export const AppProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
-
-  const logout = () => {
-    setUserProfile(null);
-    setIsLogin(false);
-    // Only clear auth-related items
-    localStorage.removeItem("user");
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("isLogin");
-    auth.signOut();
-  };
 
   return (
     <AppContext.Provider
