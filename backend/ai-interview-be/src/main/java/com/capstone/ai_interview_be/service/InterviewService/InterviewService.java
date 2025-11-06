@@ -35,7 +35,7 @@ public class InterviewService {
     private final ConversationService conversationService;
     private final ObjectMapper objectMapper;
     
-    // Xử lý việc submit câu trả lời qua WebSocket và tạo câu hỏi tiếp theo
+    // Phương thức để xử lý câu trả lời và tạo câu hỏi tiếp theo
     @Transactional
     public ProcessAnswerResponse processAnswerAndGenerateNext(Long sessionId, AnswerMessage answerMessage) {
         // Kiểm tra session có tồn tại không
@@ -82,7 +82,6 @@ public class InterviewService {
                 
             } catch (Exception e) {
                 log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
-                // Không throw exception để không ảnh hưởng luồng chính
             }
         });
 
@@ -135,8 +134,7 @@ public class InterviewService {
         );
     }
 
-    
-    // Process last answer without generating next question
+    // Phương thức để xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
     @Transactional
     public void processLastAnswer(Long sessionId, AnswerMessage answerMessage) {
         log.info("Processing last answer for session {}", sessionId);

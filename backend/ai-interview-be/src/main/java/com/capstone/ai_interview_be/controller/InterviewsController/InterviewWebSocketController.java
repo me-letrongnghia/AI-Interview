@@ -13,14 +13,12 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Controller
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class InterviewWebSocketController {
 
@@ -33,13 +31,13 @@ public class InterviewWebSocketController {
         try {
             log.info("Received answer for session {}, isLastAnswer: {}", sessionId, answerMessage.getIsLastAnswer());
             
-            // Check if this is the last answer
+            // Kiểm tra nếu đây là câu trả lời cuối cùng
             if (Boolean.TRUE.equals(answerMessage.getIsLastAnswer())) {
-                // Save the answer but don't generate next question
+                // Xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
                 log.info("Processing last answer for session {}, will not generate next question", sessionId);
                 interviewService.processLastAnswer(sessionId, answerMessage);
-                
-                // Send completion message
+
+                // Gửi thông báo hoàn thành
                 FeedbackMessage endMessage = new FeedbackMessage();
                 endMessage.setType("end");
                 endMessage.setIsComplete(true);
@@ -50,7 +48,7 @@ public class InterviewWebSocketController {
                 return;
             }
             
-            // Normal flow: process answer and generate next question
+            // Xử lý câu trả lời và tạo câu hỏi tiếp theo
             var response = interviewService.processAnswerAndGenerateNext(sessionId, answerMessage);
 
             // Nếu có câu hỏi tiếp theo, gửi luôn

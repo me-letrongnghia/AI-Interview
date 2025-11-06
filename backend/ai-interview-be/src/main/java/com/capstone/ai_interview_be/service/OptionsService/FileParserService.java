@@ -1,4 +1,4 @@
-package com.capstone.ai_interview_be.service;
+package com.capstone.ai_interview_be.service.OptionsService;
 
 import lombok.extern.slf4j.Slf4j;
 import net.sourceforge.tess4j.Tesseract;
@@ -39,24 +39,24 @@ public class FileParserService {
         throw new IllegalArgumentException("Unsupported file format. Please upload PDF or DOCX files.");
     }
 
-    // Kiểm tra định dạng PDF
+    // Hàm kiểm tra định dạng PDF
     private boolean isPDF(String name, String type) {
         return (type != null && type.equals("application/pdf")) || name.endsWith(".pdf");
     }
 
-    // Kiểm tra định dạng DOCX
+    // Hàm kiểm tra định dạng DOCX
     private boolean isDOCX(String name, String type) {
         return (type != null && type.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) || name.endsWith(".docx");
     }
 
-    // Validate uploaded file
+    // Kiểm tra tính hợp lệ của tệp
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("File cannot be null or empty");
         if (file.getOriginalFilename() == null) throw new IllegalArgumentException("File name cannot be null");
         if (file.getSize() > MAX_FILE_SIZE) throw new IllegalArgumentException("File size exceeds 10MB");
     }
 
-    // Parse PDF files
+    // Hàm phân tích tệp PDF
     private String parsePDF(MultipartFile file) throws IOException {
         try (PDDocument document = PDDocument.load(file.getInputStream())) {
             String text = new PDFTextStripper().getText(document);
@@ -71,7 +71,7 @@ public class FileParserService {
         }
     }
 
-    // trích xuất văn bản từ PDF hình ảnh sử dụng OCR
+    // Trích xuất văn bản từ PDF hình ảnh sử dụng OCR
     private String extractTextUsingOCR(PDDocument document) throws IOException {
         Tesseract tesseract = setupTesseract();
         PDFRenderer renderer = new PDFRenderer(document);
@@ -94,8 +94,7 @@ public class FileParserService {
         return result;
     }
 
-
-    // Cấu hình Tesseract với các đường dẫn tessdata phổ biến
+    // Cấu hình Tesseract OCR
     private Tesseract setupTesseract() {
         Tesseract tesseract = new Tesseract();
         tesseract.setLanguage("eng");
@@ -120,7 +119,7 @@ public class FileParserService {
         return tesseract;
     }
 
-    // Parse DOCX files
+    // Hàm phân tích tệp DOCX
     private String parseDOCX(MultipartFile file) throws IOException {
         try (XWPFDocument doc = new XWPFDocument(file.getInputStream());
              XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {

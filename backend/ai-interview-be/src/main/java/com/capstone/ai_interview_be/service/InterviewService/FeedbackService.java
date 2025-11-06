@@ -40,8 +40,7 @@ public class FeedbackService {
     private final AIService aiService;
     private final ObjectMapper objectMapper;
 
-    // Generate feedback cho toàn bộ session
-    // Gọi khi interview kết thúc
+    // Phương thức để generate feedback cho một session
     @Transactional
     public InterviewFeedbackResponse generateSessionFeedback(Long sessionId) {
         log.info("Generating feedback for session: {}", sessionId);

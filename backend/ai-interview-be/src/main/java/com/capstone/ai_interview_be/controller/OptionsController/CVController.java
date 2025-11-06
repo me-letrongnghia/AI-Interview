@@ -2,7 +2,6 @@ package com.capstone.ai_interview_be.controller.OptionsController;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,8 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 
 import com.capstone.ai_interview_be.dto.response.DataScanResponse;
-import com.capstone.ai_interview_be.service.FileParserService;
 import com.capstone.ai_interview_be.service.AIService.AIService;
+import com.capstone.ai_interview_be.service.OptionsService.FileParserService;
 
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -22,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/api/cv")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5000", allowCredentials = "false") 
 public class CVController {
 
     private final FileParserService fileParserService;

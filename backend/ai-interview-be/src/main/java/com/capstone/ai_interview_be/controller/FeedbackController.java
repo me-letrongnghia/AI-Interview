@@ -1,7 +1,6 @@
 package com.capstone.ai_interview_be.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/feedback")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5000"})
 public class FeedbackController {
     
     private final FeedbackService feedbackService;

@@ -10,7 +10,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import com.capstone.ai_interview_be.dto.request.FireRequest;
 import com.capstone.ai_interview_be.dto.request.LoginRequest;
 import com.capstone.ai_interview_be.dto.request.RegisterRequest;

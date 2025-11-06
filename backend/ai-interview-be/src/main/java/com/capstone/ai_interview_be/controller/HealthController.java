@@ -3,7 +3,6 @@ package com.capstone.ai_interview_be.controller;
 import com.capstone.ai_interview_be.service.AIService.GenQService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,9 +14,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/health")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5000"})
 public class HealthController {
-    
     private final GenQService genQService;
     
     // Kiểm tra trạng thái hệ thống backend

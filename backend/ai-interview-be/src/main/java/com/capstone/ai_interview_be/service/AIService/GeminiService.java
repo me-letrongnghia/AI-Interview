@@ -202,7 +202,7 @@ public class GeminiService {
             "'Lead' (leadership experience), " +
             "'Principal' (senior leadership)\n\n" +
             "3. Skills: Extract ALL technical skills and frameworks mentioned in the CV. " +
-            "Include all relevant programming languages, frameworks, databases, tools, and technologies. " +
+            "Include all relevant programming languages, frameworks, databases, and technologies. " +
             "Avoid duplicates, but keep the full list.\n\n" +
             "4. Language: Always set this field to 'en' by default.\n\n" +
             "CRITICAL INSTRUCTIONS:\n" +
@@ -213,22 +213,26 @@ public class GeminiService {
             "- If CV mentions web development with HTML/CSS/JS/PHP = Full Stack Developer\n" +
             "- If CV is a student with projects but no work experience = Intern or Fresher\n" +
             "- Prioritize programming languages and frameworks when identifying role, but list all skills\n" +
-            "- Return only the JSON object, with no extra explanation or formatting\n" +
+            "- If the CV is NOT related to the Information Technology (IT) field, return this JSON exactly:\n" +
+            "  {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n" +
+            "- Return only the JSON object, with no extra explanation or formatting\n\n" +
             "Example output formats:\n" +
             "Complete data: {\"role\":\"Full Stack Developer\",\"level\":\"Fresher\",\"skill\":[\"Java\",\"JavaScript\",\"React\",\"MySQL\",\"Docker\"],\"language\":\"en\"}\n" +
             "Partial data: {\"role\":\"Software Engineer\",\"level\":null,\"skill\":[\"Python\",\"Django\",\"Flask\"],\"language\":\"en\"}\n" +
-            "Missing data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}";
+            "Non-IT data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}";
 
         String userPrompt = String.format(
             "CV Content to analyze:\n\n%s\n\n" +
-            "Based on this CV, extract the role, level, ALL mentioned technical skills/frameworks, and language. " +
-            "If any information cannot be clearly determined from the CV content, return null for that field except 'language'. " +
-            "Return ONLY the JSON object with the extracted data.",
+            "Based on this CV, determine if it belongs to the IT field. " +
+            "If it is NOT related to Information Technology, return:\n" +
+            "{\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n\n" +
+            "Otherwise, extract and return only a JSON object with the fields: role, level, skill, language.",
             truncatedText != null ? truncatedText : ""
         );
 
         return generateResponse(systemPrompt, userPrompt);
     }
+
 
     // Generate feedback cho một câu trả lời cụ thể
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
