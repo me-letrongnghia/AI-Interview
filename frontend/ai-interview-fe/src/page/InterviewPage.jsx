@@ -183,11 +183,9 @@ const InterviewUI = memo(
     interviewConfig,
   }) => (
     <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden'>
-
       <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
         {/* Main Video Area */}
         <div className='flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white'>
-
           {/* Header Bar */}
           <div className='absolute top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 p-3.5 flex items-center justify-between z-10'>
             <button
@@ -285,7 +283,12 @@ const InterviewUI = memo(
                   }`}
                   title={isRecording ? "Stop recording" : "Voice input"}
                 >
-                  <Mic size={20} className={`text-white ${isRecording ? "animate-pulse" : ""}`} />
+                  <Mic
+                    size={20}
+                    className={`text-white ${
+                      isRecording ? "animate-pulse" : ""
+                    }`}
+                  />
                   <span className='text-white font-semibold text-sm'>
                     Voice Input
                   </span>
@@ -296,7 +299,9 @@ const InterviewUI = memo(
                   <div className='bg-white rounded-lg border-2 border-red-300 animate-fadeIn px-6 py-3 flex items-center gap-4'>
                     <div className='flex items-center gap-2'>
                       <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
-                      <span className='text-sm font-semibold text-gray-800'>Recording</span>
+                      <span className='text-sm font-semibold text-gray-800'>
+                        Recording
+                      </span>
                     </div>
                     <div className='w-32'>
                       <VolumeBar analyser={analyser} />
@@ -310,7 +315,9 @@ const InterviewUI = memo(
                 <div className='mt-4 max-w-2xl mx-auto p-3 bg-white rounded-lg border border-black-200 animate-fadeIn'>
                   <p className='text-sm text-gray-700'>
                     {chatInput}
-                    <span className='text-green-600 italic'>{interimTranscript}</span>
+                    <span className='text-green-600 italic'>
+                      {interimTranscript}
+                    </span>
                   </p>
                 </div>
               )}
@@ -338,15 +345,13 @@ const InterviewUI = memo(
                       100
                     )}%`,
                   }}
-                >
-                </div>
+                ></div>
               </div>
               <div className='flex justify-between mt-2 px-1'>
-                <span className='text-sm text-green font-medium'>
-                  Progress
-                </span>
+                <span className='text-sm text-green font-medium'>Progress</span>
                 <span className='text-sm text-black font-medium'>
-                  {chatHistory.filter((m) => m.type === "ai").length}/{interviewConfig.maxQuestions}
+                  {chatHistory.filter((m) => m.type === "ai").length}/
+                  {interviewConfig.maxQuestions}
                 </span>
               </div>
             </div>
@@ -460,12 +465,17 @@ const InterviewUI = memo(
                             src={userProfile.picture}
                             alt={userProfile.fullName || userProfile.name}
                             className='w-full h-full object-cover'
-                            referrerPolicy="no-referrer"
-                            crossOrigin="anonymous"
+                            referrerPolicy='no-referrer'
+                            crossOrigin='anonymous'
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "https://ui-avatars.com/api/?name=" + 
-                                encodeURIComponent(userProfile?.fullName || userProfile?.name || "User") + 
+                              e.target.src =
+                                "https://ui-avatars.com/api/?name=" +
+                                encodeURIComponent(
+                                  userProfile?.fullName ||
+                                    userProfile?.name ||
+                                    "User"
+                                ) +
                                 "&background=22c55e&color=fff";
                             }}
                           />
@@ -627,6 +637,7 @@ export default function InterviewInterface() {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isPracticeSession, setIsPracticeSession] = useState(false);
+  const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
 
   // Interview config based on level - default to intern
   const [interviewConfig, setInterviewConfig] = useState({
@@ -739,46 +750,54 @@ export default function InterviewInterface() {
   }, [chatHistory]);
 
   // Handle leave room - MUST be defined before useTimer
-  const handleLeaveRoom = useCallback(
-    () => {
-      const confirmLeave = window.confirm(
-        "Are you sure you want to end the interview? Your progress will be saved and feedback will be generated automatically."
-      );
+  const handleLeaveRoom = useCallback(() => {
+    // Prevent multiple calls
+    if (isLeavingRef.current) {
+      console.log("⚠️ Already leaving, ignoring duplicate call");
+      return;
+    }
 
-      if (!confirmLeave) {
-        return;
-      }
+    isLeavingRef.current = true;
+    console.log("🚪 Leaving room - setting flag");
 
-      // Stop speech
-      stopSpeaking();
+    const confirmLeave = window.confirm(
+      "Are you sure you want to end the interview? Your progress will be saved and feedback will be generated automatically."
+    );
 
-      // Stop recording
-      if (isRecording) {
-        setIsRecording(false);
-        stopListening();
-      }
+    if (!confirmLeave) {
+      // User cancelled, reset flag
+      isLeavingRef.current = false;
+      return;
+    }
 
-      // Stop media stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          try {
-            track.stop();
-          } catch {
-            toast.warn("Error stopping media track.");
-          }
-        });
-        streamRef.current = null;
-      }
+    // Stop speech
+    stopSpeaking();
 
-      // Disconnect socket
-      disconnectSocket();
+    // Stop recording
+    if (isRecording) {
+      setIsRecording(false);
+      stopListening();
+    }
 
-      // Show notification and navigate to feedback generation page
-      toast.info("Generating feedback...", { autoClose: 3000 });
-      navigate(`/feedback/${sessionId}`);
-    },
-    [navigate, stopSpeaking, isRecording, stopListening, sessionId]
-  );
+    // Stop media stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {
+          toast.warn("Error stopping media track.");
+        }
+      });
+      streamRef.current = null;
+    }
+
+    // Disconnect socket
+    disconnectSocket();
+
+    // Show notification and navigate to feedback generation page
+    toast.info("Generating feedback...", { autoClose: 3000 });
+    navigate(`/feedback/${sessionId}`);
+  }, [navigate, stopSpeaking, isRecording, stopListening, sessionId]);
 
   // Timer with dynamic initial values
   const timerDisplay = useTimer(
@@ -1001,12 +1020,12 @@ export default function InterviewInterface() {
           if (sessionData.isPractice) {
             console.log("🔄 Practice mode detected!");
           }
-          
+
           // Use duration and questionCount from user selection
           if (sessionData.duration && sessionData.questionCount) {
             const config = {
               minutes: sessionData.duration,
-              maxQuestions: sessionData.questionCount
+              maxQuestions: sessionData.questionCount,
             };
             setInterviewConfig(config);
             console.log(
@@ -1014,7 +1033,9 @@ export default function InterviewInterface() {
             );
           } else if (sessionData.level) {
             // Fallback to level-based config if no duration/questionCount
-            console.warn("⚠️ No duration/questionCount, falling back to level-based config");
+            console.warn(
+              "⚠️ No duration/questionCount, falling back to level-based config"
+            );
             const level = sessionData.level;
             const config = getInterviewConfig(level);
             setInterviewConfig(config);
@@ -1026,13 +1047,11 @@ export default function InterviewInterface() {
             const defaultConfig = getInterviewConfig("intern");
             setInterviewConfig(defaultConfig);
           }
-          
+
           // Auto-start timer after config is loaded
           setIsRunning(true);
         } else {
-          console.warn(
-            "⚠️ No session data, using default intern config"
-          );
+          console.warn("⚠️ No session data, using default intern config");
           const defaultConfig = getInterviewConfig("intern");
           setInterviewConfig(defaultConfig);
           setIsRunning(true);
