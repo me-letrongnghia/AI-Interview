@@ -66,6 +66,12 @@ public class InterviewSession {
     
     @Column(name = "feedback_generated")
     private Boolean feedbackGenerated = false;
+
+    @Column(name = "is_practice")
+    private Boolean isPractice = false;
+
+    @Column(name = "original_session_id")
+    private Long originalSessionId;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;

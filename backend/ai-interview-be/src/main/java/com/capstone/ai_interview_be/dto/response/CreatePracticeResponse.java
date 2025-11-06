@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AnswerFeedbackData {
-
-    private String feedback;
-
-    private String sampleAnswer;
+public class CreatePracticeResponse {
+    private Long practiceSessionId;
+    private String message;
+    private Integer questionCount;
 }
