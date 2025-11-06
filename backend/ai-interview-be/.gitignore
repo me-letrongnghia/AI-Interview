@@ -32,5 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 firebase-service-account.json
+firebase-service-accoun.json
 .firebase-service-account.json
 src/main/resources/firebase-service-account.json
+backend/ai-interview-be/src/main/resources/firebase-service-accoun.json

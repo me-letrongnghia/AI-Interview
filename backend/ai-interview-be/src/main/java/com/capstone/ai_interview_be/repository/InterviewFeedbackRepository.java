@@ -14,4 +14,5 @@ public interface InterviewFeedbackRepository extends JpaRepository<InterviewFeed
     
     // Kiểm tra feedback đã tồn tại cho session ID chưa
     boolean existsBySessionId(Long sessionId);
+    
 }

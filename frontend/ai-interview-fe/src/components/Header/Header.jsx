@@ -19,8 +19,8 @@ function Header() {
     { to: "/about", label: "About", external: true },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
     setShowDropdown(false);
     setMobileOpen(false);

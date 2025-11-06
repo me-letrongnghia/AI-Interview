@@ -98,7 +98,6 @@ public class PracticeService {
         practiceSession.setStatus("in_progress");
         practiceSession.setIsPractice(true);
         practiceSession.setOriginalSessionId(originalSessionId);
-        practiceSession.setFeedbackGenerated(false);
 
         practiceSession = sessionRepository.save(practiceSession);
         log.info("Created practice session with id {}", practiceSession.getId());
