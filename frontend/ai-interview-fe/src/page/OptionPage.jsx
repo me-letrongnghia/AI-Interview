@@ -186,7 +186,7 @@ export default function OptionPage() {
 
   // Duration options for interview (in minutes)
   const durationOptions = [
-    { value: "5", label: "5 minutes" },
+    { value: "1", label: "1 minutes" },
     { value: "10", label: "10 minutes" },
     { value: "15", label: "15 minutes" },
     { value: "20", label: "20 minutes" },
