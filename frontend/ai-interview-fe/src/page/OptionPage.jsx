@@ -199,7 +199,7 @@ export default function OptionPage() {
 
   // Question count options
   const questionCountOptions = [
-    { value: "2", label: "5 questions" },
+    { value: "5", label: "5 questions" },
     { value: "10", label: "10 questions" },
     { value: "15", label: "15 questions" },
     { value: "20", label: "20 questions" },

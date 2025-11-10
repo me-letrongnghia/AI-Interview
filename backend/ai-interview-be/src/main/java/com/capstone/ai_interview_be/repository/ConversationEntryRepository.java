@@ -27,4 +27,7 @@ public interface ConversationEntryRepository extends JpaRepository<ConversationE
     // Tìm conversation entry theo question ID (mỗi question chỉ có 1 entry)
     @Query("SELECT c FROM ConversationEntry c WHERE c.questionId = :questionId")
     ConversationEntry findByQuestionId(@Param("questionId") Long questionId);
+    
+    // Xóa tất cả conversation entries của một session
+    void deleteBySessionId(Long sessionId);
 }

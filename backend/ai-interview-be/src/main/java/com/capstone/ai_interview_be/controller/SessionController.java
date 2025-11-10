@@ -123,6 +123,7 @@ public class SessionController {
                 .duration(session.getDuration())
                 .questionCount(session.getQuestionCount())
                 .feedbackId(session.getFeedbackId())
+                .isPractice(session.getIsPractice())
                 .build();
     }
 }

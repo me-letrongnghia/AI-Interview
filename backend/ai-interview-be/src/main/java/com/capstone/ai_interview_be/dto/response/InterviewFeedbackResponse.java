@@ -30,6 +30,7 @@ public class InterviewFeedbackResponse {
         private LocalDateTime endTime;
         private String duration;
         private Integer totalQuestions;
+        private Boolean isPractice;
     }
     
     @Data

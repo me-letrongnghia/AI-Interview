@@ -29,6 +29,23 @@ export const SessionApi = {
       throw new Error(msg);
     }
   },
+
+  async Delete_Session(sessionId) {
+    if (!sessionId) throw new Error("sessionId is required");
+
+    try {
+      const res = await Https.delete(`/api/sessions/${sessionId}`);
+      return res.data;
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.response?.statusText ||
+        err?.message ||
+        "Delete session failed";
+      throw new Error(msg);
+    }
+  },
 };
 
 export default SessionApi;

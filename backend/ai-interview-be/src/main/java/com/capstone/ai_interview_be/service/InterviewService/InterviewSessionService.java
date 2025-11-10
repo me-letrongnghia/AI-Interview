@@ -3,9 +3,14 @@ package com.capstone.ai_interview_be.service.InterviewService;
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionRequest;
 import com.capstone.ai_interview_be.dto.CreateInterviewSession.CreateInterviewSessionResponse;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
+import com.capstone.ai_interview_be.model.InterviewAnswer;
 import com.capstone.ai_interview_be.model.InterviewSession;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.repository.InterviewSessionRepository;
+import com.capstone.ai_interview_be.repository.ConversationEntryRepository;
+import com.capstone.ai_interview_be.repository.InterviewFeedbackRepository;
+import com.capstone.ai_interview_be.repository.InterviewAnswerRepository;
+import com.capstone.ai_interview_be.repository.AnswerFeedbackRepository;
 import com.capstone.ai_interview_be.service.AIService.AIService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +26,10 @@ public class InterviewSessionService {
     
     private final InterviewSessionRepository sessionRepository;
     private final InterviewQuestionRepository questionRepository;
+    private final ConversationEntryRepository conversationRepository;
+    private final InterviewFeedbackRepository feedbackRepository;
+    private final InterviewAnswerRepository answerRepository;
+    private final AnswerFeedbackRepository answerFeedbackRepository;
     private final ConversationService conversationService;
     private final AIService aiService;
     
@@ -140,13 +149,49 @@ public class InterviewSessionService {
         log.info("Session status updated successfully");
     }
     
-    // Xóa session theo ID
+    // Xóa session theo ID và tất cả dữ liệu liên quan
     @Transactional
     public void deleteSession(Long sessionId) {
-        log.info("Deleting sessionId: {}", sessionId);
+        log.info("Deleting sessionId: {} and all related data", sessionId);
         InterviewSession session = getSessionById(sessionId);
+        
+        // 1. Xóa feedback (nếu có)
+        if (session.getFeedbackId() != null) {
+            log.info("Deleting feedback with id: {}", session.getFeedbackId());
+            feedbackRepository.deleteById(session.getFeedbackId());
+        }
+        
+        // 2. Xóa tất cả conversation entries
+        log.info("Deleting all conversation entries for session: {}", sessionId);
+        conversationRepository.deleteBySessionId(sessionId);
+        
+        // 3. Xóa tất cả answer_feedback trước, rồi mới xóa answers
+        log.info("Deleting all answer feedbacks and answers for session: {}", sessionId);
+        java.util.List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        int totalAnswerFeedbackDeleted = 0;
+        for (InterviewQuestion question : questions) {
+            java.util.List<com.capstone.ai_interview_be.model.InterviewAnswer> answers = 
+                answerRepository.findByQuestionIdOrderByCreatedAtAsc(question.getId());
+            for (InterviewAnswer answer : answers) {
+                answerFeedbackRepository.deleteByAnswerId(answer.getId());
+                totalAnswerFeedbackDeleted++;
+            }
+            if (!answers.isEmpty()) {
+                log.debug("Deleting {} answers for question {}", answers.size(), question.getId());
+                answerRepository.deleteAll(answers);
+            }
+        }
+        log.info("Deleted {} answer feedbacks", totalAnswerFeedbackDeleted);
+        
+        // 4. Xóa tất cả questions
+        log.info("Deleting all questions for session: {}", sessionId);
+        questionRepository.deleteBySessionId(sessionId);
+        
+        // 5. Cuối cùng xóa session
+        log.info("Deleting session: {}", sessionId);
         sessionRepository.delete(session);
-        log.info("Session deleted successfully");
+        
+        log.info("Session {} and all related data deleted successfully", sessionId);
     }
     
     // Lấy thống kê session cho user

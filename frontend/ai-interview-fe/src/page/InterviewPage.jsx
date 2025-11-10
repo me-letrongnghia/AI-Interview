@@ -339,7 +339,7 @@ const InterviewUI = memo(
                   className='h-full bg-green-500 rounded-full transition-all duration-500'
                   style={{
                     width: `${Math.min(
-                      (chatHistory.filter((m) => m.type === "ai").length /
+                      (chatHistory.filter((m) => m.type === "ai" && !m.isSystemMessage).length /
                         interviewConfig.maxQuestions) *
                         100,
                       100
@@ -350,7 +350,7 @@ const InterviewUI = memo(
               <div className='flex justify-between mt-2 px-1'>
                 <span className='text-sm text-green font-medium'>Progress</span>
                 <span className='text-sm text-black font-medium'>
-                  {chatHistory.filter((m) => m.type === "ai").length}/
+                  {chatHistory.filter((m) => m.type === "ai" && !m.isSystemMessage).length}/
                   {interviewConfig.maxQuestions}
                 </span>
               </div>
@@ -924,6 +924,7 @@ export default function InterviewInterface() {
               text: endMessage,
               time: formatTime(new Date()),
               id: messageId,
+              isSystemMessage: true,
             },
           ]);
           setTypingMessageId(messageId);
@@ -948,6 +949,7 @@ export default function InterviewInterface() {
               text: errorMsg,
               time: formatTime(new Date()),
               id: messageId,
+              isSystemMessage: true,
             },
           ]);
           setTypingMessageId(messageId);
@@ -971,9 +973,9 @@ export default function InterviewInterface() {
                 },
               ];
 
-              // Check if reached max questions
+              // Check if reached max questions (exclude system messages)
               const aiQuestionCount = newHistory.filter(
-                (m) => m.type === "ai"
+                (m) => m.type === "ai" && !m.isSystemMessage
               ).length;
               if (aiQuestionCount >= interviewConfig.maxQuestions) {
                 toast.warning(
@@ -1096,6 +1098,7 @@ export default function InterviewInterface() {
               text: "Hello! Let's start the interview.",
               time: formatTime(new Date()),
               id: "fallback-initial",
+              isSystemMessage: true,
             };
             setChatHistory([fallbackMessage]);
             processedMessagesRef.current.add("fallback-initial");
@@ -1174,6 +1177,7 @@ export default function InterviewInterface() {
           text: `🎉 Congratulations! You've successfully completed all ${interviewConfig.maxQuestions} questions. Thank you for your participation. The interview will end shortly...`,
           time: formatTime(new Date()),
           id: `congrats-${Date.now()}`,
+          isSystemMessage: true, // NEW: Mark as system message to exclude from count
         };
 
         const finalHistory = [...newHistory, congratsMessage];
