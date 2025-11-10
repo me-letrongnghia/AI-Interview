@@ -15,4 +15,7 @@ public interface AnswerFeedbackRepository extends JpaRepository<AnswerFeedback, 
 
     // Lấy tất cả feedback cho các answer trong một session
     List<AnswerFeedback> findByAnswerIdIn(List<Long> answerIds);
+    
+    // Xóa feedback theo answer ID
+    void deleteByAnswerId(Long answerId);
 }

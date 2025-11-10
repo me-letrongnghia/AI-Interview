@@ -229,6 +229,7 @@ public class FeedbackService {
             .endTime(endTime)
             .duration(durationStr)
             .totalQuestions(totalQuestions)
+            .isPractice(session.getIsPractice())
             .build();
     }
     

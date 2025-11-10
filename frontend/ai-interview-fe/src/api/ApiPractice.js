@@ -36,4 +36,13 @@ export const ApiPractice = {
     });
     return response.data;
   },
+
+  // Delete practice session
+  deletePracticeSession: async (practiceSessionId) => {
+    const response = await axios.delete(
+      `${BASE_URL}/sessions/${practiceSessionId}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  },
 };

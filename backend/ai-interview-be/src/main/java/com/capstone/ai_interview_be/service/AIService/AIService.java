@@ -179,7 +179,7 @@ public class AIService {
         } catch (Exception e) {
             log.error("Error generating overall feedback with Gemini, using fallback", e);
             return OverallFeedbackData.builder()
-                    .overview("Hiiiiiiiiii")
+                    .overview("Session feedback unavailable at this moment.")
                     .assessment("Thank you for completing the interview. Your performance showed potential.")
                     .strengths(java.util.Arrays.asList(
                         "Participated in the interview",
@@ -192,4 +192,6 @@ public class AIService {
                     .build();
         }
     }
+
+
 }

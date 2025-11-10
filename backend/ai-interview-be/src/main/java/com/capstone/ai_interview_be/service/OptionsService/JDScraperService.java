@@ -75,7 +75,7 @@ public class JDScraperService {
         
         String title = extractFirstMatch(doc, titleSelectors);
         if (!title.isEmpty()) {
-            sb.append("POSITION: \n").append(title).append("\n\n");
+            sb.append("- POSITION: \n").append(title).append("\n\n");
         }
         
         // 2. Tìm tên công ty
@@ -88,20 +88,20 @@ public class JDScraperService {
         
         String company = extractFirstMatch(doc, companySelectors);
         if (!company.isEmpty()) {
-            sb.append("COMPANY: \n").append(company).append("\n\n");
+            sb.append("- COMPANY: \n").append(company).append("\n\n");
         }
         
-        // // 3. Tìm địa điểm
-        // String[] locationSelectors = {
-        //     ".location", "[class*='location']", "[data-automation='job-detail-location']",
-        //     ".topcard__flavor--bullet", ".job-location",
-        //     "span[itemprop='addressLocality']", ".jobsearch-JobInfoHeader-subtitle"
-        // };
+        // 3. Tìm địa điểm
+        String[] locationSelectors = {
+            ".location", "[class*='location']", "[data-automation='job-detail-location']",
+            ".topcard__flavor--bullet", ".job-location",
+            "span[itemprop='addressLocality']", ".jobsearch-JobInfoHeader-subtitle"
+        };
         
-        // String location = extractFirstMatch(doc, locationSelectors);
-        // if (!location.isEmpty()) {
-        //     sb.append("LOCATION: \n").append(location).append("\n\n");
-        // }
+        String location = extractFirstMatch(doc, locationSelectors);
+        if (!location.isEmpty()) {
+            sb.append("- LOCATION: \n").append(location).append("\n\n");
+        }
         
         // 4. Tìm mức lương
         String[] salarySelectors = {
@@ -112,7 +112,7 @@ public class JDScraperService {
         
         String salary = extractFirstMatch(doc, salarySelectors);
         if (!salary.isEmpty()) {
-            sb.append("SALARY: \n").append(salary).append("\n\n");
+            sb.append("- SALARY: \n").append(salary).append("\n\n");
         }
         
         // 5. Tìm loại hình công việc
@@ -123,7 +123,7 @@ public class JDScraperService {
         
         String jobType = extractFirstMatch(doc, jobTypeSelectors);
         if (!jobType.isEmpty()) {
-            sb.append("JOB TYPE: \n").append(jobType).append("\n\n");
+            sb.append("- JOB TYPE: \n").append(jobType).append("\n\n");
         }
         
         // 6. Tìm kinh nghiệm yêu cầu
@@ -134,7 +134,7 @@ public class JDScraperService {
         
         String experience = extractFirstMatch(doc, experienceSelectors);
         if (!experience.isEmpty()) {
-            sb.append("EXPERIENCE: \n").append(experience).append("\n\n");
+            sb.append("- EXPERIENCE: \n").append(experience).append("\n\n");
         }
         
         // 7. Tìm mô tả công việc
@@ -161,7 +161,7 @@ public class JDScraperService {
         
         String description = extractFirstMatch(doc, descriptionSelectors);
         if (!description.isEmpty()) {
-            sb.append("JOB DESCRIPTION: \n").append(description).append("\n\n");
+            sb.append("- JOB DESCRIPTION: \n").append(description).append("\n\n");
         }
         
         // 8. Tìm yêu cầu công việc
@@ -174,7 +174,7 @@ public class JDScraperService {
         
         String requirements = extractFirstMatch(doc, requirementsSelectors);
         if (!requirements.isEmpty() && !description.contains(requirements)) {
-            sb.append("REQUIREMENTS: \n").append(requirements).append("\n\n");
+            sb.append("- REQUIREMENTS: \n").append(requirements).append("\n\n");
         }
         
         // 9. Tìm quyền lợi
@@ -187,7 +187,7 @@ public class JDScraperService {
         
         String benefits = extractFirstMatch(doc, benefitsSelectors);
         if (!benefits.isEmpty() && !description.contains(benefits)) {
-            sb.append("BENEFITS: \n").append(benefits).append("\n\n");
+            sb.append("- BENEFITS: \n").append(benefits).append("\n\n");
         }
         
         // 10. Tìm thông tin liên hệ
@@ -198,7 +198,7 @@ public class JDScraperService {
         
         String contact = extractFirstMatch(doc, contactSelectors);
         if (!contact.isEmpty()) {
-            sb.append("CONTACT INFO: \n").append(contact).append("\n\n");
+            sb.append("- CONTACT INFO: \n").append(contact).append("\n\n");
         }
         
         return sb.toString();

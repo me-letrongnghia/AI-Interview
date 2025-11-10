@@ -89,6 +89,88 @@ public class PracticeController {
         }
     }
     
+    // GET /api/practice/sessions/original/{originalSessionId}
+    // Get all practice sessions for a specific original session
+    @GetMapping("/sessions/original/{originalSessionId}")
+    public ResponseEntity<?> getPracticeSessionsByOriginalId(@PathVariable Long originalSessionId) {
+        try {
+            log.info("Fetching practice sessions for original session {}", originalSessionId);
+            var practiceSessions = practiceService.getPracticeSessionsByOriginalId(originalSessionId);
+            
+            // Enrich with feedback overview for each practice session
+            var enrichedSessions = practiceSessions.stream().map(session -> {
+                var sessionMap = new java.util.HashMap<String, Object>();
+                sessionMap.put("id", session.getId());
+                sessionMap.put("userId", session.getUserId());
+                sessionMap.put("role", session.getRole());
+                sessionMap.put("level", session.getLevel());
+                sessionMap.put("skill", session.getSkill());
+                sessionMap.put("language", session.getLanguage());
+                sessionMap.put("title", session.getTitle());
+                sessionMap.put("description", session.getDescription());
+                sessionMap.put("source", session.getSource());
+                sessionMap.put("status", session.getStatus());
+                sessionMap.put("duration", session.getDuration());
+                sessionMap.put("questionCount", session.getQuestionCount());
+                sessionMap.put("isPractice", session.getIsPractice());
+                sessionMap.put("originalSessionId", session.getOriginalSessionId());
+                sessionMap.put("feedbackId", session.getFeedbackId());
+                sessionMap.put("createdAt", session.getCreatedAt());
+                sessionMap.put("completedAt", session.getCompletedAt());
+                
+                // Add feedback overview if available
+                if (session.getFeedbackId() != null) {
+                    try {
+                        var feedback = practiceService.getFeedbackOverview(session.getFeedbackId());
+                        sessionMap.put("feedbackOverview", feedback);
+                    } catch (Exception e) {
+                        log.warn("Could not fetch feedback for session {}", session.getId());
+                        sessionMap.put("feedbackOverview", null);
+                    }
+                }
+                
+                return sessionMap;
+            }).collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", enrichedSessions,
+                "count", enrichedSessions.size()
+            ));
+        } catch (Exception e) {
+            log.error("Error fetching practice sessions", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    // DELETE /api/practice/sessions/{practiceSessionId}
+    // Delete a practice session
+    @DeleteMapping("/sessions/{practiceSessionId}")
+    public ResponseEntity<?> deletePracticeSession(
+            @PathVariable Long practiceSessionId,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Long userId = extractUserId(authHeader);
+            log.info("User {} deleting practice session {}", userId, practiceSessionId);
+            
+            practiceService.deletePracticeSession(userId, practiceSessionId);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Practice session deleted successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error deleting practice session", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
     private Long extractUserId(String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         return jwtService.extractUserId(token);

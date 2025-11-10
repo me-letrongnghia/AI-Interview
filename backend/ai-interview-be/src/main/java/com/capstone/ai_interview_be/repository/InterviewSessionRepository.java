@@ -24,5 +24,8 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
             @Param("role") String role,
             @Param("status") String status
     );
+    
+    // Find all practice sessions by original session ID
+    List<InterviewSession> findByOriginalSessionIdOrderByCreatedAtDesc(Long originalSessionId);
 
 }

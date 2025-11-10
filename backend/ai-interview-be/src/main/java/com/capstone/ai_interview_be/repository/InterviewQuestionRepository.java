@@ -20,4 +20,7 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
 
     // Lấy tất cả câu hỏi của session theo thứ tự (for practice)
     List<InterviewQuestion> findBySessionIdOrderByCreatedAtAsc(Long sessionId);
+    
+    // Xóa tất cả câu hỏi của một session
+    void deleteBySessionId(Long sessionId);
 }

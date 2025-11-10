@@ -11,9 +11,11 @@ import {
   AlertCircle,
   ArrowLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SessionApi from "../api/SessionApi";
+import { toast } from "react-toastify";
 
 const HistoryPage = () => {
   const navigate = useNavigate();
@@ -35,10 +37,19 @@ const HistoryPage = () => {
       setLoading(true);
       setError("");
       const data = await SessionApi.Get_Sessions_By_User(user.id, filters);
-      setSessions(data);
+      console.log("All sessions from API:", data);
+      
+      // Filter out practice sessions - only show original sessions
+      const originalSessions = data.filter(session => {
+        console.log(`Session ${session.id}: isPractice =`, session.isPractice);
+        return session.isPractice !== true;
+      });
+      
+      console.log("Filtered original sessions:", originalSessions);
+      setSessions(originalSessions);
     } catch (err) {
       console.error("Error fetching sessions:", err);
-      setError(err.message || "Không thể tải dữ liệu. Vui lòng thử lại sau.");
+      setError(err.message || "Unable to load data. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -53,14 +64,29 @@ const HistoryPage = () => {
     navigate(`/feedback/${sessionId}`);
   };
 
+  const handleDeleteSession = async (sessionId, event) => {
+    event.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this session? This action cannot be undone.")) {
+      try {
+        const response = await SessionApi.deleteSession(sessionId);
+        console.log("Session deleted successfully:", sessionId);
+        toast.success(response.message || "Session deleted successfully");
+        fetchSessions();
+      } catch (err) {
+        console.error("Error deleting session:", err);
+        setError(err.message || "Failed to delete session. Please try again.");
+      }
+    }
+  };
+
   const renderSourceLabel = (source) => {
     const config = {
-      CV: { label: "Từ CV", color: "blue" },
-      JD: { label: "Từ JD", color: "purple" },
-      Custom: { label: "Thủ công", color: "gray" },
+      CV: { label: "CV", color: "blue" },
+      JD: { label: "JD", color: "purple" },
+      Custom: { label: "Custom", color: "gray" },
     };
 
-    const { label, color } = config[source] || { label: "Khác", color: "gray" };
+    const { label, color } = config[source] || { label: "Other", color: "gray" };
 
     return (
       <span
@@ -76,19 +102,19 @@ const HistoryPage = () => {
       case "completed":
         return (
           <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full text-xs font-medium">
-            Hoàn thành
+            Completed
           </span>
         );
       case "in_progress":
         return (
           <span className="text-yellow-600 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-full text-xs font-medium">
-            Đang tiến hành
+            In Progress
           </span>
         );
       default:
         return (
           <span className="text-gray-600 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full text-xs font-medium">
-            Không xác định
+            Unknown
           </span>
         );
     }
@@ -120,13 +146,13 @@ const HistoryPage = () => {
       <div className="max-w-6xl mx-auto mb-6">
         <button
           onClick={() => navigate("/")}
-          className="inline-flex items-center gap-2 text-gray-600 border border-emerald-300 hover:bg-emerald-50 hover:text-gray-800 font-medium transition-colors group px-4 py-2 rounded-xl shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
         >
           <ArrowLeft
             size={18}
             className="group-hover:-translate-x-1 transition-transform"
           />
-          Quay lại trang chủ
+          Back to Home
         </button>
       </div>
 
@@ -136,10 +162,10 @@ const HistoryPage = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Lịch sử phỏng vấn
+                Interview History
               </h1>
               <p className="text-gray-600">
-                Theo dõi và quản lý các buổi phỏng vấn của bạn
+                Track and manage your interview sessions
               </p>
             </div>
 
@@ -154,10 +180,10 @@ const HistoryPage = () => {
                   setFilters({ ...filters, source: e.target.value })
                 }
               >
-                <option value="all">Tất cả nguồn</option>
-                <option value="CV">Từ CV</option>
-                <option value="JD">Từ JD</option>
-                <option value="Custom">Thủ công</option>
+                <option value="all">All Options</option>
+                <option value="CV">CV</option>
+                <option value="JD">JD</option>
+                <option value="Custom">Custom</option>
               </select>
 
               <select
@@ -167,7 +193,7 @@ const HistoryPage = () => {
                   setFilters({ ...filters, role: e.target.value })
                 }
               >
-                <option value="all">Tất cả vị trí</option>
+                <option value="all">All Positions</option>
                 {[...new Set(sessions.map((s) => s.role))].map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -182,9 +208,9 @@ const HistoryPage = () => {
                   setFilters({ ...filters, status: e.target.value })
                 }
               >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="in_progress">Đang tiến hành</option>
-                <option value="completed">Đã hoàn thành</option>
+                <option value="all">All Status</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
               </select>
             </div>
           </div>
@@ -194,7 +220,7 @@ const HistoryPage = () => {
         {loading && (
           <div className="flex justify-center items-center py-20 text-gray-600">
             <Loader2 className="animate-spin mr-3" size={20} />
-            <span>Đang tải dữ liệu...</span>
+            <span>Loading data...</span>
           </div>
         )}
 
@@ -227,25 +253,34 @@ const HistoryPage = () => {
                         </div>
                       </div>
 
-                      <button
-                        disabled={session.feedbackId == null}
-                        onClick={() => handleDetailClick(session.id)}
-                        className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 self-start
-                          ${
-                            session.feedbackId != null
-                              ? "text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-200 cursor-pointer"
-                              : "text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-70"
-                          }`}
-                      >
-                        <span>
-                          {session.feedbackId != null
-                            ? "Xem chi tiết"
-                            : "Đang xử lý"}
-                        </span>
-                        {session.feedbackId != null && (
-                          <ChevronRight size={16} />
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="mr-3 p-2.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors hover:border-red-300"
+                          title="Delete session"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <button
+                          disabled={session.feedbackId == null}
+                          onClick={() => handleDetailClick(session.id)}
+                          className={`inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300
+                            ${
+                              session.feedbackId != null
+                                ? "text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-200 cursor-pointer"
+                                : "text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-70"
+                            }`}
+                        >
+                          <span>
+                            {session.feedbackId != null
+                              ? "View Details"
+                              : "Processing"}
+                          </span>
+                          {session.feedbackId != null && (
+                            <ChevronRight size={16} />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Session Details Grid */}
@@ -256,7 +291,7 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Vị trí:</span>{" "}
+                          <span className="font-medium">Position:</span>{" "}
                           {session.role}
                           {session.level && (
                             <span className="text-gray-500">
@@ -273,7 +308,7 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Ngôn ngữ:</span>{" "}
+                          <span className="font-medium">Language:</span>{" "}
                           {session.language}
                         </div>
                       </div>
@@ -284,8 +319,8 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Kỹ năng:</span>{" "}
-                          {session.skill?.slice(0, 3).join(", ") || "Không có"}
+                          <span className="font-medium">Skills:</span>{" "}
+                          {session.skill?.slice(0, 3).join(", ") || "None"}
                           {session.skill?.length > 3 && "..."}
                         </div>
                       </div>
@@ -296,7 +331,7 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Bắt đầu:</span>{" "}
+                          <span className="font-medium">Started:</span>{" "}
                           {formatDate(session.createdAt)}
                         </div>
                       </div>
@@ -307,10 +342,10 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Kết thúc:</span>{" "}
+                          <span className="font-medium">Ended:</span>{" "}
                           {session.updatedAt
                             ? formatDate(session.updatedAt)
-                            : "Chưa hoàn thành"}
+                            : "Not completed"}
                         </div>
                       </div>
 
@@ -320,8 +355,8 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0"
                         />
                         <div>
-                          <span className="font-medium">Số câu hỏi:</span>{" "}
-                          {session.questionCount ?? "Không rõ"}
+                          <span className="font-medium">Questions:</span>{" "}
+                          {session.questionCount ?? "Unknown"}
                         </div>
                       </div>
                     </div>
@@ -334,7 +369,7 @@ const HistoryPage = () => {
                           className="text-gray-400 flex-shrink-0 mt-0.5"
                         />
                         <div>
-                          <span className="font-medium">Mô tả:</span>{" "}
+                          <span className="font-medium">Description:</span>{" "}
                           <span className="line-clamp-2">
                             {session.description}
                           </span>
@@ -353,11 +388,18 @@ const HistoryPage = () => {
                   <FileText size={48} className="mx-auto" />
                 </div>
                 <p className="text-gray-500 text-lg font-medium mb-2">
-                  Không có dữ liệu
+                  No Data
                 </p>
-                <p className="text-gray-400">
-                  Không tìm thấy buổi phỏng vấn nào phù hợp với bộ lọc.
+                <p className="text-gray-400 mb-6">
+                  No interview sessions found matching your filters.
                 </p>
+                <button
+                  onClick={() => navigate("/options")}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
+                >
+                  Start New Interview
+                  <ChevronRight size={18} />
+                </button>
               </div>
             )}
           </div>
