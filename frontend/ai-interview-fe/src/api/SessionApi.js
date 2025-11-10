@@ -30,7 +30,7 @@ export const SessionApi = {
     }
   },
 
-  async Delete_Session(sessionId) {
+  async deleteSession(sessionId) {
     if (!sessionId) throw new Error("sessionId is required");
 
     try {
