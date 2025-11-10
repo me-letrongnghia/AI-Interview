@@ -12,11 +12,12 @@ import {
 } from "lucide-react";
 import pandaImage from "../assets/LinhVat.png";
 import pandaQuestion from "../assets/chamhoi.png";
-import duyTanLogo from "../assets/logoDTU.jpeg";
-import techzenLogo from "../assets/techzen.jpg";
-import partechLogo from "../assets/Partech-logo.png";
+import duyTanLogo from "../assets/LogoDuyTan.jpg";
+import techzenLogo from "../assets/Techzenlogo.png";
+import CMULogo from "../assets/CMUlogo.png";
 import Header from "../components/Header";
 import { UseAppContext } from "../context/AppContext";
+import techzenacademy from '../assets/techzenAcademy.png';
 
 export default function HomePage() {
   const { isLogin } = UseAppContext();
@@ -111,9 +112,10 @@ export default function HomePage() {
             Trusted by leading organizations
           </p>
           <div className="flex flex-wrap items-center justify-center gap-16">
-            <img src={duyTanLogo} alt="Duy Tan University" className="h-16 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" />
-            <img src={techzenLogo} alt="Techzen" className="h-14 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" />
-            <img src={partechLogo} alt="Partech" className="h-12 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" />
+            <img src={CMULogo} alt="Carnegie Mellon University" className="h-16" />
+            <img src={duyTanLogo} alt="Duy Tan University" className="h-16 " />
+            <img src={techzenLogo} alt="Techzen" className="h-16"  />
+            <img src={techzenacademy} alt="Techzen Academy" className="h-14"  />
           </div>
         </div>
       </section>
