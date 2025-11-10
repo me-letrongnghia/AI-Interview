@@ -636,7 +636,7 @@ export default function InterviewInterface() {
 
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
-  const [isPracticeSession, setIsPracticeSession] = useState(false);
+  const [_isPracticeSession, setIsPracticeSession] = useState(false);
   const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
 
   // Interview config based on level - default to intern

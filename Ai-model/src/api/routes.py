@@ -130,7 +130,7 @@ async def generate_question(request: GenerateQuestionRequest):
             )
         
         # Tạo câu hỏi với ngữ cảnh hội thoại
-        question = question_generator.generate(
+        question, actual_temperature = question_generator.generate(
             cv_text=request.cv_text,
             jd_text=request.jd_text,
             role=request.role,
@@ -138,6 +138,7 @@ async def generate_question(request: GenerateQuestionRequest):
             skills=request.skills,
             previous_question=request.previous_question,
             previous_answer=request.previous_answer,
+            conversation_history=request.conversation_history,
             max_tokens=request.max_tokens,
             temperature=request.temperature
         )
@@ -145,6 +146,7 @@ async def generate_question(request: GenerateQuestionRequest):
         generation_time = time.time() - start_time
         
         logger.info(f"Da tao cau hoi trong {generation_time:.2f}s")
+        logger.info(f"Temperature: requested={request.temperature}, actual={actual_temperature:.2f}")
         logger.info(f"Cau hoi: {question[:100]}...")
         
         return GenerateQuestionResponse(
@@ -153,7 +155,8 @@ async def generate_question(request: GenerateQuestionRequest):
             model_info={
                 "model_path": str(MODEL_PATH),
                 "max_tokens": request.max_tokens,
-                "temperature": request.temperature,
+                "temperature_requested": request.temperature,
+                "temperature_actual": round(actual_temperature, 2),
                 "context_type": context_type
             }
         )

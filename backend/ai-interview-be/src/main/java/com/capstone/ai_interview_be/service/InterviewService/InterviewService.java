@@ -155,6 +155,10 @@ public class InterviewService {
         log.info("Generating next question for session {}, CV text: {}, JD text: {}",
                 sessionId, session.getCvText() != null, session.getJdText() != null);
 
+        // Lấy 20 cặp Q&A gần nhất làm context
+        List<ConversationEntry> recentHistory = conversationService.getRecentConversation(sessionId, 20);
+        log.info("Retrieved {} recent conversation entries for context", recentHistory.size());
+
         String nextQuestionContent = aiService.generateNextQuestion(
                 session.getRole(),
                 session.getSkill(),
@@ -163,7 +167,8 @@ public class InterviewService {
                 question.getContent(),
                 answerMessage.getContent(),
                 session.getCvText(),
-                session.getJdText());
+                session.getJdText(),
+                recentHistory);
 
         // Lấy câu mới nhất lưu vào DB
         InterviewQuestion nextQuestion = new InterviewQuestion();

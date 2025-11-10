@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
@@ -48,14 +49,29 @@ public class AIService {
      
     // Phương thức để tạo câu hỏi tiếp theo với CV và JD text
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
-                                     String previousQuestion, String previousAnswer, String cvText, String jdText) {
-        log.info("Generating next question");
+                                     String previousQuestion, String previousAnswer, String cvText, String jdText,
+                                     List<ConversationEntry> conversationHistory) {
+        log.info("Generating next question with {} history entries", 
+                conversationHistory != null ? conversationHistory.size() : 0);
+
+        // Chuyển đổi ConversationEntry sang format cho AI
+        List<Map<String, String>> historyForAI = null;
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            historyForAI = conversationHistory.stream()
+                .map(entry -> {
+                    Map<String, String> qa = new java.util.HashMap<>();
+                    qa.put("question", entry.getQuestionContent());
+                    qa.put("answer", entry.getAnswerContent());
+                    return qa;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        }
 
         // Thử GenQ service trước
         if (genQService.isServiceHealthy()) {
             log.info("Using GenQ service for next question generation");
             return genQService.generateNextQuestion(sessionRole, sessionLevel, sessionSkill, 
-                                                   previousQuestion, previousAnswer, cvText, jdText);
+                                                   previousQuestion, previousAnswer, cvText, jdText, historyForAI);
         }
         // Fallback về Gemini
         log.warn("GenQ service unavailable, falling back to Gemini for next question");
@@ -72,7 +88,7 @@ public class AIService {
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
                                      String previousQuestion, String previousAnswer) {
         return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel, 
-                                   previousQuestion, previousAnswer, null, null);
+                                   previousQuestion, previousAnswer, null, null, null);
     }
     
     // Phương thức để trích xuất dữ liệu từ CV, JD

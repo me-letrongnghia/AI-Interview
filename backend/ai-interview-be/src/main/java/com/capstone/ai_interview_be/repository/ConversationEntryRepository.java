@@ -21,6 +21,10 @@ public interface ConversationEntryRepository extends JpaRepository<ConversationE
     @Query("SELECT c FROM ConversationEntry c WHERE c.sessionId = :sessionId AND c.answerContent IS NOT NULL ORDER BY c.sequenceNumber DESC")
     List<ConversationEntry> findAnsweredEntriesBySessionId(@Param("sessionId") Long sessionId);
     
+    // Lấy N entries gần nhất đã có câu trả lời, sắp xếp theo sequence tăng dần
+    @Query(value = "SELECT * FROM conversation_entry c WHERE c.session_id = :sessionId AND c.answer_content IS NOT NULL ORDER BY c.sequence_number DESC LIMIT :limit", nativeQuery = true)
+    List<ConversationEntry> findRecentAnsweredEntries(@Param("sessionId") Long sessionId, @Param("limit") int limit);
+    
     // Đếm tổng số conversation entries trong một session
     long countBySessionId(Long sessionId);
     

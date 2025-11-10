@@ -1,7 +1,7 @@
 """
 Pydantic models cho validation request/response
 """
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 
 from src.core.config import (
@@ -10,17 +10,35 @@ from src.core.config import (
 )
 
 
+# Default values
+DEFAULT_ROLE = "Developer"
+DEFAULT_LEVEL = "Mid-level"
+
+# Example data
+EXAMPLE_CV_TEXT = "Experienced Java developer with 3 years in Spring Boot and microservices"
+EXAMPLE_JD_TEXT = "Building microservices with Spring Boot and PostgreSQL"
+EXAMPLE_ROLE = "Java Backend Developer"
+EXAMPLE_LEVEL = "Mid-level"
+EXAMPLE_SKILLS = ["Spring Boot", "Microservices", "PostgreSQL", "REST API"]
+
+
 class GenerateQuestionRequest(BaseModel):
     """Model request để tạo câu hỏi phỏng vấn"""
     cv_text: Optional[str] = Field(default=None, description="Văn bản CV của ứng viên")
     jd_text: Optional[str] = Field(default=None, description="Văn bản mô tả công việc (Job Description)")
-    role: str = Field(default="Developer", description="Vị trí/chức danh công việc")
-    level: str = Field(default="Mid-level", description="Trình độ kinh nghiệm (Junior/Mid-level/Senior)")
+    role: str = Field(default=DEFAULT_ROLE, description="Vị trí/chức danh công việc")
+    level: str = Field(default=DEFAULT_LEVEL, description="Trình độ kinh nghiệm (Junior/Mid-level/Senior)")
     skills: List[str] = Field(default_factory=list, description="Kỹ năng yêu cầu")
     
     # MỚI: Ngữ cảnh từ cuộc hội thoại trước
     previous_question: Optional[str] = Field(default=None, description="Câu hỏi trước đã hỏi")
     previous_answer: Optional[str] = Field(default=None, description="Câu trả lời trước của ứng viên")
+    
+    # MỚI: Lịch sử hội thoại (tối đa 20 cặp Q&A gần nhất)
+    conversation_history: Optional[List[Dict[str, str]]] = Field(
+        default=None, 
+        description="Lịch sử hội thoại - danh sách các cặp {question, answer}"
+    )
     
     max_tokens: int = Field(
         default=MAX_TOKENS_DEFAULT, 
@@ -38,15 +56,19 @@ class GenerateQuestionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "cv_text": "Experienced Java developer with 3 years in Spring Boot and microservices",
-                "jd_text": "Building microservices with Spring Boot and PostgreSQL",
-                "role": "Java Backend Developer",
-                "level": "Mid-level",
-                "skills": ["Spring Boot", "Microservices", "PostgreSQL", "REST API"],
+                "cv_text": EXAMPLE_CV_TEXT,
+                "jd_text": EXAMPLE_JD_TEXT,
+                "role": EXAMPLE_ROLE,
+                "level": EXAMPLE_LEVEL,
+                "skills": EXAMPLE_SKILLS,
                 "previous_question": "Tell me about yourself",
                 "previous_answer": "I have 3 years experience with Spring Boot",
-                "max_tokens": 32,
-                "temperature": 0.7
+                "conversation_history": [
+                    {"question": "Tell me about yourself", "answer": "I'm a Java developer..."},
+                    {"question": "What's your experience with Spring Boot?", "answer": "I have 3 years..."}
+                ],
+                "max_tokens": MAX_TOKENS_DEFAULT,
+                "temperature": TEMPERATURE_DEFAULT
             }
         }
 
@@ -60,9 +82,9 @@ class InitialQuestionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "role": "Java Backend Developer",
-                "level": "Mid-level",
-                "skills": ["Spring Boot", "PostgreSQL"]
+                "role": EXAMPLE_ROLE,
+                "level": EXAMPLE_LEVEL,
+                "skills": EXAMPLE_SKILLS[:2]
             }
         }
 
@@ -80,7 +102,7 @@ class GenerateQuestionResponse(BaseModel):
     """Model response cho câu hỏi đã tạo"""
     question: str = Field(..., description="Câu hỏi phỏng vấn đã tạo")
     generation_time: float = Field(..., description="Thời gian tạo (giây)")
-    model_info: dict = Field(..., description="Metadata của model")
+    model_info: Dict[str, str] = Field(..., description="Metadata của model")
     
     model_config = {"protected_namespaces": ()}
 

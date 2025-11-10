@@ -1,11 +1,143 @@
 import logging
+import re
 import torch
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.core.config import TOP_P, REPETITION_PENALTY, NUM_BEAMS
 from src.services.model_loader import model_manager
+from src.services.answer_analyzer import answer_analyzer
+from src.services.cv_jd_extractor import cv_jd_extractor
 
 logger = logging.getLogger(__name__)
+
+
+# Temperature constants
+TEMP_MIN = 0.5
+TEMP_MAX = 0.9
+TEMP_JUNIOR_BASE = 0.6
+TEMP_MID_BASE = 0.7
+TEMP_SENIOR_BASE = 0.75
+TEMP_LEAD_BASE = 0.8
+
+# Temperature adjustments
+TEMP_INITIAL_DECREASE = 0.1
+TEMP_DEEP_INCREASE = 0.1
+TEMP_SHORT_ANSWER_DECREASE = 0.1
+TEMP_DETAILED_ANSWER_INCREASE = 0.05
+
+# Conversation thresholds
+SHORT_ANSWER_WORDS = 30
+DETAILED_ANSWER_WORDS = 150
+MID_CONVERSATION_QA = 5
+DEEP_CONVERSATION_QA = 10
+
+# Context limits
+MAX_CONTEXT_CHARS = 300
+MAX_RECENT_HISTORY = 5
+MAX_QA_DISPLAY_CHARS = 200
+MAX_ANSWER_DISPLAY_CHARS = 500
+
+# Prompt templates
+SYSTEM_PROMPT_BASE = """You are an experienced technical interviewer conducting a professional interview. Ask ONE clear, natural, conversational question.
+
+CRITICAL RULES:
+1. Output ONLY the question - no meta-commentary, no explanations
+2. Make it sound like a REAL human interviewer - warm, professional, conversational
+3. Questions should be 15-30 words (not too short, not too long)
+4. ALWAYS be grammatically perfect and complete
+5. Be specific to the role and skill level
+
+CONVERSATIONAL STARTERS (Use these!):
+- 'Can you walk me through...' - 'Could you share...' - 'Tell me about...'
+- 'How would you approach...' - 'How do you handle...' - 'What's your experience with...'
+- 'I'd like to hear about...' - 'I'm curious about...' - 'Have you worked with...'
+- 'In your experience, how...' - 'When working with X, how do you...'
+- 'Let's talk about...' - 'What would you do if...' - 'How have you dealt with...'
+
+AVOID (These sound robotic!):
+- Starting with 'Explain', 'Describe', 'Define', 'What is', 'Design'
+- One-word questions: 'Why?', 'How?', 'What?'
+- Incomplete sentences missing subjects/objects
+- Academic test-like questions
+
+EXCELLENT EXAMPLES:
+
+Junior Level (Simple, Clear, Practical):
+✓ 'Can you walk me through how you would debug a NullPointerException in a Spring Boot application?'
+✓ 'Tell me about a time when your code worked locally but failed in production - how did you troubleshoot it?'
+✓ 'What's your experience building and testing RESTful APIs? Can you share a specific example?'
+
+Mid-Level (Deeper, Scenario-Based):
+✓ 'How would you handle a situation where your service suddenly experiences 10x normal traffic?'
+✓ 'Can you walk me through your approach to database schema migrations in a production environment?'
+✓ 'In your experience, what strategies have you used to maintain backward compatibility when evolving an API?'
+
+Senior Level (Architectural, Strategic):
+✓ 'How would you design a distributed caching layer for a global e-commerce platform handling millions of requests?'
+✓ 'Tell me about a time when you had to make a critical architectural decision with limited information and tight deadlines.'
+✓ 'If you inherited a legacy monolithic system that needed modernization, what would be your step-by-step approach?'
+
+BAD EXAMPLES - NEVER DO THIS:
+✗ 'Explain microservices' - Too vague, robotic, sounds like a textbook
+✗ 'Design would you ensure security' - Broken grammar
+✗ 'What is Docker?' - Definition question, not conversational
+✗ 'How ensure reliability?' - Missing words, incomplete
+"""
+
+FOLLOWUP_STRATEGIES = {
+    "encourage_detail": """The candidate's answer was BRIEF. Ask a natural follow-up that:
+- Encourages elaboration: 'Can you tell me more about...', 'I'd like to hear more details about...'
+- Asks for specifics: 'What specific steps did you take?', 'Can you walk me through your process?'
+- Example: 'That's interesting! Can you give me a specific example of how you implemented that?'
+""",
+    
+    "request_example": """The candidate gave a good answer but WITHOUT specific examples. Follow up with:
+- 'Can you share a specific example from your experience where you did this?'
+- 'Tell me about a real situation where you had to apply this approach.'
+- 'That makes sense - could you walk me through a concrete case where you used this?'
+""",
+    
+    "probe_technology": """The candidate mentioned {tech_list}. Dig deeper naturally:
+- 'You mentioned {tech} - can you tell me about a specific challenge you faced with it?'
+- 'I'm curious about your experience with {tech_list} - what trade-offs did you encounter?'
+- 'How have you handled [specific scenario] when working with {tech}?'
+""",
+    
+    "explore_edge_case": """The candidate gave a SOLID answer. Challenge them with edge cases:
+- 'That's a good approach! What would you do if [failure scenario]?'
+- 'How would you handle it if [edge case or scale issue] occurred?'
+- 'Interesting! What would happen if the system had to handle 100x the normal load?'
+""",
+    
+    "change_topic": """The candidate gave a THOROUGH answer. Transition to a new topic naturally:
+- 'That's great! Now I'd like to hear about your experience with [different skill].'
+- 'Thanks for that detailed explanation. Let's shift gears - how do you approach [new topic]?'
+- 'Excellent! Moving on, can you tell me about...'
+""",
+    
+    "deep_dive": """Dig deeper into what they shared:
+- 'Can you elaborate on the technical details of how you implemented that?'
+- 'What was your thought process when you made that decision?'
+- 'How did you evaluate the trade-offs between different approaches?'
+"""
+}
+
+FOLLOWUP_EXAMPLES = """
+GREAT Follow-up Examples:
+✓ 'You mentioned Redis - can you walk me through how you handle cache invalidation in your implementation?'
+✓ 'That's interesting! What would happen if the database connection failed during that process?'
+✓ 'Building on that, how do you monitor and debug performance issues with this solution in production?'
+✓ 'I'm curious - what challenges did you face when scaling this approach to handle more users?'
+"""
+
+OPENING_QUESTION_GUIDE = """
+Ask a warm, engaging opening question that:
+- Gets them talking about real experience (not theory)
+- Starts with conversational phrases like 'Tell me about...', 'Can you share...', 'I'd like to hear...'
+- Matches their level (Junior: basics & learning, Mid: practical scenarios, Senior: architecture & leadership)
+- Makes them comfortable while assessing key skills
+Example: 'Can you tell me about your experience building REST APIs with Spring Boot? I'd love to hear about a specific project.'
+"""
 
 
 class QuestionGenerator:
@@ -13,191 +145,325 @@ class QuestionGenerator:
     
     def __init__(self):
         self.model_manager = model_manager
+        self.cv_jd_extractor = cv_jd_extractor
+    
+    def _calculate_optimal_temperature(
+        self,
+        level: str,
+        previous_answer: Optional[str] = None,
+        conversation_history: Optional[List[dict]] = None,
+        base_temperature: float = 0.7
+    ) -> float:
+        """
+        Tính temperature tối ưu dựa trên context
+        
+        Returns:
+            Temperature đã điều chỉnh (0.5-0.9)
+        """
+        # Base temperature theo level
+        level_temps = {
+            "junior": TEMP_JUNIOR_BASE,
+            "entry": TEMP_JUNIOR_BASE,
+            "mid-level": TEMP_MID_BASE,
+            "mid": TEMP_MID_BASE,
+            "senior": TEMP_SENIOR_BASE,
+            "lead": TEMP_LEAD_BASE
+        }
+        
+        temperature = level_temps.get(level.lower(), base_temperature)
+        
+        # Điều chỉnh dựa trên conversation stage
+        if not previous_answer:
+            temperature = max(TEMP_MIN, temperature - TEMP_INITIAL_DECREASE)
+            logger.debug(f"Initial question - reduced temp to {temperature:.2f}")
+        else:
+            history_length = len(conversation_history) if conversation_history else 0
+            
+            if history_length >= DEEP_CONVERSATION_QA:
+                temperature = min(TEMP_MAX, temperature + TEMP_DEEP_INCREASE)
+                logger.debug(f"Deep conversation ({history_length} Q&A) - increased temp to {temperature:.2f}")
+            
+            # Điều chỉnh dựa trên answer quality
+            answer_length = len(previous_answer.split())
+            
+            if answer_length < SHORT_ANSWER_WORDS:
+                temperature = max(TEMP_MIN, temperature - TEMP_SHORT_ANSWER_DECREASE)
+                logger.debug(f"Short answer - reduced temp to {temperature:.2f}")
+            elif answer_length > DETAILED_ANSWER_WORDS:
+                temperature = min(TEMP_MAX, temperature + TEMP_DETAILED_ANSWER_INCREASE)
+                logger.debug(f"Detailed answer - increased temp to {temperature:.2f}")
+        
+        # Ensure trong range hợp lệ
+        temperature = max(TEMP_MIN, min(TEMP_MAX, temperature))
+        
+        logger.info(f"Optimal temp: {temperature:.2f} (level={level}, has_prev={previous_answer is not None}, "
+                   f"history={len(conversation_history) if conversation_history else 0})")
+        
+        return temperature
     
     def _build_prompt(
         self, 
-        jd_text: str,
-        cv_text: str,
+        jd_text: Optional[str],
+        cv_text: Optional[str],
         role: str, 
         level: str, 
         skills: List[str],
         previous_question: Optional[str] = None,
-        previous_answer: Optional[str] = None
+        previous_answer: Optional[str] = None,
+        conversation_history: Optional[List[dict]] = None,
+        cv_extraction = None,
+        jd_extraction = None,
+        skill_gap = None
     ) -> str:
-        """Xây dựng prompt để tạo câu hỏi"""
+        """Xây dựng prompt để tạo câu hỏi (với CV/JD extraction)"""
         cv_text = cv_text or ""
         jd_text = jd_text or ""
         
-        system_prompt = (
-            "You are an experienced HR interviewer. Ask natural, conversational technical interview questions.\n\n"
-            "CRITICAL RULES:\n"
-            "1. NEVER start with 'Explain', 'Describe', 'Define' - these sound robotic\n"
-            "2. ALWAYS use conversational starters:\n"
-            "   - 'Can you...', 'Could you...'\n"
-            "   - 'How would you...', 'How do you...'\n"
-            "   - 'What would you do...', 'What's your approach...'\n"
-            "   - 'Tell me about...', 'Walk me through...'\n"
-            "   - 'I'd love to hear...', 'I'm curious about...'\n"
-            "   - 'Have you ever...', 'When was the last time...'\n"
-            "3. Make questions complete and grammatically perfect\n"
-            "4. Keep questions specific and relevant\n\n"
-            "GOOD EXAMPLES (Copy this style!):\n"
-            "✓ 'Can you walk me through how you handle errors in your microservices?'\n"
-            "✓ 'How would you approach scaling a service that suddenly gets 10x traffic?'\n"
-            "✓ 'What would you do if your database connection pool gets exhausted?'\n"
-            "✓ 'Tell me about a time when you had to optimize a slow API endpoint.'\n"
-            "✓ 'I'm curious - how do you typically ensure security in your Spring Boot apps?'\n\n"
-            "BAD EXAMPLES (NEVER do this!):\n"
-            "✗ 'Explain how you would monitor a system ensuring reliability' ❌ Starts with 'Explain'\n"
-            "✗ 'Describe the cost considerations when building system' ❌ Starts with 'Describe', missing article\n"
-            "✗ 'What would you ensure latency' ❌ Incomplete sentence\n\n"
-            "Remember: Sound like a friendly HR person, not a textbook!\n"
-        )
-        
+        system_prompt = SYSTEM_PROMPT_BASE
         skills_str = ", ".join(skills) if skills else "technical skills"
         
-        # Xây dựng context từ CV và/hoặc JD
-        context_parts = []
-        if cv_text:
-            context_parts.append(f"Candidate CV: {cv_text[:500]}")  # Giới hạn độ dài
-        if jd_text:
-            context_parts.append(f"Job Requirements: {jd_text[:500]}")  # Giới hạn độ dài
+        # Build CV/JD context
+        context_parts = self._build_cv_jd_context(
+            cv_extraction, jd_extraction, skill_gap, cv_text, jd_text
+        )
         context_str = "\n".join(context_parts) if context_parts else ""
         
-        # Build context based on conversation history
+        # Build follow-up or opening question
         if previous_question and previous_answer:
-            # Trích xuất các điểm chính từ câu trả lời trước để tham chiếu
-            system_prompt += (
-                "\nNow ask a FOLLOW-UP question:\n"
-                "- Start with a conversational phrase (see GOOD EXAMPLES above)\n"
-                "- Reference what they mentioned: 'You mentioned [X]...'\n"
-                "- Ask about specific scenarios or challenges\n"
-                "- Sound genuinely curious and engaged\n"
-                "- AVOID starting with Explain/Describe/Define\n"
+            system_prompt += self._build_followup_prompt(previous_answer)
+            user_prompt = self._build_followup_user_prompt(
+                role, level, skills_str, context_str, 
+                previous_question, previous_answer, conversation_history
             )
-            user_prompt_parts = [
-                f"Role: {role} ({level})",
-                f"Skills: {skills_str}"
-            ]
-            if context_str:
-                user_prompt_parts.append(f"\n{context_str}")
-            user_prompt_parts.extend([
-                f"\nThey were asked: \"{previous_question}\"",
-                f"They answered: \"{previous_answer}\"\n",
-                "Ask a natural follow-up question (use 'Can you...', 'How would you...', 'What would you do...', etc.):"
-            ])
-            user_prompt = "\n".join(user_prompt_parts)
         else:
-            # Câu hỏi đầu tiên
-            user_prompt_parts = [
-                f"Role: {role} ({level})",
-                f"Skills: {skills_str}"
-            ]
-            if context_str:
-                user_prompt_parts.append(f"\n{context_str}")
-            user_prompt_parts.append("\nAsk the opening question:")
-            user_prompt = "\n".join(user_prompt_parts)
+            system_prompt += f"\n=== OPENING QUESTION MODE ===\n{OPENING_QUESTION_GUIDE}\n"
+            user_prompt = self._build_opening_user_prompt(role, level, skills_str, context_str)
         
         return f"<|system|>\n{system_prompt}\n<|user|>\n{user_prompt}\n<|assistant|>\n"
     
+    def _build_cv_jd_context(
+        self, 
+        cv_extraction, 
+        jd_extraction, 
+        skill_gap, 
+        cv_text: str, 
+        jd_text: str
+    ) -> List[str]:
+        """Build context from CV/JD extractions"""
+        context_parts = []
+        
+        # Case 1: CV only
+        if cv_extraction and not jd_extraction:
+            cv_summary = f"Candidate Profile: {cv_extraction.years_experience or 'N/A'} years experience"
+            if cv_extraction.technologies:
+                cv_summary += f" | Tech Stack: {', '.join(cv_extraction.technologies[:8])}"
+            if cv_extraction.projects:
+                cv_summary += f" | Key Projects: {', '.join(cv_extraction.projects[:2])}"
+            context_parts.append(cv_summary)
+        
+        # Case 2: JD only
+        elif jd_extraction and not cv_extraction:
+            jd_summary = f"Job Requirements: {jd_extraction.required_years or 'N/A'} years needed"
+            if jd_extraction.must_have_skills:
+                jd_summary += f" | Must-have: {', '.join(jd_extraction.must_have_skills[:5])}"
+            if jd_extraction.nice_to_have_skills:
+                jd_summary += f" | Nice-to-have: {', '.join(jd_extraction.nice_to_have_skills[:3])}"
+            context_parts.append(jd_summary)
+        
+        # Case 3: Both CV and JD
+        elif cv_extraction and jd_extraction:
+            cv_summary = f"Candidate: {cv_extraction.years_experience or 'N/A'} yrs | {', '.join(cv_extraction.technologies[:5]) if cv_extraction.technologies else 'N/A'}"
+            jd_summary = f"Job Needs: {jd_extraction.required_years or 'N/A'} yrs | Must-have: {', '.join(jd_extraction.must_have_skills[:4]) if jd_extraction.must_have_skills else 'N/A'}"
+            context_parts.extend([cv_summary, jd_summary])
+            
+            if skill_gap and skill_gap.focus_areas:
+                gap_summary = f"SKILL GAPS TO PROBE: {', '.join(skill_gap.focus_areas[:5])}"
+                if skill_gap.missing_must_have:
+                    gap_summary += f" | ❗CRITICAL: {', '.join(skill_gap.missing_must_have[:3])}"
+                context_parts.append(gap_summary)
+        
+        # Case 4: Fallback
+        else:
+            if cv_text:
+                context_parts.append(f"Candidate CV: {cv_text[:MAX_CONTEXT_CHARS]}")
+            if jd_text:
+                context_parts.append(f"Job Requirements: {jd_text[:MAX_CONTEXT_CHARS]}")
+        
+        return context_parts
+    
+    def _build_followup_prompt(self, previous_answer: str) -> str:
+        """Build follow-up system prompt based on answer analysis"""
+        answer_analysis = answer_analyzer.analyze(previous_answer)
+        strategy = answer_analysis["suggested_strategy"]
+        
+        prompt = (
+            "\n=== FOLLOW-UP QUESTION MODE ===\n"
+            f"Previous answer quality: {answer_analysis['detail_level']} ({answer_analysis['word_count']} words)\n"
+            f"Technologies mentioned: {', '.join(answer_analysis['technologies'][:3]) if answer_analysis['technologies'] else 'none'}\n"
+            f"Strategy: {strategy}\n\n"
+        )
+        
+        # Add strategy-specific guidance
+        strategy_template = FOLLOWUP_STRATEGIES.get(strategy, FOLLOWUP_STRATEGIES["deep_dive"])
+        
+        if strategy == "probe_technology" and answer_analysis['technologies']:
+            techs = answer_analysis['technologies'][:2]
+            tech_list = ', '.join(techs)
+            strategy_template = strategy_template.format(
+                tech_list=tech_list,
+                tech=techs[0] if techs else 'X'
+            )
+        
+        prompt += strategy_template + "\n" + FOLLOWUP_EXAMPLES
+        
+        return prompt
+    
+    def _build_followup_user_prompt(
+        self, 
+        role: str, 
+        level: str, 
+        skills_str: str, 
+        context_str: str,
+        previous_question: str, 
+        previous_answer: str, 
+        conversation_history: Optional[List[dict]]
+    ) -> str:
+        """Build user prompt for follow-up questions"""
+        parts = [
+            f"Position: {role} | Level: {level}",
+            f"Focus Skills: {skills_str}"
+        ]
+        
+        if context_str:
+            parts.append(f"\nContext:\n{context_str}")
+        
+        # Add conversation history
+        if conversation_history and len(conversation_history) > 0:
+            parts.append(f"\n--- Recent Conversation (last {min(MAX_RECENT_HISTORY, len(conversation_history))} Q&A) ---")
+            recent = conversation_history[-MAX_RECENT_HISTORY:]
+            for i, qa in enumerate(recent, 1):
+                parts.append(f"Q{i}: {qa.get('question', '')[:MAX_QA_DISPLAY_CHARS]}...")
+                parts.append(f"A{i}: {qa.get('answer', '')[:MAX_QA_DISPLAY_CHARS]}...")
+        
+        parts.extend([
+            f"\n--- Latest Exchange ---",
+            f"Q: {previous_question}",
+            f"A: {previous_answer[:MAX_ANSWER_DISPLAY_CHARS]}...",
+            f"\n--- Your Task ---",
+            f"Ask ONE natural follow-up question that digs deeper:"
+        ])
+        
+        return "\n".join(parts)
+    
+    def _build_opening_user_prompt(
+        self, 
+        role: str, 
+        level: str, 
+        skills_str: str, 
+        context_str: str
+    ) -> str:
+        """Build user prompt for opening questions"""
+        parts = [
+            f"Position: {role} | Level: {level}",
+            f"Key Skills to Assess: {skills_str}"
+        ]
+        
+        if context_str:
+            parts.append(f"\nContext:\n{context_str}")
+        
+        parts.extend([
+            f"\n--- Your Task ---",
+            f"Ask ONE engaging opening question:"
+        ])
+        
+        return "\n".join(parts)
+    
     def _clean_question(self, text: str) -> str:
         """Làm sạch và định dạng câu hỏi đã tạo"""
-        # Cho phép nhiều câu để câu hỏi tự nhiên hơn
-        lines = text.strip().split("\n")
-        question = " ".join([line.strip() for line in lines if line.strip()])
+        # Remove meta-commentary
+        text = re.sub(r'^(Here\'s|Here is|I would ask|Question:|My question is):?\s*', '', 
+                     text.strip(), flags=re.IGNORECASE)
+        text = re.sub(r'^(Sure|Certainly|Of course)[,!]?\s*', '', 
+                     text.strip(), flags=re.IGNORECASE)
         
-        # Tìm dấu chấm hỏi cuối cùng để giữ câu hỏi tự nhiên đầy đủ
+        # Merge multiple lines, filter out markers
+        lines = [line.strip() for line in text.strip().split("\n") 
+                if line.strip() and not line.strip().startswith(('#', '-', '*'))]
+        question = " ".join(lines)
+        
+        # Extract first question (up to first ?)
         if "?" in question:
-            # Giữ mọi thứ đến và bao gồm dấu chấm hỏi cuối cùng
-            last_q_idx = question.rfind("?")
-            question = question[:last_q_idx + 1].strip()
-        elif not question.endswith("?"):
-            # Nếu không tìm thấy dấu chấm hỏi, thêm vào cuối
-            question += "?"
+            first_q_idx = question.find("?")
+            question = question[:first_q_idx + 1].strip()
+        else:
+            # No ?, take first sentence and add ?
+            sentences = question.split(".")
+            question = sentences[0].strip()
+            if not question.endswith("?"):
+                question += "?"
         
-        # Xử lý sau: Sửa các lỗi ngữ pháp phổ biến
+        # Fix grammar
         question = self._fix_grammar(question)
+        
+        # Capitalize first letter
+        if question:
+            question = question[0].upper() + question[1:]
         
         return question
     
     def _fix_grammar(self, question: str) -> str:
         """Sửa các lỗi ngữ pháp phổ biến"""
-        import re
+        # Convert robotic patterns to conversational
+        grammar_fixes = [
+            # "Design would you X" → "How would you design X"
+            (r'^Design\s+would\s+you\s+', r'How would you design ', re.IGNORECASE),
+            (r'^Design\s+how\s+you\s+', r'How would you design ', re.IGNORECASE),
+            
+            # "Explain/Describe how you would X" → "How would you X"
+            (r'^(Explain|Describe|Define)\s+how\s+(you\s+)?(would|do|can|could)\s+', 
+             r'How \3 you ', re.IGNORECASE),
+            
+            # "Explain what" → "What"
+            (r'^(Explain|Describe|Define)\s+what\s+', r'What ', re.IGNORECASE),
+            
+            # "Explain the X" → "Can you explain the X"
+            (r'^(Explain|Describe|Define)\s+(the|your|how|why)\s+', 
+             r'Can you explain \2 ', re.IGNORECASE),
+            
+            # "What is X?" → "Can you explain what X is?"
+            (r'^What\s+is\s+([^?]+)\?', r'Can you explain what \1 is?', re.IGNORECASE),
+            
+            # Fix grammar errors
+            (r'\bwhat\s+would\s+you\s+ensure\b', r'how would you ensure', re.IGNORECASE),
+            (r'^How\s+(ensure|handle|design|implement|build|test|deploy|manage)\b',
+             r'How would you \1', re.IGNORECASE),
+            (r'\b(what|how)\s+do\s+we\s+', r'how would you ', re.IGNORECASE),
+            
+            # Add missing articles
+            (r'\b(in|for|using|with|on|at|to|from)\s+(system|service|application|database|API|workflow)\b',
+             r'\1 a \2', 0),
+            (r'\bensure\s+(security|reliability|scalability|performance)\s+in\s+(protocol|system|workflow)\b',
+             r'ensure \1 in the \2', re.IGNORECASE),
+            (r'\b(building|designing|creating|implementing)\s+(scalable|reliable|secure|distributed)\s+(system|service)\b',
+             r'\1 a \2 \3', re.IGNORECASE),
+            
+            # Fix "the X the Y" → "the X and the Y"
+            (r'\bthe\s+(\w+)\s+the\s+(\w+)', r'the \1 and the \2', 0),
+            
+            # "ensuring X" → "while ensuring X"
+            (r'\s+ensuring\s+(?!the|a)', r' while ensuring ', 0),
+        ]
         
-        # SỬA MẠNH - Chuyển đổi TẤT CẢ các mẫu Explain/Describe
+        for pattern, replacement, flags in grammar_fixes:
+            question = re.sub(pattern, replacement, question, flags=flags)
         
-        # Mẫu 0: "Explain would you" / "Describe would you" (ngữ pháp sai) → "How would you"
-        question = re.sub(
-            r'^(Explain|Describe)\s+would\s+you\s+',
-            r'How would you ',
-            question,
-            flags=re.IGNORECASE
-        )
+        # Cleanup punctuation
+        question = re.sub(r'\?+', '?', question)  # Multiple ?
+        question = re.sub(r'\.+\?', '?', question)  # Period before ?
+        question = re.sub(r'\s+', ' ', question)  # Extra spaces
+        question = re.sub(r'\s+([?,.])', r'\1', question)  # Space before punctuation
         
-        # Mẫu 1: MỌI "Explain/Describe how you would X" → "How would you X"
-        question = re.sub(
-            r'^(Explain|Describe)\s+how\s+you\s+would\s+',
-            r'How would you ',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 2: "Explain/Describe the X" → "Can you explain the X"
-        question = re.sub(
-            r'^(Explain|Describe)\s+the\s+',
-            r'Can you explain the ',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 3: MỌI "Explain/Describe" còn lại ở đầu → "Can you explain"
-        question = re.sub(
-            r'^(Explain|Describe)\s+',
-            r'Can you explain ',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 4: "What would you ensure X" → "How would you ensure X"
-        question = re.sub(
-            r'what\s+would\s+you\s+ensure\s+',
-            r'how would you ensure ',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 5: Sửa động từ kép như "tested would you test" → "would you test"
-        question = re.sub(
-            r'(\w+ed)\s+would\s+you\s+(\w+)',
-            r'would you \2',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 6: "ensuring X" → "while ensuring X" (khi không ở đầu)
-        question = re.sub(
-            r'\s+ensuring\s+',
-            r' while ensuring ',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 7: Thêm mạo từ thiếu
-        question = re.sub(r'\s(system|service|application|database|workflow|framework)([,\s\?])', r' the \1\2', question)
-        
-        # Mẫu 8: "building X system" → "building a X system"
-        question = re.sub(
-            r'(building|designing|creating|implementing)\s+(low|high|distributed|scalable|reliable|secure)\s+(\w+)\s+(system|service|application|workflow)',
-            r'\1 a \2 \3 \4',
-            question,
-            flags=re.IGNORECASE
-        )
-        
-        # Mẫu 9: Làm sạch dấu câu
-        question = re.sub(r'\?+', '?', question)
-        question = re.sub(r'\.+\?', '?', question)
-        
-        return question
+        return question.strip()
     
     def generate(
         self,
@@ -208,9 +474,10 @@ class QuestionGenerator:
         skills: Optional[List[str]] = None,
         previous_question: Optional[str] = None,
         previous_answer: Optional[str] = None,
-        max_tokens: int = 32,
+        conversation_history: Optional[List[dict]] = None,
+        max_tokens: int = 64,  # Tăng từ 32 lên 64 để câu hỏi dài và tự nhiên hơn
         temperature: float = 0.7
-    ) -> str:
+    ) -> tuple[str, float]:
         """
         Tạo câu hỏi phỏng vấn
         
@@ -222,11 +489,12 @@ class QuestionGenerator:
             skills: Danh sách kỹ năng yêu cầu
             previous_question: Câu hỏi trước trong cuộc hội thoại
             previous_answer: Câu trả lời trước của ứng viên
+            conversation_history: Lịch sử hội thoại (tối đa 20 cặp Q&A)
             max_tokens: Số token tối đa để tạo
-            temperature: Temperature sampling
+            temperature: Temperature sampling (base value, will be adjusted)
             
         Returns:
-            Chuỗi câu hỏi đã tạo
+            Tuple of (question, actual_temperature_used)
         """
         try:
             if not self.model_manager.is_loaded():
@@ -234,14 +502,44 @@ class QuestionGenerator:
                 raise RuntimeError("Model chua duoc tai")
             
             logger.info(f"Generating question for role={role}, level={level}, skills={skills}")
+            if conversation_history:
+                logger.info(f"Using conversation history with {len(conversation_history)} entries")
+            
+            # Extract CV/JD information
+            cv_extraction = None
+            jd_extraction = None
+            skill_gap = None
+            
+            if cv_text or jd_text:
+                if cv_text:
+                    cv_extraction = self.cv_jd_extractor.extract_cv(cv_text)
+                if jd_text:
+                    jd_extraction = self.cv_jd_extractor.extract_jd(jd_text)
+                
+                # Analyze skill gap if both available
+                if cv_extraction and jd_extraction:
+                    skill_gap = self.cv_jd_extractor.analyze_skill_gap(cv_extraction, jd_extraction)
+                    logger.info(f"Skill gap analysis: {len(skill_gap.focus_areas)} focus areas - {', '.join(skill_gap.focus_areas[:3])}")
             
             model = self.model_manager.get_model()
             tokenizer = self.model_manager.get_tokenizer()
             device = self.model_manager.get_device()
             
+            if tokenizer is None:
+                logger.error("Tokenizer not loaded")
+                raise RuntimeError("Tokenizer chua duoc tai")
+            
             skills = skills or []
             
-            # Xây dựng prompt với ngữ cảnh
+            # Tính optimal temperature dựa trên context
+            optimal_temperature = self._calculate_optimal_temperature(
+                level=level,
+                previous_answer=previous_answer,
+                conversation_history=conversation_history,
+                base_temperature=temperature
+            )
+            
+            # Xây dựng prompt với ngữ cảnh (kèm extracted info)
             prompt = self._build_prompt(
                 jd_text=jd_text,
                 cv_text=cv_text,
@@ -249,12 +547,20 @@ class QuestionGenerator:
                 level=level,
                 skills=skills,
                 previous_question=previous_question,
-                previous_answer=previous_answer
+                previous_answer=previous_answer,
+                conversation_history=conversation_history,
+                cv_extraction=cv_extraction,
+                jd_extraction=jd_extraction,
+                skill_gap=skill_gap
             )
             
             logger.debug(f"Built prompt with length: {len(prompt)}")
+            logger.info(f"Using dynamic temperature: {optimal_temperature:.2f} (original: {temperature})")
             
             # Tokenize và chuyển lên device tương ứng
+            if model is None:
+                logger.error("Model is None")
+                raise RuntimeError("Model is not available")
             inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
             
             # Tạo với chế độ inference
@@ -265,12 +571,15 @@ class QuestionGenerator:
                     **inputs,
                     max_new_tokens=max_tokens,
                     do_sample=True,
-                    temperature=temperature,
+                    temperature=optimal_temperature,  # Sử dụng dynamic temperature
                     top_p=TOP_P,
+                    top_k=50,  # Thêm top-k sampling để đa dạng hơn
                     repetition_penalty=REPETITION_PENALTY,
-                    num_beams=NUM_BEAMS,  # Sampling nhanh không dùng beam search
+                    num_beams=NUM_BEAMS,
                     early_stopping=True,  # Dừng khi sinh token EOS
-                    pad_token_id=tokenizer.eos_token_id
+                    no_repeat_ngram_size=3,  # Tránh lặp cụm từ 3 từ
+                    pad_token_id=tokenizer.eos_token_id,
+                    eos_token_id=tokenizer.eos_token_id
                 )
             
             # Decode
@@ -285,12 +594,10 @@ class QuestionGenerator:
             cleaned_question = self._clean_question(text)
             logger.info(f"Generated question: {cleaned_question}")
             
-            return cleaned_question
+            return cleaned_question, optimal_temperature
             
         except Exception as e:
             logger.error(f"Error generating question: {str(e)}", exc_info=True)
             raise RuntimeError(f"Failed to generate question: {str(e)}")
 
-
-# Instance global của question generator
 question_generator = QuestionGenerator()

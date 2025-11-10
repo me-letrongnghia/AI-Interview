@@ -168,9 +168,11 @@ public class GenQService {
     // Phương thức để tạo câu hỏi tiếp theo với CV và JD text
     public String generateNextQuestion(String role, String level, List<String> skills, 
                                      String previousQuestion, String previousAnswer,
-                                     String cvText, String jdText) {
+                                     String cvText, String jdText,
+                                     List<Map<String, String>> conversationHistory) {
         try {
-            log.info("Generating next question using GenQ service");
+            log.info("Generating next question using GenQ service with {} history entries", 
+                    conversationHistory != null ? conversationHistory.size() : 0);
             
             // Chuẩn bị request body với cv_text và jd_text (nếu có)
             Map<String, Object> requestBody = new java.util.HashMap<>();
@@ -179,7 +181,7 @@ public class GenQService {
             requestBody.put("skills", skills != null ? skills : List.of());
             requestBody.put("previous_question", previousQuestion != null ? previousQuestion : "");
             requestBody.put("previous_answer", previousAnswer != null ? previousAnswer : "");
-            requestBody.put("max_tokens", 48);
+            requestBody.put("max_tokens", 80);  // Tăng từ 48 lên 80 để câu hỏi tự nhiên hơn (15-30 words)
             requestBody.put("temperature", 0.7);
 
             if (cvText != null && !cvText.trim().isEmpty()) {
@@ -187,6 +189,12 @@ public class GenQService {
             }
             if (jdText != null && !jdText.trim().isEmpty()) {
                 requestBody.put("jd_text", jdText);
+            }
+            
+            // Thêm conversation history nếu có
+            if (conversationHistory != null && !conversationHistory.isEmpty()) {
+                requestBody.put("conversation_history", conversationHistory);
+                log.info("Added {} conversation history entries to request", conversationHistory.size());
             }
             
             // Gọi GenQ service để lấy câu hỏi tiếp theo
@@ -219,7 +227,7 @@ public class GenQService {
     // Phương thức để tạo câu hỏi tiếp theo
     public String generateNextQuestion(String role, String level, List<String> skills, 
                                      String previousQuestion, String previousAnswer) {
-        return generateNextQuestion(role, level, skills, previousQuestion, previousAnswer, null, null);
+        return generateNextQuestion(role, level, skills, previousQuestion, previousAnswer, null, null, null);
     }
 
     // Fallback error nếu GenQ service không khả dụng

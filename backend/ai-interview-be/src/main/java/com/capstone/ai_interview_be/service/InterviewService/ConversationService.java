@@ -80,6 +80,22 @@ public class ConversationService {
         return context.toString();
     }
     
+    // Lấy N cặp Q&A gần nhất để làm context cho AI (mặc định 20)
+    @Transactional(readOnly = true)
+    public List<ConversationEntry> getRecentConversation(Long sessionId, int limit) {
+        // Lấy N entries gần nhất đã có answer, kết quả đã reverse về thứ tự tăng dần
+        List<ConversationEntry> entries = conversationRepository.findRecentAnsweredEntries(sessionId, limit);
+        // Reverse lại để có thứ tự chronological (từ cũ đến mới)
+        java.util.Collections.reverse(entries);
+        return entries;
+    }
+    
+    // Lấy 20 cặp Q&A gần nhất (default)
+    @Transactional(readOnly = true)
+    public List<ConversationEntry> getRecentConversation(Long sessionId) {
+        return getRecentConversation(sessionId, 20);
+    }
+    
     // Đếm số lượng câu hỏi trong session
     @Transactional(readOnly = true)
     public long countSessionQuestions(Long sessionId) {
