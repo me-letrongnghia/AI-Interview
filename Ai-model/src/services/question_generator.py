@@ -455,6 +455,7 @@ class QuestionGenerator:
             r'\s+(the|a|an)\s+(the|a|an)\s+',  # Double articles
             r'\b(would|should|could)\s+(would|should|could)\b',  # Double modals
             r'\?\s*\?',  # Multiple question marks
+            r'\b(tell me|explain)\s+(why|how|what)\s+would\s+you\b',  # "Tell me why would you" (should be "why you would")
         ]
         
         for pattern in broken_patterns:
@@ -472,13 +473,10 @@ class QuestionGenerator:
         tokenizer
     ) -> str:
         """Generate question in single attempt"""
-        logger.info(f"Tokenizing prompt (length: {len(prompt)} chars)")
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        logger.info(f"Input tokens: {inputs['input_ids'].shape[1]}")
         
         inference_ctx = torch.inference_mode if hasattr(torch, "inference_mode") else torch.no_grad
         
-        logger.info(f"Starting generation with max_new_tokens={max_tokens}, temp={temperature}")
         with inference_ctx():
             outputs = model.generate(
                 **inputs,
@@ -488,19 +486,16 @@ class QuestionGenerator:
                 top_p=TOP_P,
                 top_k=50,
                 repetition_penalty=REPETITION_PENALTY,
+                num_beams=NUM_BEAMS,
                 no_repeat_ngram_size=3,
                 pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-                use_cache=True
+                eos_token_id=tokenizer.eos_token_id
             )
-        
-        logger.info(f"Generation complete. Output tokens: {outputs[0].shape[0]}")
         
         text = tokenizer.decode(
             outputs[0][inputs["input_ids"].shape[1]:], 
             skip_special_tokens=True
         )
-        logger.info(f"Decoded text (length: {len(text)} chars): {text[:100] if len(text) > 100 else text}")
         
         return self._clean_question(text)
     

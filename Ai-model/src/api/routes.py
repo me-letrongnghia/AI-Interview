@@ -154,9 +154,9 @@ async def generate_question(request: GenerateQuestionRequest):
             generation_time=round(generation_time, 2),
             model_info={
                 "model_path": str(MODEL_PATH),
-                "max_tokens": request.max_tokens,
-                "temperature_requested": request.temperature,
-                "temperature_actual": round(actual_temperature, 2),
+                "max_tokens": str(request.max_tokens),
+                "temperature_requested": str(round(request.temperature, 2)),
+                "temperature_actual": str(round(actual_temperature, 2)),
                 "context_type": context_type
             }
         )
