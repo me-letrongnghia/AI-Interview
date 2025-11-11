@@ -235,7 +235,9 @@ public class GeminiService {
     // Generate feedback cho một câu trả lời cụ thể
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
 
-        String systemPrompt = "You are a precise and analytical evaluator. Always respond with valid JSON only.";
+        String systemPrompt = "You are a precise and analytical evaluator. Always respond with valid JSON only. " +
+                "Use proper markdown formatting in your feedback including **bold** for emphasis, " +
+                "`code` for technical terms, and ``` for code blocks. Use line breaks for better readability.";
 
         String userPrompt = String.format("""
                 You are an expert technical interviewer evaluating a candidate's answer with precise scoring standards.
@@ -251,30 +253,56 @@ public class GeminiService {
                 - Mid-level: Deep knowledge, best practices, design patterns, trade-offs
                 - Senior: Expert level, architectural decisions, optimization, mentoring ability
 
+                FORMATTING GUIDELINES:
+                - Use **bold** to highlight important concepts or key points
+                - Use `backticks` for technical terms, variables, or short code snippets
+                - Use ``` for multi-line code blocks with language identifier (e.g., ```java)
+                - Use line breaks between paragraphs for readability
+                - Use - or * for bullet points when listing items
+                - Use proper spacing around code blocks
+
                 FEEDBACK REQUIREMENTS:
                 - Be specific and constructive
                 - Mention what was done well
                 - Point out specific areas for improvement
                 - Reference technical concepts where applicable
                 - Keep professional and encouraging tone
+                - Format code examples properly with syntax highlighting
 
                 SAMPLE ANSWER REQUIREMENTS:
                 - Provide a comprehensive model answer
                 - Include technical details appropriate for the level
                 - Show best practices and proper terminology
                 - Demonstrate the depth expected for the position
+                - Format any code examples with proper code blocks
 
                 Provide detailed feedback in JSON format:
                 {
-                    "feedback": "Your answer demonstrates... [3-5 sentences with specific observations]",
-                    "sampleAnswer": "A strong answer would include... [comprehensive model answer]"
+                    "feedback": "Your answer demonstrates... [3-5 sentences with specific observations, use markdown formatting]",
+                    "sampleAnswer": "A strong answer would include... [comprehensive model answer with proper formatting]"
+                }
+
+                Example of good formatting:
+                {
+                    "feedback": "Your answer shows **good understanding** of the concept. You correctly mentioned `variables` but could improve by discussing:\\n\\n- Point 1\\n- Point 2\\n\\nOverall, solid response.",
+                    "sampleAnswer": "A complete answer should cover:\\n\\n**Key Concept**: Description here\\n\\n```java\\ncode example\\n```\\n\\nThis demonstrates..."
                 }
                 """, role, level, question, answer);
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
-            return objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
+            AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
+            
+            // Format the feedback and sample answer for better readability
+            if (feedbackData.getFeedback() != null) {
+                feedbackData.setFeedback(formatFeedbackContent(feedbackData.getFeedback()));
+            }
+            if (feedbackData.getSampleAnswer() != null) {
+                feedbackData.setSampleAnswer(formatFeedbackContent(feedbackData.getSampleAnswer()));
+            }
+            
+            return feedbackData;
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
             return AnswerFeedbackData.builder()
@@ -305,7 +333,9 @@ public class GeminiService {
 
         String skillsText = (skills == null || skills.isEmpty()) ? "General" : String.join(", ", skills);
 
-        String systemPrompt = "You are a comprehensive interview evaluator. Always respond with valid JSON only.";
+        String systemPrompt = "You are a comprehensive interview evaluator. Always respond with valid JSON only. " +
+                "Use proper markdown formatting including **bold** for emphasis, " +
+                "`code` for technical terms, and proper line breaks for readability.";
 
         String userPrompt = String.format("""
                 You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
@@ -337,15 +367,23 @@ public class GeminiService {
                             - Communication effectiveness
                             - Suitability for the role and level
                             - Key observations from the interview flow
+                            - Use **bold** for key points and `backticks` for technical terms
 
                          3. STRENGTHS (List 3-5 specific strengths):
                             Identify concrete positive aspects with examples
+                            - Format as clear bullet points
+                            - Use **bold** for key strengths
+                            - Use `code` for technical terms
 
                          4. WEAKNESSES (List 2-4 areas for improvement):
                             Identify specific gaps or areas needing development
+                            - Format as clear bullet points
+                            - Be constructive and specific
 
                          5. RECOMMENDATIONS:
                             Provide actionable 3-5 sentence guidance
+                            - Use proper formatting for readability
+                            - Include specific, actionable advice
 
                         IMPORTANT SCORING CRITERIA:
                         - EXCELLENT: 90%%+ correct answers, deep technical understanding, excellent communication
@@ -354,14 +392,21 @@ public class GeminiService {
                         - BELOW AVERAGE: 30-49%% correct answers, limited knowledge, poor communication
                         - POOR: <30%% correct answers, insufficient knowledge, very weak responses
 
+                        FORMATTING GUIDELINES:
+                        - Use **bold** to highlight important points
+                        - Use `backticks` for technical terms
+                        - Use line breaks (\\n) between paragraphs
+                        - Format lists clearly with proper spacing
+                        - Make the feedback easy to read and scan
+
                          Provide detailed feedback in JSON format:
                          {
                              "overview": "GOOD",
                              "assessment": "Throughout the interview, the candidate demonstrated...",
                              "strengths": [
-                                 "Specific strength with example from interview",
-                                 "Another specific technical strength",
-                                 "Communication or approach strength"
+                                 "**Specific strength** with example from interview",
+                                 "**Another specific technical strength**",
+                                 "**Communication or approach strength**"
                              ],
                              "weaknesses": [
                                  "Specific gap with example",
@@ -378,7 +423,31 @@ public class GeminiService {
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
-            return objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
+            OverallFeedbackData feedbackData = objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
+            
+            if (feedbackData.getAssessment() != null) {
+                feedbackData.setAssessment(formatFeedbackContent(feedbackData.getAssessment()));
+            }
+            
+            if (feedbackData.getRecommendations() != null) {
+                feedbackData.setRecommendations(formatFeedbackContent(feedbackData.getRecommendations()));
+            }
+            
+            if (feedbackData.getStrengths() != null) {
+                List<String> formattedStrengths = feedbackData.getStrengths().stream()
+                        .map(this::formatFeedbackContent)
+                        .toList();
+                feedbackData.setStrengths(formattedStrengths);
+            }
+
+            if (feedbackData.getWeaknesses() != null) {
+                List<String> formattedWeaknesses = feedbackData.getWeaknesses().stream()
+                        .map(this::formatFeedbackContent)
+                        .toList();
+                feedbackData.setWeaknesses(formattedWeaknesses);
+            }
+            
+            return feedbackData;
         } catch (Exception e) {
             log.error("Error parsing overall feedback response", e);
             return OverallFeedbackData.builder()
@@ -416,4 +485,70 @@ public class GeminiService {
 
         return cleaned;
     }
+
+    // Helper method to format feedback content
+    private String formatFeedbackContent(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return content;
+        }
+
+        String formatted = content;
+
+        // Remove bold markdown (**text** or __text__) - keep only the text
+        formatted = formatted.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
+        formatted = formatted.replaceAll("__([^_]+)__", "$1");
+
+        // Remove italic markdown (*text* or _text_) but be careful not to affect bullet points
+        // Only remove italic at word boundaries
+        formatted = formatted.replaceAll("(?<!\\*)\\*(?!\\*)([^*]+?)\\*(?!\\*)", "$1");
+        formatted = formatted.replaceAll("(?<!_)_(?!_)([^_]+?)_(?!_)", "$1");
+
+        // Handle code blocks - remove ``` markers but keep the code with proper spacing
+        formatted = formatted.replaceAll("```\\w*\\n", "\n\n");
+        formatted = formatted.replaceAll("```", "\n\n");
+
+        // Remove inline code backticks - keep only the text
+        formatted = formatted.replaceAll("`([^`]+)`", "$1");
+
+        // Format lists - ensure proper spacing and clean bullet points
+        formatted = formatted.replaceAll("\\n\\s*[-*]\\s+", "\n\n• ");
+        formatted = formatted.replaceAll("^\\s*[-*]\\s+", "• ");
+
+        // Format numbered lists with spacing
+        formatted = formatted.replaceAll("\\n\\s*(\\d+)\\.\\s+", "\n\n$1. ");
+
+        // Remove headers markdown (# ## ###) - keep only the text with line break after
+        formatted = formatted.replaceAll("^#{1,6}\\s+(.+)", "$1\n");
+        formatted = formatted.replaceAll("\\n#{1,6}\\s+(.+)", "\n\n$1\n");
+
+        // Add line break after sentences ending with period, question mark, or exclamation
+        // Only if followed by capital letter (new sentence)
+        formatted = formatted.replaceAll("([.!?])([A-Z])", "$1\n\n$2");
+
+        // Add line break after colons if followed by newline content (like lists or explanations)
+        formatted = formatted.replaceAll(":(\\s*)([A-Z•\\d])", ":\n\n$2");
+
+        // Ensure proper paragraph spacing (max 2 line breaks)
+        formatted = formatted.replaceAll("\\n{3,}", "\n\n");
+
+        // Clean up excessive spaces
+        formatted = formatted.replaceAll("[ \\t]+", " ");
+        formatted = formatted.replaceAll("[ \\t]+\\n", "\n");
+        formatted = formatted.replaceAll("\\n[ \\t]+", "\n");
+
+        // Trim leading/trailing whitespace from each line
+        String[] lines = formatted.split("\n");
+        StringBuilder result = new StringBuilder();
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            if (!trimmedLine.isEmpty()) {
+                result.append(trimmedLine).append("\n");
+            } else {
+                result.append("\n");
+            }
+        }
+
+        return result.toString().trim();
+    }
+
 }

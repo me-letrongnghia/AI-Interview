@@ -27,5 +27,8 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     
     // Find all practice sessions by original session ID
     List<InterviewSession> findByOriginalSessionIdOrderByCreatedAtDesc(Long originalSessionId);
+    
+    // Delete all practice sessions by original session ID
+    void deleteByOriginalSessionId(Long originalSessionId);
 
 }
