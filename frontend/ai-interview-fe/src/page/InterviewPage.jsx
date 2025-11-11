@@ -47,22 +47,22 @@ const VideoStream = memo(({ streamRef, muted }) => {
       autoPlay
       playsInline
       muted={muted}
-      className='w-full h-full object-cover'
+      className="w-full h-full object-cover"
     />
   );
 });
 
 // Timer component to display countdown (compact version for header)
 const Timer = memo(({ minutes, seconds }) => (
-  <div className='bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200'>
-    <div className='flex items-center gap-2'>
-      <span className='text-xs font-medium text-gray-600'>Time:</span>
-      <div className='flex items-center gap-1'>
-        <span className='text-lg font-bold text-gray-900'>
+  <div className="bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200">
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium text-gray-600">Time:</span>
+      <div className="flex items-center gap-1">
+        <span className="text-lg font-bold text-gray-900">
           {String(minutes).padStart(2, "0")}
         </span>
-        <span className='text-lg font-bold text-gray-900'>:</span>
-        <span className='text-lg font-bold text-gray-900'>
+        <span className="text-lg font-bold text-gray-900">:</span>
+        <span className="text-lg font-bold text-gray-900">
           {String(seconds).padStart(2, "0")}
         </span>
       </div>
@@ -96,12 +96,12 @@ const VolumeBar = ({ analyser }) => {
   }, [analyser]);
 
   return (
-    <div className='flex items-center gap-1 h-2'>
+    <div className="flex items-center gap-1 h-2">
       {[...Array(10)].map((_, i) => (
         <div
           key={i}
           ref={(el) => (barsRef.current[i] = el)}
-          className='w-4 h-2 rounded-sm bg-gray-300'
+          className="w-4 h-2 rounded-sm bg-gray-300"
         />
       ))}
     </div>
@@ -182,15 +182,15 @@ const InterviewUI = memo(
     pandaImage,
     interviewConfig,
   }) => (
-    <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden'>
-      <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden">
+      <div className="relative flex-1 flex gap-6 p-6 overflow-hidden">
         {/* Main Video Area */}
-        <div className='flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white'>
+        <div className="flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white">
           {/* Header Bar */}
-          <div className='absolute top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 p-3.5 flex items-center justify-between z-10'>
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 p-3.5 flex items-center justify-between z-10">
             <button
               onClick={handleLeaveRoom}
-              className='group flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-200 border border-white/20 hover:border-white/30'
+              className="group flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-200 border border-white/20 hover:border-white/30"
             >
               <LogOut size={18} />
               <span>End Interview</span>
@@ -204,64 +204,64 @@ const InterviewUI = memo(
           </div>
 
           {/* Main Content Area */}
-          <div className='relative h-full flex flex-col items-center justify-start p-8 pt-24'>
+          <div className="relative h-full flex flex-col items-center justify-start p-8 pt-24">
             {/* Video Grid */}
-            <div className='grid grid-cols-2 gap-6 max-w-6xl w-full mt-8'>
+            <div className="grid grid-cols-2 gap-6 max-w-6xl w-full mt-8">
               {/* Your Video */}
-              <div className='group relative aspect-video bg-gray-900 rounded-xl overflow-hidden border-2 border-green-500'>
+              <div className="group relative aspect-video bg-gray-900 rounded-xl overflow-hidden border-2 border-green-500">
                 {streamRef.current && (
                   <VideoStream streamRef={streamRef} muted />
                 )}
                 {/* Name Label */}
-                <div className='absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg'>
-                  <span className='text-gray-800 text-sm font-semibold'>
+                <div className="absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg">
+                  <span className="text-gray-800 text-sm font-semibold">
                     Candidate
                   </span>
                 </div>
               </div>
 
               {/* AI Interviewer Video */}
-              <div className='relative aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl overflow-hidden border-2 border-emerald-500'>
+              <div className="relative aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl overflow-hidden border-2 border-emerald-500">
                 {/* AI Avatar */}
-                <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='relative w-32 h-32'>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-32 h-32">
                     <img
                       src={pandaImage}
-                      alt='Master Panda'
-                      className='w-full h-full object-contain'
+                      alt="Master Panda"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 </div>
 
                 {/* AI Badge */}
-                <div className='absolute top-3 left-3 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md'>
-                  <span className='text-white text-xs font-semibold'>
+                <div className="absolute top-3 left-3 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md">
+                  <span className="text-white text-xs font-semibold">
                     AI INTERVIEWER
                   </span>
                 </div>
 
                 {/* Name Label */}
-                <div className='absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg'>
-                  <span className='text-gray-800 text-sm font-semibold'>
+                <div className="absolute bottom-3 left-3 bg-white/90 px-3 py-1.5 rounded-lg">
+                  <span className="text-gray-800 text-sm font-semibold">
                     Master Panda
                   </span>
                 </div>
 
                 {/* Speaking Indicator */}
                 {typingMessageId && (
-                  <div className='absolute bottom-3 right-3 flex items-center gap-2 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md'>
-                    <div className='flex gap-1'>
-                      <div className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'></div>
+                  <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-emerald-500 px-3 py-1.5 rounded-lg shadow-md">
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></div>
                       <div
-                        className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'
+                        className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"
                         style={{ animationDelay: "0.1s" }}
                       ></div>
                       <div
-                        className='w-1.5 h-1.5 bg-white rounded-full animate-bounce'
+                        className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
-                    <span className='text-white text-xs font-semibold'>
+                    <span className="text-white text-xs font-semibold">
                       Speaking...
                     </span>
                   </div>
@@ -270,8 +270,8 @@ const InterviewUI = memo(
             </div>
 
             {/* Voice Controls Section - Below Video Grid */}
-            <div className='max-w-7xl w-full mt-8'>
-              <div className='flex items-center justify-center gap-6'>
+            <div className="max-w-7xl w-full mt-8">
+              <div className="flex items-center justify-center gap-6">
                 {/* Voice Input Button */}
                 <button
                   onClick={handleMicClick}
@@ -289,21 +289,21 @@ const InterviewUI = memo(
                       isRecording ? "animate-pulse" : ""
                     }`}
                   />
-                  <span className='text-white font-semibold text-sm'>
+                  <span className="text-white font-semibold text-sm">
                     Voice Input
                   </span>
                 </button>
 
                 {/* Recording Indicator - Compact */}
                 {isRecording && (
-                  <div className='bg-white rounded-lg border-2 border-red-300 animate-fadeIn px-6 py-3 flex items-center gap-4'>
-                    <div className='flex items-center gap-2'>
-                      <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
-                      <span className='text-sm font-semibold text-gray-800'>
+                  <div className="bg-white rounded-lg border-2 border-red-300 animate-fadeIn px-6 py-3 flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-semibold text-gray-800">
                         Recording
                       </span>
                     </div>
-                    <div className='w-32'>
+                    <div className="w-32">
                       <VolumeBar analyser={analyser} />
                     </div>
                   </div>
@@ -312,10 +312,10 @@ const InterviewUI = memo(
 
               {/* Transcript Display */}
               {isRecording && (interimTranscript || chatInput) && (
-                <div className='mt-4 max-w-2xl mx-auto p-3 bg-white rounded-lg border border-black-200 animate-fadeIn'>
-                  <p className='text-sm text-gray-700'>
+                <div className="mt-4 max-w-2xl mx-auto p-3 bg-white rounded-lg border border-black-200 animate-fadeIn">
+                  <p className="text-sm text-gray-700">
                     {chatInput}
-                    <span className='text-green-600 italic'>
+                    <span className="text-green-600 italic">
                       {interimTranscript}
                     </span>
                   </p>
@@ -324,7 +324,7 @@ const InterviewUI = memo(
 
               {/* Error Display */}
               {isRecording && speechError && (
-                <div className='mt-2 max-w-2xl mx-auto text-xs text-red-600 bg-red-50 p-2 rounded-lg'>
+                <div className="mt-2 max-w-2xl mx-auto text-xs text-red-600 bg-red-50 p-2 rounded-lg">
                   {speechError}
                 </div>
               )}
@@ -332,14 +332,16 @@ const InterviewUI = memo(
           </div>
 
           {/* Progress Bar - Bottom Fixed */}
-          <div className='absolute bottom-0 left-0 right-0 p-4 z-10'>
-            <div className='max-w-6xl mx-auto'>
-              <div className='border-2 border-black-700 bg-green/20 rounded-full h-3 overflow-hidden'>
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+            <div className="max-w-6xl mx-auto">
+              <div className="border-2 border-black-700 bg-green/20 rounded-full h-3 overflow-hidden">
                 <div
-                  className='h-full bg-green-500 rounded-full transition-all duration-500'
+                  className="h-full bg-green-500 rounded-full transition-all duration-500"
                   style={{
                     width: `${Math.min(
-                      (chatHistory.filter((m) => m.type === "ai" && !m.isSystemMessage).length /
+                      (chatHistory.filter(
+                        (m) => m.type === "ai" && !m.isSystemMessage
+                      ).length /
                         interviewConfig.maxQuestions) *
                         100,
                       100
@@ -347,11 +349,15 @@ const InterviewUI = memo(
                   }}
                 ></div>
               </div>
-              <div className='flex justify-between mt-2 px-1'>
-                <span className='text-sm text-green font-medium'>Progress</span>
-                <span className='text-sm text-black font-medium'>
-                  {chatHistory.filter((m) => m.type === "ai" && !m.isSystemMessage).length}/
-                  {interviewConfig.maxQuestions}
+              <div className="flex justify-between mt-2 px-1">
+                <span className="text-sm text-green font-medium">Progress</span>
+                <span className="text-sm text-black font-medium">
+                  {
+                    chatHistory.filter(
+                      (m) => m.type === "ai" && !m.isSystemMessage
+                    ).length
+                  }
+                  /{interviewConfig.maxQuestions}
                 </span>
               </div>
             </div>
@@ -359,31 +365,31 @@ const InterviewUI = memo(
         </div>
 
         {/* Chat Sidebar */}
-        <div className='w-[450px] bg-white shadow-xl flex flex-col border border-green-100 rounded-2xl overflow-hidden'>
+        <div className="w-[450px] bg-white shadow-xl flex flex-col border border-green-100 rounded-2xl overflow-hidden">
           {/* Chat Header */}
-          <div className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white'>
-            <div className='flex items-center gap-3'>
-              <div className='p-2 bg-white/20 rounded-lg'>
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
                 <svg
-                  className='w-5 h-5'
-                  fill='currentColor'
-                  viewBox='0 0 20 20'
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
                 >
                   <path
-                    fillRule='evenodd'
-                    d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
-                    clipRule='evenodd'
+                    fillRule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                    clipRule="evenodd"
                   />
                 </svg>
               </div>
-              <h2 className='text-lg font-semibold'>Interview Chat</h2>
+              <h2 className="text-lg font-semibold">Interview Chat</h2>
             </div>
           </div>
 
           {/* Messages Container */}
           <div
             ref={messagesRef}
-            className='flex-1 overflow-y-auto p-6 space-y-4 bg-green-50/30'
+            className="flex-1 overflow-y-auto p-6 space-y-4 bg-green-50/30"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: "#10b981 #f0fdf4",
@@ -398,29 +404,29 @@ const InterviewUI = memo(
               >
                 {chat.type === "ai" ? (
                   // AI Message - Simple & Clean
-                  <div className='max-w-[85%] group'>
-                    <div className='flex items-start gap-3'>
+                  <div className="max-w-[85%] group">
+                    <div className="flex items-start gap-3">
                       {/* AI Avatar */}
-                      <div className='flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                         <img
                           src={pandaImage}
-                          alt='AI Panda'
-                          className='w-full h-full object-contain'
+                          alt="AI Panda"
+                          className="w-full h-full object-contain"
                         />
                       </div>
 
                       {/* AI Message Bubble */}
-                      <div className='flex-1'>
-                        <div className='flex items-center gap-2 mb-1'>
-                          <span className='text-xs font-bold text-green-700'>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-green-700">
                             Master Panda
                           </span>
-                          <span className='text-xs text-gray-400'>
+                          <span className="text-xs text-gray-400">
                             {chat.time}
                           </span>
                         </div>
-                        <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200'>
-                          <p className='text-sm leading-relaxed text-gray-800'>
+                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200">
+                          <p className="text-sm leading-relaxed text-gray-800">
                             {chat.id === typingMessageId ? (
                               <TypingText
                                 text={chat.text}
@@ -437,36 +443,36 @@ const InterviewUI = memo(
                   </div>
                 ) : (
                   // User Message - Simple & Clean
-                  <div className='max-w-[85%] group'>
-                    <div className='flex items-start gap-3 justify-end'>
+                  <div className="max-w-[85%] group">
+                    <div className="flex items-start gap-3 justify-end">
                       {/* User Message Bubble */}
-                      <div className='flex-1'>
-                        <div className='flex items-center gap-2 mb-1 justify-end'>
-                          <span className='text-xs text-gray-400'>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1 justify-end">
+                          <span className="text-xs text-gray-400">
                             {chat.time}
                           </span>
-                          <span className='text-xs font-bold text-green-700'>
+                          <span className="text-xs font-bold text-green-700">
                             {userProfile?.fullName ||
                               userProfile?.name ||
                               "You"}
                           </span>
                         </div>
-                        <div className='bg-green-600 rounded-2xl rounded-tr-sm px-4 py-3'>
-                          <p className='text-sm leading-relaxed text-white'>
+                        <div className="bg-green-600 rounded-2xl rounded-tr-sm px-4 py-3">
+                          <p className="text-sm leading-relaxed text-white">
                             {chat.text}
                           </p>
                         </div>
                       </div>
 
                       {/* User Avatar */}
-                      <div className='flex-shrink-0 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center overflow-hidden'>
+                      <div className="flex-shrink-0 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center overflow-hidden">
                         {userProfile?.picture ? (
                           <img
                             src={userProfile.picture}
                             alt={userProfile.fullName || userProfile.name}
-                            className='w-full h-full object-cover'
-                            referrerPolicy='no-referrer'
-                            crossOrigin='anonymous'
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src =
@@ -480,7 +486,7 @@ const InterviewUI = memo(
                             }}
                           />
                         ) : (
-                          <span className='text-white text-sm font-bold'>
+                          <span className="text-white text-sm font-bold">
                             {(userProfile?.fullName || userProfile?.name || "U")
                               .charAt(0)
                               .toUpperCase()}
@@ -495,28 +501,28 @@ const InterviewUI = memo(
 
             {/* Loading indicator - Simple */}
             {isLoading && (
-              <div className='flex justify-start animate-fadeIn'>
-                <div className='flex items-start gap-3'>
-                  <div className='flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden'>
+              <div className="flex justify-start animate-fadeIn">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     <img
                       src={pandaImage}
-                      alt='AI Panda'
-                      className='w-full h-full object-contain'
+                      alt="AI Panda"
+                      className="w-full h-full object-contain"
                     />
                   </div>
-                  <div className='bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200'>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-sm text-gray-600'>
+                  <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-green-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
                         Panda is thinking
                       </span>
-                      <div className='flex space-x-1.5'>
-                        <div className='w-1 h-1 bg-green-500 rounded-full animate-bounce'></div>
+                      <div className="flex space-x-1.5">
+                        <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce"></div>
                         <div
-                          className='w-1 h-1 bg-green-500 rounded-full animate-bounce'
+                          className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0.2s" }}
                         ></div>
                         <div
-                          className='w-1 h-1 bg-green-500 rounded-full animate-bounce'
+                          className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0.4s" }}
                         ></div>
                       </div>
@@ -528,14 +534,14 @@ const InterviewUI = memo(
           </div>
 
           {/* Input Area */}
-          <div className='p-4 bg-white border-t border-green-100'>
-            <div className='flex flex-col gap-4'>
+          <div className="p-4 bg-white border-t border-green-100">
+            <div className="flex flex-col gap-4">
               {/* Text input with character counter */}
-              <div className='flex gap-3'>
-                <div className='flex-1 min-w-0 relative'>
+              <div className="flex gap-3">
+                <div className="flex-1 min-w-0 relative">
                   <textarea
-                    placeholder='Type your answer here...'
-                    className='w-full px-4 py-3 rounded-lg border border-black-200 focus:outline-none focus:border-green-500 transition-colors bg-white resize-none min-h-[56px] max-h-32 text-sm placeholder:text-gray-400 overflow-hidden'
+                    placeholder="Type your answer here..."
+                    className="w-full px-4 py-3 rounded-lg border border-black-200 focus:outline-none focus:border-green-500 transition-colors bg-white resize-none min-h-[56px] max-h-32 text-sm placeholder:text-gray-400 overflow-hidden"
                     value={chatInput}
                     rows={1}
                     onChange={(e) => setChatInput(e.target.value)}
@@ -555,8 +561,8 @@ const InterviewUI = memo(
                 <button
                   onClick={sendMessage}
                   disabled={!chatInput.trim() || isLoading}
-                  className='bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors self-start'
-                  title='Send message (Enter)'
+                  className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors self-start"
+                  title="Send message (Enter)"
                 >
                   <Send size={20} />
                 </button>
@@ -1014,6 +1020,7 @@ export default function InterviewInterface() {
     ApiInterviews.getSessionInfo(sessionId)
       .then((sessionResponse) => {
         console.log("📊 Session response:", sessionResponse);
+
         if (sessionResponse && sessionResponse.data) {
           const sessionData = sessionResponse.data;
 
@@ -1071,28 +1078,117 @@ export default function InterviewInterface() {
         setIsRunning(true);
       })
       .finally(() => {
-        // Then get the first question
+        // Then get the first question or load history
         ApiInterviews.Get_Interview(sessionId)
-          .then((data) => {
-            if (data && data.data) {
-              setCurrentQuestionId(data.data.id);
-              const initialMessage = {
-                type: "ai",
-                text: data.data.content,
-                time: formatTime(new Date()),
-                id: `initial-${data.data.id}`,
-              };
-              setChatHistory([initialMessage]);
-              processedMessagesRef.current.add(`initial-${data.data.id}`);
-              setTypingMessageId(`initial-${data.data.id}`);
-              // Speak immediately, typing animation runs in parallel
-              speak(data.data.content);
+          .then((response) => {
+            console.log("📥 API response:", response);
+
+            // Extract the actual data from response
+            const apiData = response?.data || response;
+            console.log("📥 Extracted API data:", apiData);
+
+            if (
+              apiData &&
+              apiData.success === true &&
+              Array.isArray(apiData.data) &&
+              apiData.data.length > 0
+            ) {
+              // Has history - load all previous messages
+              console.log(
+                "📚 Loading interview history with",
+                apiData.data.length,
+                "messages"
+              );
+
+              const chatHistoryArray = [];
+              let lastQuestionId = null;
+
+              // Process each message in the history
+              apiData.data.forEach((item, index) => {
+                const messageId = `history-${
+                  item.id || item.questionId || index
+                }`;
+
+                // Determine message type and content
+                const messageType = item.type || "ai"; // Default to 'ai' if not specified
+                const messageContent = item.content;
+
+                if (messageContent) {
+                  chatHistoryArray.push({
+                    type: messageType,
+                    text: messageContent,
+                    time: formatTime(new Date(item.timestamp || Date.now())),
+                    id: messageId,
+                    isSystemMessage: item.isSystemMessage || false,
+                  });
+
+                  processedMessagesRef.current.add(messageId);
+
+                  // Track last question ID for continuing
+                  if (messageType === "ai" && !item.isSystemMessage) {
+                    lastQuestionId = item.questionId || item.id;
+                  }
+                }
+              });
+
+              // Set the chat history
+              setChatHistory(chatHistoryArray);
+
+              // Set current question ID to the last AI question
+              if (lastQuestionId) {
+                setCurrentQuestionId(lastQuestionId);
+                console.log("✅ Restored to question ID:", lastQuestionId);
+              }
+            } else if (
+              apiData &&
+              apiData.success === false &&
+              apiData.question
+            ) {
+              // No history - load first question
+              console.log("📝 Loading first question (no history)");
+              const questionData = apiData.question;
+
+              if (
+                questionData &&
+                (questionData.id || questionData.questionId)
+              ) {
+                const qId = questionData.id || questionData.questionId;
+                setCurrentQuestionId(qId);
+
+                const initialMessage = {
+                  type: "ai",
+                  text: questionData.content,
+                  time: formatTime(new Date()),
+                  id: `initial-${qId}`,
+                };
+
+                setChatHistory([initialMessage]);
+                processedMessagesRef.current.add(`initial-${qId}`);
+                setTypingMessageId(`initial-${qId}`);
+
+                // Speak immediately, typing animation runs in parallel
+                speak(questionData.content);
+
+                console.log("✅ First question loaded:", qId);
+              } else {
+                console.error(
+                  "❌ Invalid question data structure:",
+                  questionData
+                );
+                throw new Error("Invalid question data");
+              }
+            } else {
+              // Unexpected response format
+              console.error("❌ Unexpected API response format:", apiData);
+              throw new Error("Unexpected API response format");
             }
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error("❌ Error loading interview data:", err);
             toast.error(
-              "No initial question found. Starting default question."
+              "Could not load interview data. Starting with default question."
             );
+
             const fallbackMessage = {
               type: "ai",
               text: "Hello! Let's start the interview.",
@@ -1100,10 +1196,12 @@ export default function InterviewInterface() {
               id: "fallback-initial",
               isSystemMessage: true,
             };
+
             setChatHistory([fallbackMessage]);
             processedMessagesRef.current.add("fallback-initial");
             setCurrentQuestionId("default-question-id");
             setTypingMessageId("fallback-initial");
+
             // Speak immediately, typing animation runs in parallel
             speak("Hello! Let's start the interview.");
           });
@@ -1218,7 +1316,7 @@ export default function InterviewInterface() {
     setIsLoading(true);
 
     const payload = {
-      questionId: currentQuestionId || "unknown",
+      questionId: currentQuestionId,
       content: text,
       timestamp: new Date().toISOString(),
       isLastAnswer: willBeLastAnswer, // Tell backend this is the last answer
