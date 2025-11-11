@@ -37,6 +37,33 @@ MAX_RECENT_HISTORY = 5
 MAX_QA_DISPLAY_CHARS = 200
 MAX_ANSWER_DISPLAY_CHARS = 500
 
+# Retry settings
+MAX_RETRY_ATTEMPTS = 3
+MIN_QUESTION_WORDS = 10
+MAX_QUESTION_WORDS = 50
+RETRY_TEMP_INCREASE = 0.15
+
+# Validation patterns
+ROBOTIC_PATTERNS = [
+    r'^Explain\s+',
+    r'^Describe\s+',
+    r'^Define\s+',
+    r'^What\s+is\s+',
+    r'^List\s+',
+    r'^\w+\s+would\s+you\s+',  # "Design would you"
+]
+
+NATURAL_STARTERS = [
+    r'^Can\s+you\s+',
+    r'^Tell\s+me\s+',
+    r'^How\s+would\s+you\s+',
+    r'^What\'?s\s+your\s+',
+    r'^Have\s+you\s+',
+    r'^Could\s+you\s+',
+    r'^I\'?d\s+like\s+to\s+',
+    r'^In\s+your\s+experience',
+]
+
 # Prompt templates
 SYSTEM_PROMPT_BASE = """You are an experienced technical interviewer conducting a professional interview. Ask ONE clear, natural, conversational question.
 
@@ -378,6 +405,100 @@ class QuestionGenerator:
         
         return "\n".join(parts)
     
+    def _validate_question(self, question: str) -> tuple[bool, str]:
+        """
+        Validate question quality
+        
+        Returns:
+            (is_valid, reason_if_invalid)
+        """
+        if not question or not question.strip():
+            return False, "empty_question"
+        
+        question = question.strip()
+        words = question.split()
+        word_count = len(words)
+        
+        # Check length
+        if word_count < MIN_QUESTION_WORDS:
+            return False, f"too_short_{word_count}_words"
+        
+        if word_count > MAX_QUESTION_WORDS:
+            return False, f"too_long_{word_count}_words"
+        
+        # Check ends with question mark
+        if not question.endswith('?'):
+            return False, "missing_question_mark"
+        
+        # Check for robotic patterns
+        for pattern in ROBOTIC_PATTERNS:
+            if re.match(pattern, question, re.IGNORECASE):
+                return False, f"robotic_pattern"
+        
+        # Check for natural conversational starters
+        has_natural_starter = False
+        for pattern in NATURAL_STARTERS:
+            if re.match(pattern, question, re.IGNORECASE):
+                has_natural_starter = True
+                break
+        
+        if not has_natural_starter:
+            return False, "no_natural_starter"
+        
+        # Check for incomplete sentences (missing key words)
+        lower = question.lower()
+        if ' you ' not in lower and ' your ' not in lower:
+            return False, "missing_subject_you"
+        
+        # Check for broken grammar patterns
+        broken_patterns = [
+            r'\s+(the|a|an)\s+(the|a|an)\s+',  # Double articles
+            r'\b(would|should|could)\s+(would|should|could)\b',  # Double modals
+            r'\?\s*\?',  # Multiple question marks
+        ]
+        
+        for pattern in broken_patterns:
+            if re.search(pattern, question):
+                return False, "broken_grammar"
+        
+        return True, ""
+    
+    def _generate_single_attempt(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        model,
+        tokenizer
+    ) -> str:
+        """Generate question in single attempt"""
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        
+        inference_ctx = torch.inference_mode if hasattr(torch, "inference_mode") else torch.no_grad
+        
+        with inference_ctx():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                do_sample=True,
+                temperature=temperature,
+                top_p=TOP_P,
+                top_k=50,
+                repetition_penalty=REPETITION_PENALTY,
+                num_beams=NUM_BEAMS,
+                early_stopping=True,
+                no_repeat_ngram_size=3,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+        
+        text = tokenizer.decode(
+            outputs[0][inputs["input_ids"].shape[1]:], 
+            skip_special_tokens=True
+        )
+        
+        return self._clean_question(text)
+    
     def _clean_question(self, text: str) -> str:
         """Làm sạch và định dạng câu hỏi đã tạo"""
         # Remove meta-commentary
@@ -531,7 +652,7 @@ class QuestionGenerator:
             
             skills = skills or []
             
-            # Tính optimal temperature dựa trên context
+            # Calculate optimal temperature
             optimal_temperature = self._calculate_optimal_temperature(
                 level=level,
                 previous_answer=previous_answer,
@@ -539,7 +660,7 @@ class QuestionGenerator:
                 base_temperature=temperature
             )
             
-            # Xây dựng prompt với ngữ cảnh (kèm extracted info)
+            # Build prompt
             prompt = self._build_prompt(
                 jd_text=jd_text,
                 cv_text=cv_text,
@@ -555,46 +676,50 @@ class QuestionGenerator:
             )
             
             logger.debug(f"Built prompt with length: {len(prompt)}")
-            logger.info(f"Using dynamic temperature: {optimal_temperature:.2f} (original: {temperature})")
             
-            # Tokenize và chuyển lên device tương ứng
-            if model is None:
-                logger.error("Model is None")
-                raise RuntimeError("Model is not available")
-            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            # Generate with retry mechanism
+            for attempt in range(MAX_RETRY_ATTEMPTS):
+                try:
+                    # Increase temperature on retries for more diversity
+                    attempt_temperature = optimal_temperature + (attempt * RETRY_TEMP_INCREASE)
+                    attempt_temperature = min(TEMP_MAX, attempt_temperature)
+                    
+                    logger.info(f"Generation attempt {attempt + 1}/{MAX_RETRY_ATTEMPTS}, temp={attempt_temperature:.2f}")
+                    
+                    # Generate question
+                    question = self._generate_single_attempt(
+                        prompt=prompt,
+                        temperature=attempt_temperature,
+                        max_tokens=max_tokens,
+                        model=model,
+                        tokenizer=tokenizer
+                    )
+                    
+                    logger.debug(f"Generated: {question[:100]}...")
+                    
+                    # Validate question
+                    is_valid, reason = self._validate_question(question)
+                    
+                    if is_valid:
+                        logger.info(f"Valid question generated on attempt {attempt + 1}")
+                        logger.info(f"Final question: {question}")
+                        return question, attempt_temperature
+                    else:
+                        logger.warning(f"Invalid question (attempt {attempt + 1}): {reason}")
+                        logger.debug(f"Rejected question: {question}")
+                        
+                        if attempt < MAX_RETRY_ATTEMPTS - 1:
+                            logger.info(f"Retrying with higher temperature...")
+                        
+                except Exception as e:
+                    logger.error(f"Error in generation attempt {attempt + 1}: {str(e)}")
+                    if attempt == MAX_RETRY_ATTEMPTS - 1:
+                        raise
             
-            # Tạo với chế độ inference
-            inference_ctx = torch.inference_mode if hasattr(torch, "inference_mode") else torch.no_grad
-            
-            with inference_ctx():
-                outputs = model.generate(
-                    **inputs,
-                    max_new_tokens=max_tokens,
-                    do_sample=True,
-                    temperature=optimal_temperature,  # Sử dụng dynamic temperature
-                    top_p=TOP_P,
-                    top_k=50,  # Thêm top-k sampling để đa dạng hơn
-                    repetition_penalty=REPETITION_PENALTY,
-                    num_beams=NUM_BEAMS,
-                    early_stopping=True,  # Dừng khi sinh token EOS
-                    no_repeat_ngram_size=3,  # Tránh lặp cụm từ 3 từ
-                    pad_token_id=tokenizer.eos_token_id,
-                    eos_token_id=tokenizer.eos_token_id
-                )
-            
-            # Decode
-            text = tokenizer.decode(
-                outputs[0][inputs["input_ids"].shape[1]:], 
-                skip_special_tokens=True
-            )
-            
-            logger.debug(f"Generated raw text: {text[:100]}...")
-            
-            # Làm sạch và trả về
-            cleaned_question = self._clean_question(text)
-            logger.info(f"Generated question: {cleaned_question}")
-            
-            return cleaned_question, optimal_temperature
+            # All retries failed - return best effort with warning
+            logger.error(f"Failed to generate valid question after {MAX_RETRY_ATTEMPTS} attempts")
+            logger.warning(f"Returning last generated question despite validation failure: {question}")
+            return question, optimal_temperature
             
         except Exception as e:
             logger.error(f"Error generating question: {str(e)}", exc_info=True)
