@@ -1091,7 +1091,7 @@ export default function InterviewInterface() {
               apiData &&
               apiData.success === true &&
               Array.isArray(apiData.data) &&
-              apiData.data.length > 0
+              apiData.data.length > 1
             ) {
               // Has history - load all previous messages
               console.log(
@@ -1139,6 +1139,33 @@ export default function InterviewInterface() {
                 setCurrentQuestionId(lastQuestionId);
                 console.log("✅ Restored to question ID:", lastQuestionId);
               }
+            } else if (
+              apiData &&
+              apiData.success === true &&
+              apiData.data.length > 0
+            ) {
+                // Has single first question - load it
+                console.log("📝 Loading first question from history");
+                const firstItem = apiData.data[0];
+                const messageId = `history-${firstItem.id || firstItem.questionId || 0}`;
+                
+                const chatHistory = [{
+                type: firstItem.type || "ai",
+                text: firstItem.content,
+                time: formatTime(new Date(firstItem.timestamp || Date.now())),
+                id: messageId,
+                isSystemMessage: firstItem.isSystemMessage || false,
+                }];
+                
+                processedMessagesRef.current.add(messageId);
+                
+                // Set current question ID if it's an AI question
+                if ((firstItem.type || "ai") === "ai" && !firstItem.isSystemMessage) {
+                setCurrentQuestionId(firstItem.questionId || firstItem.id);
+                }
+              setChatHistory(chatHistory);
+              speak(chatHistory[0].text);
+              
             } else if (
               apiData &&
               apiData.success === false &&
@@ -1208,7 +1235,12 @@ export default function InterviewInterface() {
       });
 
     const processedMessages = processedMessagesRef.current;
-
+    const redQuestion = chatHistory[0]?.text;
+    console.log("🚀 Interview session initialized:", {
+      sessionId,
+      redQuestion,
+      processedMessages: Array.from(processedMessages || []),
+    });
     return () => {
       disconnectSocket();
       if (processedMessages) {

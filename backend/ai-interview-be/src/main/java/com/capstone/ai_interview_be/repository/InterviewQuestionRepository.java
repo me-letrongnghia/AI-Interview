@@ -4,7 +4,6 @@ import com.capstone.ai_interview_be.model.InterviewQuestion;
 
 import java.util.List;
 
-import org.aspectj.weaver.patterns.TypePatternQuestions.Question;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +33,7 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
     List<InterviewQuestion> findQuestionsBySessionId(@Param("sessionId") String sessionId);
 
     boolean existsBySessionId(Long sessionId);
+    
+    
+    
 }

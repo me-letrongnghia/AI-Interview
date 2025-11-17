@@ -60,3 +60,11 @@ ocr:
   tessdata-path: "/usr/share/tesseract-ocr/5/tessdata"
   languages: "eng+vie"
   dpi: 300
+
+# Cloudinary Configuration
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
+
+
