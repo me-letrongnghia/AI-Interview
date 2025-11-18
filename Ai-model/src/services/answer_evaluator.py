@@ -110,11 +110,11 @@ Provide evaluation in JSON format with scores (0.0-1.0), feedback points, and im
         except json.JSONDecodeError:
             pass
         
-        # Try to find JSON block in markdown code fence
+        # Try to find JSON block in markdown code fence or plain text
         json_patterns = [
             r'```json\s*(\{.*?\})\s*```',
             r'```\s*(\{.*?\})\s*```',
-            r'(\{[\s\S]*"scores"[\s\S]*\})',
+            r'(\{[\s\S]*?"scores"[\s\S]*?\})',  # Match shortest JSON with scores
         ]
         
         for pattern in json_patterns:
@@ -125,6 +125,41 @@ Provide evaluation in JSON format with scores (0.0-1.0), feedback points, and im
                     return json.loads(json_str)
                 except json.JSONDecodeError:
                     continue
+        
+        # Last resort: try to extract partial JSON and fix common issues
+        try:
+            # Find first { and try to build valid JSON from there
+            start = text.find('{')
+            if start != -1:
+                json_text = text[start:]
+                
+                # Try to find complete JSON by counting braces
+                brace_count = 0
+                end_pos = -1
+                for i, char in enumerate(json_text):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_pos = i + 1
+                            break
+                
+                if end_pos > 0:
+                    json_str = json_text[:end_pos]
+                    return json.loads(json_str)
+                else:
+                    # Incomplete JSON - try to extract at least scores
+                    scores_match = re.search(
+                        r'"scores"\s*:\s*\{([^}]+)\}',
+                        json_text,
+                        re.DOTALL
+                    )
+                    if scores_match:
+                        # Build minimal valid JSON with scores
+                        return {"scores": json.loads('{' + scores_match.group(1) + '}')}
+        except Exception as e:
+            logger.debug(f"Partial JSON extraction failed: {e}")
         
         logger.warning("Could not extract JSON from response")
         return None
