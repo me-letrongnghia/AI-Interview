@@ -12,19 +12,22 @@ from src.core.config import (
     CORS_ORIGINS, CORS_ALLOW_CREDENTIALS, 
     CORS_ALLOW_METHODS, CORS_ALLOW_HEADERS
 )
-from src.services.model_loader import model_manager
+from src.services.model_loader import model_manager, judge_model_manager
 from src.api.routes import router
 from src.middleware import MetricsMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model on startup, cleanup on shutdown"""
-    # Startup
+    """Load models on startup, cleanup on shutdown"""
+    # Startup - Load only GenQ model (Judge model loads on-demand)
     model_manager.load()
+    # Judge model will be loaded on first /evaluate-answer request to save memory
     yield
-    # Shutdown
+    # Shutdown - Cleanup both models if loaded
     model_manager.cleanup()
+    if judge_model_manager.is_loaded():
+        judge_model_manager.cleanup()
 
 
 def create_app() -> FastAPI:

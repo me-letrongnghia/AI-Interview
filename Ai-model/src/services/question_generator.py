@@ -5,166 +5,29 @@ from typing import List, Optional, Tuple
 
 from src.core.config import TOP_P, REPETITION_PENALTY, NUM_BEAMS
 from src.services.model_loader import model_manager
-from src.services.answer_analyzer import answer_analyzer
-from src.services.cv_jd_extractor import cv_jd_extractor
+
+# Import từ các module mới
+from .analysis import answer_analyzer, cv_jd_extractor
+from .generation.constants import (
+    TEMP_MIN, TEMP_MAX,
+    TEMP_JUNIOR_BASE, TEMP_MID_BASE, TEMP_SENIOR_BASE, TEMP_LEAD_BASE,
+    TEMP_INITIAL_DECREASE, TEMP_DEEP_INCREASE,
+    TEMP_SHORT_ANSWER_DECREASE, TEMP_DETAILED_ANSWER_INCREASE,
+    SHORT_ANSWER_WORDS, DETAILED_ANSWER_WORDS,
+    MID_CONVERSATION_QA, DEEP_CONVERSATION_QA,
+    MAX_CONTEXT_CHARS, MAX_RECENT_HISTORY,
+    MAX_QA_DISPLAY_CHARS, MAX_ANSWER_DISPLAY_CHARS,
+    MAX_RETRY_ATTEMPTS, RETRY_TEMP_INCREASE
+)
+from .generation.prompt_templates import (
+    SYSTEM_PROMPT_BASE,
+    FOLLOWUP_STRATEGIES,
+    FOLLOWUP_EXAMPLES,
+    OPENING_QUESTION_GUIDE
+)
+from .validation import generate_emotional_reaction, validate_question
 
 logger = logging.getLogger(__name__)
-
-
-# Temperature constants
-TEMP_MIN = 0.5
-TEMP_MAX = 0.9
-TEMP_JUNIOR_BASE = 0.6
-TEMP_MID_BASE = 0.7
-TEMP_SENIOR_BASE = 0.75
-TEMP_LEAD_BASE = 0.8
-
-# Temperature adjustments
-TEMP_INITIAL_DECREASE = 0.1
-TEMP_DEEP_INCREASE = 0.1
-TEMP_SHORT_ANSWER_DECREASE = 0.1
-TEMP_DETAILED_ANSWER_INCREASE = 0.05
-
-# Conversation thresholds
-SHORT_ANSWER_WORDS = 30
-DETAILED_ANSWER_WORDS = 150
-MID_CONVERSATION_QA = 5
-DEEP_CONVERSATION_QA = 10
-
-# Context limits
-MAX_CONTEXT_CHARS = 300
-MAX_RECENT_HISTORY = 5
-MAX_QA_DISPLAY_CHARS = 200
-MAX_ANSWER_DISPLAY_CHARS = 500
-
-# Retry settings
-MAX_RETRY_ATTEMPTS = 3
-MIN_QUESTION_WORDS = 10
-MAX_QUESTION_WORDS = 50
-RETRY_TEMP_INCREASE = 0.15
-
-# Validation patterns
-ROBOTIC_PATTERNS = [
-    r'^Explain\s+',
-    r'^Describe\s+',
-    r'^Define\s+',
-    r'^What\s+is\s+',
-    r'^List\s+',
-    r'^\w+\s+would\s+you\s+',  # "Design would you"
-]
-
-NATURAL_STARTERS = [
-    r'^Can\s+you\s+',
-    r'^Tell\s+me\s+',
-    r'^How\s+would\s+you\s+',
-    r'^What\'?s\s+your\s+',
-    r'^Have\s+you\s+',
-    r'^Could\s+you\s+',
-    r'^I\'?d\s+like\s+to\s+',
-    r'^In\s+your\s+experience',
-]
-
-# Prompt templates
-SYSTEM_PROMPT_BASE = """You are an experienced technical interviewer conducting a professional interview. Ask ONE clear, natural, conversational question.
-
-CRITICAL RULES:
-1. Output ONLY the question - no meta-commentary, no explanations
-2. Make it sound like a REAL human interviewer - warm, professional, conversational
-3. Questions should be 15-30 words (not too short, not too long)
-4. ALWAYS be grammatically perfect and complete
-5. Be specific to the role and skill level
-
-CONVERSATIONAL STARTERS (Use these!):
-- 'Can you walk me through...' - 'Could you share...' - 'Tell me about...'
-- 'How would you approach...' - 'How do you handle...' - 'What's your experience with...'
-- 'I'd like to hear about...' - 'I'm curious about...' - 'Have you worked with...'
-- 'In your experience, how...' - 'When working with X, how do you...'
-- 'Let's talk about...' - 'What would you do if...' - 'How have you dealt with...'
-
-AVOID (These sound robotic!):
-- Starting with 'Explain', 'Describe', 'Define', 'What is', 'Design'
-- One-word questions: 'Why?', 'How?', 'What?'
-- Incomplete sentences missing subjects/objects
-- Academic test-like questions
-
-EXCELLENT EXAMPLES:
-
-Junior Level (Simple, Clear, Practical):
-✓ 'Can you walk me through how you would debug a NullPointerException in a Spring Boot application?'
-✓ 'Tell me about a time when your code worked locally but failed in production - how did you troubleshoot it?'
-✓ 'What's your experience building and testing RESTful APIs? Can you share a specific example?'
-
-Mid-Level (Deeper, Scenario-Based):
-✓ 'How would you handle a situation where your service suddenly experiences 10x normal traffic?'
-✓ 'Can you walk me through your approach to database schema migrations in a production environment?'
-✓ 'In your experience, what strategies have you used to maintain backward compatibility when evolving an API?'
-
-Senior Level (Architectural, Strategic):
-✓ 'How would you design a distributed caching layer for a global e-commerce platform handling millions of requests?'
-✓ 'Tell me about a time when you had to make a critical architectural decision with limited information and tight deadlines.'
-✓ 'If you inherited a legacy monolithic system that needed modernization, what would be your step-by-step approach?'
-
-BAD EXAMPLES - NEVER DO THIS:
-✗ 'Explain microservices' - Too vague, robotic, sounds like a textbook
-✗ 'Design would you ensure security' - Broken grammar
-✗ 'What is Docker?' - Definition question, not conversational
-✗ 'How ensure reliability?' - Missing words, incomplete
-"""
-
-FOLLOWUP_STRATEGIES = {
-    "encourage_detail": """The candidate's answer was BRIEF. Ask a natural follow-up that:
-- Encourages elaboration: 'Can you tell me more about...', 'I'd like to hear more details about...'
-- Asks for specifics: 'What specific steps did you take?', 'Can you walk me through your process?'
-- Example: 'That's interesting! Can you give me a specific example of how you implemented that?'
-""",
-    
-    "request_example": """The candidate gave a good answer but WITHOUT specific examples. Follow up with:
-- 'Can you share a specific example from your experience where you did this?'
-- 'Tell me about a real situation where you had to apply this approach.'
-- 'That makes sense - could you walk me through a concrete case where you used this?'
-""",
-    
-    "probe_technology": """The candidate mentioned {tech_list}. Dig deeper naturally:
-- 'You mentioned {tech} - can you tell me about a specific challenge you faced with it?'
-- 'I'm curious about your experience with {tech_list} - what trade-offs did you encounter?'
-- 'How have you handled [specific scenario] when working with {tech}?'
-""",
-    
-    "explore_edge_case": """The candidate gave a SOLID answer. Challenge them with edge cases:
-- 'That's a good approach! What would you do if [failure scenario]?'
-- 'How would you handle it if [edge case or scale issue] occurred?'
-- 'Interesting! What would happen if the system had to handle 100x the normal load?'
-""",
-    
-    "change_topic": """The candidate gave a THOROUGH answer. Transition to a new topic naturally:
-- 'That's great! Now I'd like to hear about your experience with [different skill].'
-- 'Thanks for that detailed explanation. Let's shift gears - how do you approach [new topic]?'
-- 'Excellent! Moving on, can you tell me about...'
-""",
-    
-    "deep_dive": """Dig deeper into what they shared:
-- 'Can you elaborate on the technical details of how you implemented that?'
-- 'What was your thought process when you made that decision?'
-- 'How did you evaluate the trade-offs between different approaches?'
-"""
-}
-
-FOLLOWUP_EXAMPLES = """
-GREAT Follow-up Examples:
-✓ 'You mentioned Redis - can you walk me through how you handle cache invalidation in your implementation?'
-✓ 'That's interesting! What would happen if the database connection failed during that process?'
-✓ 'Building on that, how do you monitor and debug performance issues with this solution in production?'
-✓ 'I'm curious - what challenges did you face when scaling this approach to handle more users?'
-"""
-
-OPENING_QUESTION_GUIDE = """
-Ask a warm, engaging opening question that:
-- Gets them talking about real experience (not theory)
-- Starts with conversational phrases like 'Tell me about...', 'Can you share...', 'I'd like to hear...'
-- Matches their level (Junior: basics & learning, Mid: practical scenarios, Senior: architecture & leadership)
-- Makes them comfortable while assessing key skills
-Example: 'Can you tell me about your experience building REST APIs with Spring Boot? I'd love to hear about a specific project.'
-"""
 
 
 class QuestionGenerator:
@@ -263,7 +126,17 @@ class QuestionGenerator:
                 previous_question, previous_answer, conversation_history
             )
         else:
+            # Opening question - add clear examples
             system_prompt += f"\n=== OPENING QUESTION MODE ===\n{OPENING_QUESTION_GUIDE}\n"
+            system_prompt += """
+IMPORTANT - Your output must be EXACTLY like these examples:
+"Hi! Thanks for joining today. So, tell me about your experience with Spring Boot - what projects have you worked on?"
+"Hey! Great to have you here. What's been your biggest challenge working with microservices so far?"
+"Welcome! I'm excited to chat. Can you walk me through how you usually approach database design?"
+"Hi there! Thanks for your time today. Tell me about a recent technical problem you solved - what happened?"
+
+Start with greeting (Hi/Hey/Welcome) + thanks, then ask about real experience.
+"""
             user_prompt = self._build_opening_user_prompt(role, level, skills_str, context_str)
         
         return f"<|system|>\n{system_prompt}\n<|user|>\n{user_prompt}\n<|assistant|>\n"
@@ -405,65 +278,6 @@ class QuestionGenerator:
         
         return "\n".join(parts)
     
-    def _validate_question(self, question: str) -> tuple[bool, str]:
-        """
-        Validate question quality
-        
-        Returns:
-            (is_valid, reason_if_invalid)
-        """
-        if not question or not question.strip():
-            return False, "empty_question"
-        
-        question = question.strip()
-        words = question.split()
-        word_count = len(words)
-        
-        # Check length
-        if word_count < MIN_QUESTION_WORDS:
-            return False, f"too_short_{word_count}_words"
-        
-        if word_count > MAX_QUESTION_WORDS:
-            return False, f"too_long_{word_count}_words"
-        
-        # Check ends with question mark
-        if not question.endswith('?'):
-            return False, "missing_question_mark"
-        
-        # Check for robotic patterns
-        for pattern in ROBOTIC_PATTERNS:
-            if re.match(pattern, question, re.IGNORECASE):
-                return False, f"robotic_pattern"
-        
-        # Check for natural conversational starters
-        has_natural_starter = False
-        for pattern in NATURAL_STARTERS:
-            if re.match(pattern, question, re.IGNORECASE):
-                has_natural_starter = True
-                break
-        
-        if not has_natural_starter:
-            return False, "no_natural_starter"
-        
-        # Check for incomplete sentences (missing key words)
-        lower = question.lower()
-        if ' you ' not in lower and ' your ' not in lower:
-            return False, "missing_subject_you"
-        
-        # Check for broken grammar patterns
-        broken_patterns = [
-            r'\s+(the|a|an)\s+(the|a|an)\s+',  # Double articles
-            r'\b(would|should|could)\s+(would|should|could)\b',  # Double modals
-            r'\?\s*\?',  # Multiple question marks
-            r'\b(tell me|explain)\s+(why|how|what)\s+would\s+you\b',  # "Tell me why would you" (should be "why you would")
-        ]
-        
-        for pattern in broken_patterns:
-            if re.search(pattern, question):
-                return False, "broken_grammar"
-        
-        return True, ""
-    
     def _generate_single_attempt(
         self,
         prompt: str,
@@ -596,7 +410,7 @@ class QuestionGenerator:
         previous_question: Optional[str] = None,
         previous_answer: Optional[str] = None,
         conversation_history: Optional[List[dict]] = None,
-        max_tokens: int = 64,  # Tăng từ 32 lên 64 để câu hỏi dài và tự nhiên hơn
+        max_tokens: int = 100,  # Increased to accommodate greeting + question
         temperature: float = 0.7
     ) -> tuple[str, float]:
         """
@@ -652,6 +466,30 @@ class QuestionGenerator:
             
             skills = skills or []
             
+            # Determine conversation state
+            qa_count = len(conversation_history) if conversation_history else 0
+            is_first_question = not previous_answer and qa_count == 0
+            
+            # Analyze previous answer if available
+            quality_score = 0.0
+            
+            if previous_answer:
+                analysis = answer_analyzer.analyze(previous_answer)
+                quality_score = analysis.get('quality_score', 0.0)
+                strategy = analysis.get('follow_up_strategy', 'initial')
+                logger.info(f"Answer quality: {quality_score:.2f}, strategy: {strategy}")
+            
+            # Generate emotional reaction based on answer quality
+            emotional_reaction = generate_emotional_reaction(
+                previous_answer,
+                quality_score,
+                qa_count,
+                is_first_question=is_first_question
+            )
+            
+            if emotional_reaction:
+                logger.info(f"Adding emotional reaction: {emotional_reaction.strip()}")
+            
             # Calculate optimal temperature
             optimal_temperature = self._calculate_optimal_temperature(
                 level=level,
@@ -698,11 +536,17 @@ class QuestionGenerator:
                     logger.debug(f"Generated: {question[:100]}...")
                     
                     # Validate question
-                    is_valid, reason = self._validate_question(question)
+                    is_valid, reason = validate_question(question)
                     
                     if is_valid:
-                        logger.info(f"Valid question generated on attempt {attempt + 1}")
+                        logger.info(f"✓ Valid question generated on attempt {attempt + 1}")
                         logger.info(f"Final question: {question}")
+                        
+                        # Prepend emotional reaction if present
+                        if emotional_reaction:
+                            question = emotional_reaction + question
+                            logger.info(f"Question with emotion: {question}")
+                        
                         return question, attempt_temperature
                     else:
                         logger.warning(f"Invalid question (attempt {attempt + 1}): {reason}")

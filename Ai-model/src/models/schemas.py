@@ -107,6 +107,65 @@ class GenerateQuestionResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
 
+class EvaluateAnswerRequest(BaseModel):
+    """Model request để đánh giá câu trả lời phỏng vấn"""
+    question: str = Field(..., description="Câu hỏi phỏng vấn")
+    answer: str = Field(..., description="Câu trả lời của ứng viên")
+    
+    # Context cho việc đánh giá
+    role: Optional[str] = Field(default=None, description="Vị trí/chức danh công việc")
+    level: Optional[str] = Field(default=None, description="Trình độ kinh nghiệm")
+    competency: Optional[str] = Field(default=None, description="Competency/chuyên môn được đánh giá")
+    skills: Optional[List[str]] = Field(default=None, description="Kỹ năng liên quan")
+    
+    # Custom weights (optional)
+    custom_weights: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Trọng số tùy chỉnh cho các dimension (correctness, coverage, depth, clarity, practicality)"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "question": "Explain the core concepts of dependency injection in Spring Boot",
+                "answer": "Dependency injection is a design pattern where objects receive their dependencies from external sources rather than creating them internally. In Spring Boot, this is handled by the IoC container which manages bean lifecycle and wiring.",
+                "role": "Java Backend Developer",
+                "level": "Mid-level",
+                "competency": "Spring Boot",
+                "skills": ["Spring Boot", "Dependency Injection", "IoC Container"],
+                "custom_weights": {
+                    "correctness": 0.35,
+                    "coverage": 0.25,
+                    "depth": 0.20,
+                    "clarity": 0.15,
+                    "practicality": 0.05
+                }
+            }
+        }
+
+
+class EvaluateAnswerResponse(BaseModel):
+    """Model response cho đánh giá câu trả lời"""
+    scores: Dict[str, float] = Field(
+        ..., 
+        description="Điểm số cho các dimension (correctness, coverage, depth, clarity, practicality, final)"
+    )
+    feedback: List[str] = Field(
+        ..., 
+        description="Danh sách feedback chi tiết (3-5 điểm)"
+    )
+    improved_answer: str = Field(
+        ..., 
+        description="Câu trả lời được cải thiện (nếu điểm < 0.8)"
+    )
+    generation_time: float = Field(
+        ..., 
+        description="Thời gian đánh giá (giây)"
+    )
+    
+    model_config = {"protected_namespaces": ()}
+
+
 class HealthResponse(BaseModel):
     """Response kiểm tra sức khỏe"""
     status: str

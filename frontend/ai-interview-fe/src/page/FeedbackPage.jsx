@@ -338,7 +338,7 @@ export default function FeedbackPage() {
                 )}
               </div>
 
-              {/* Right: Overall Score */}
+              {/* Right: Overall Score
               <div
                 className={`${overviewStyle.bg} rounded-xl p-6 border ${overviewStyle.border} text-center min-w-[160px]`}
               >
@@ -351,7 +351,7 @@ export default function FeedbackPage() {
                 <p className={`text-2xl font-bold ${overviewStyle.text}`}>
                   {overallFeedback?.overview || "AVERAGE"}
                 </p>
-              </div>
+              </div> */}
             </div>
 
             {/* Action Buttons */}

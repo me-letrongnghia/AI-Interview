@@ -8,18 +8,19 @@ from pathlib import Path
 # ==================== ĐƯỜNG DẪN ====================
 BASE_DIR = Path(__file__).parent.parent.parent
 MODEL_PATH = Path(os.getenv("MODEL_PATH", str(BASE_DIR / "model" / "Merge")))
+JUDGE_MODEL_PATH = Path(os.getenv("JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Judge_merge")))
 
 # ==================== THIẾT LẬP MODEL ====================
 MAX_TOKENS_MIN = 16
-MAX_TOKENS_MAX = 128
-MAX_TOKENS_DEFAULT = 48  # Tối ưu - hầu hết câu hỏi là 20-40 tokens
+MAX_TOKENS_MAX = 150  # Tăng để chứa greeting + question
+MAX_TOKENS_DEFAULT = 100  # Đủ cho greeting (20-30 tokens) + question (60-80 tokens)
 
 TEMPERATURE_MIN = 0.1
 TEMPERATURE_MAX = 2.0
-TEMPERATURE_DEFAULT = 0.75  # Cân bằng - thấp hơn để tạo nhanh hơn nhưng vẫn đa dạng
+TEMPERATURE_DEFAULT = 0.70  # Balanced for quality and speed
 
 TOP_P = 0.92  # Tăng lên để lựa chọn từ đa dạng hơn
-REPETITION_PENALTY = 1.15  # Cao hơn để tránh mạnh các mẫu lặp lại như "Explain/Describe..."
+REPETITION_PENALTY = 1.1  # Tránh lặp lại nhưng vẫn đủ linh hoạt
 NUM_BEAMS = 1  # Sampling nhanh hơn (không dùng beam search)
 
 # ==================== THIẾT LẬP API ====================

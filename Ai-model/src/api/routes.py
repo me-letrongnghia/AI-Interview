@@ -10,11 +10,14 @@ from src.models.schemas import (
     GenerateQuestionResponse,
     InitialQuestionRequest,
     InitialQuestionResponse,
+    EvaluateAnswerRequest,
+    EvaluateAnswerResponse,
     HealthResponse
 )
-from src.services.model_loader import model_manager
+from src.services.model_loader import model_manager, judge_model_manager
 from src.services.question_generator import question_generator
-from src.core.config import MODEL_PATH
+from src.services.answer_evaluator import answer_evaluator
+from src.core.config import MODEL_PATH, JUDGE_MODEL_PATH, MAX_TOKENS_DEFAULT
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +29,14 @@ router = APIRouter()
 async def root():
     """Endpoint gốc"""
     return {
-        "service": "AI Interview - GenQ Service",
+        "service": "AI Interview - GenQ & Judge Service",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
             "health": "/health",
             "initial": "/api/v1/initial-question",
-            "generate": "/api/v1/generate-question"
+            "generate": "/api/v1/generate-question",
+            "evaluate": "/api/v1/evaluate-answer"
         }
     }
 
@@ -88,6 +92,105 @@ async def health_check():
     )
 
 
+@router.post("/api/v1/evaluate-answer", response_model=EvaluateAnswerResponse)
+async def evaluate_answer(request: EvaluateAnswerRequest):
+    """
+    Đánh giá câu trả lời phỏng vấn của ứng viên
+    
+    - **question**: Câu hỏi phỏng vấn
+    - **answer**: Câu trả lời của ứng viên
+    - **role**: Vị trí/chức danh công việc (tùy chọn)
+    - **level**: Trình độ kinh nghiệm (tùy chọn)
+    - **competency**: Competency/chuyên môn được đánh giá (tùy chọn)
+    - **skills**: Kỹ năng liên quan (tùy chọn)
+    - **custom_weights**: Trọng số tùy chỉnh cho scoring dimensions (tùy chọn)
+    
+    Trả về:
+    - **scores**: Điểm số cho 5 dimensions (correctness, coverage, depth, clarity, practicality) và final score
+    - **feedback**: 3-5 điểm feedback chi tiết
+    - **improved_answer**: Câu trả lời được cải thiện
+    - **generation_time**: Thời gian đánh giá
+    """
+    try:
+        logger.info(f"Danh gia cau tra loi cho cau hoi: {request.question[:50]}...")
+        
+        start_time = time.time()
+        
+        # Lazy load Judge model on first request (to save memory at startup)
+        if not judge_model_manager.is_loaded():
+            logger.info("[Judge] Loading model on first request...")
+            logger.info("[Judge] Unloading GenQ model to free memory...")
+            try:
+                # Free memory by unloading GenQ model temporarily
+                if model_manager.is_loaded():
+                    model_manager.cleanup()
+                    logger.info("[Judge] GenQ model unloaded, freed ~3GB RAM")
+                
+                # Now load Judge model
+                judge_model_manager.load()
+                logger.info("[Judge] Model loaded successfully")
+            except Exception as load_error:
+                logger.error(f"[Judge] Failed to load model: {load_error}")
+                # Try to reload GenQ model if Judge failed
+                if not model_manager.is_loaded():
+                    logger.info("[Judge] Reloading GenQ model after failure...")
+                    try:
+                        model_manager.load()
+                    except:
+                        pass
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Failed to load Judge model: {str(load_error)}. Try increasing system virtual memory (see INCREASE_VIRTUAL_MEMORY.md) or use separate services."
+                )
+        
+        # Build context
+        context = {}
+        if request.role:
+            context["role"] = request.role
+        if request.level:
+            context["level"] = request.level
+        if request.competency:
+            context["competency"] = request.competency
+        if request.skills:
+            context["skills"] = request.skills
+        
+        # Evaluate answer
+        evaluation = answer_evaluator.evaluate(
+            question=request.question,
+            answer=request.answer,
+            context=context if context else None,
+            custom_weights=request.custom_weights
+        )
+        
+        generation_time = time.time() - start_time
+        
+        logger.info(f"Da danh gia trong {generation_time:.2f}s - Final score: {evaluation['scores']['final']}")
+        logger.info(f"Feedback points: {len(evaluation['feedback'])}")
+        
+        return EvaluateAnswerResponse(
+            scores=evaluation["scores"],
+            feedback=evaluation["feedback"],
+            improved_answer=evaluation["improved_answer"],
+            generation_time=round(generation_time, 2)
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except RuntimeError as e:
+        logger.error(f"Runtime error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Judge model runtime error: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to evaluate answer: {str(e)}"
+        )
+
+
 @router.post("/api/v1/generate-question", response_model=GenerateQuestionResponse)
 async def generate_question(request: GenerateQuestionRequest):
     """
@@ -129,6 +232,11 @@ async def generate_question(request: GenerateQuestionRequest):
                 detail="AI model is not ready. Please try again later."
             )
         
+        # Override max_tokens if too low for greeting + question
+        actual_max_tokens = max(request.max_tokens, MAX_TOKENS_DEFAULT)
+        if actual_max_tokens != request.max_tokens:
+            logger.info(f"Override max_tokens: {request.max_tokens} -> {actual_max_tokens} (need space for greeting)")
+        
         # Tạo câu hỏi với ngữ cảnh hội thoại
         question, actual_temperature = question_generator.generate(
             cv_text=request.cv_text,
@@ -139,7 +247,7 @@ async def generate_question(request: GenerateQuestionRequest):
             previous_question=request.previous_question,
             previous_answer=request.previous_answer,
             conversation_history=request.conversation_history,
-            max_tokens=request.max_tokens,
+            max_tokens=actual_max_tokens,
             temperature=request.temperature
         )
         
