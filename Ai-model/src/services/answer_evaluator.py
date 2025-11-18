@@ -24,19 +24,40 @@ DEFAULT_WEIGHTS = {
 JUDGE_TEMPERATURE = 0.3
 JUDGE_MAX_TOKENS = 512  
 
-# Judge prompt template (optimized for speed - shorter prompt)
-JUDGE_SYSTEM_PROMPT = """Evaluate technical interview answer. Score 0.0-1.0 on:
-1. Correctness (30%): Technical accuracy
-2. Coverage (25%): Completeness
-3. Depth (20%): Detail level
-4. Clarity (15%): Clear explanation
-5. Practicality (10%): Real-world application
+# Judge prompt template
+JUDGE_SYSTEM_PROMPT = """You are an expert technical interviewer evaluating candidate answers.
 
-Output JSON:
+Your task is to evaluate the answer based on these dimensions:
+1. **Correctness** (30%): Technical accuracy and proper understanding
+2. **Coverage** (25%): How completely the answer addresses the question
+3. **Depth** (20%): Level of detail and technical depth shown
+4. **Clarity** (15%): How clear and well-structured the explanation is
+5. **Practicality** (10%): Real-world applicability and practical insights
+
+For each dimension, provide:
+- A score from 0.0 to 1.0 (2 decimal places)
+- Specific feedback explaining the score
+
+Also provide:
+- 3-5 bullet points of actionable feedback
+- An improved version of the answer (if score < 0.8)
+
+Output MUST be valid JSON with this exact structure:
 {
-  "scores": {"correctness": 0.75, "coverage": 0.70, "depth": 0.65, "clarity": 0.80, "practicality": 0.60, "final": 0.71},
-  "feedback": ["Point 1", "Point 2", "Point 3"],
-  "improved_answer": "Better version..."
+  "scores": {
+    "correctness": 0.75,
+    "coverage": 0.70,
+    "depth": 0.65,
+    "clarity": 0.80,
+    "practicality": 0.60,
+    "final": 0.71
+  },
+  "feedback": [
+    "Strong point: Clear explanation of core concepts",
+    "Improvement needed: Add concrete code examples",
+    "Missing: Discussion of edge cases and error handling"
+  ],
+  "improved_answer": "A comprehensive answer that addresses all points..."
 }"""
 
 
@@ -69,11 +90,15 @@ class AnswerEvaluator:
         
         context_str = " | ".join(context_parts) if context_parts else "General technical interview"
         
-        user_prompt = f"""Context: {context_str}
-Q: {question}
-A: {answer}
+        user_prompt = f"""Evaluate this interview answer:
 
-Evaluate in JSON."""
+**Context**: {context_str}
+
+**Question**: {question}
+
+**Candidate's Answer**: {answer}
+
+Provide evaluation in JSON format with scores (0.0-1.0), feedback points, and improved answer."""
         
         return f"<|system|>\n{JUDGE_SYSTEM_PROMPT}\n<|user|>\n{user_prompt}\n<|assistant|>\n"
     
@@ -252,10 +277,12 @@ Evaluate in JSON."""
                 outputs = model.generate(
                     **inputs,
                     max_new_tokens=JUDGE_MAX_TOKENS,
-                    do_sample=False,  # Greedy decoding - 2-3x faster than sampling
+                    do_sample=True,
+                    temperature=JUDGE_TEMPERATURE,
+                    top_p=0.95,
+                    repetition_penalty=1.1,
                     pad_token_id=tokenizer.eos_token_id,
-                    eos_token_id=tokenizer.eos_token_id,
-                    use_cache=True  # Enable KV cache for faster generation
+                    eos_token_id=tokenizer.eos_token_id
                 )
             
             gen_time = time.time() - gen_start
