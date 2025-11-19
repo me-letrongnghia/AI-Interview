@@ -62,6 +62,13 @@ public class InterviewService {
         answer.setContent(answerMessage.getContent());
         InterviewAnswer savedAnswer = answerRepository.save(answer);
 
+        // Eager fetch skills BEFORE async to avoid LazyInitializationException
+        List<String> skills = session.getSkill();  // Force Hibernate to load collection NOW
+        String role = session.getRole();
+        String level = session.getLevel();
+        String questionContent = question.getContent();
+        String answerContent = answerMessage.getContent();
+        
         // Chạy async để không block việc tạo câu hỏi tiếp theo
         CompletableFuture.runAsync(() -> {
             try {
@@ -70,12 +77,12 @@ public class InterviewService {
                 // Use new AnswerEvaluationService which integrates Judge AI + Gemini
                 AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
                         savedAnswer.getId(),
-                        question.getContent(),
-                        answerMessage.getContent(),
-                        session.getRole(),
-                        session.getLevel(),
-                        extractMainCompetency(session.getSkill()),
-                        session.getSkill());
+                        questionContent,
+                        answerContent,
+                        role,
+                        level,
+                        extractMainCompetency(skills),
+                        skills);
 
                 answerFeedback.setCreatedAt(LocalDateTime.now());
                 answerFeedbackRepository.save(answerFeedback);
@@ -217,6 +224,13 @@ public class InterviewService {
 
         log.info("Saved last answer {} for session {}", savedAnswer.getId(), sessionId);
 
+        // Eager fetch skills BEFORE async to avoid LazyInitializationException
+        List<String> skills = session.getSkill();
+        String role = session.getRole();
+        String level = session.getLevel();
+        String questionContent = question.getContent();
+        String answerContent = answerMessage.getContent();
+
         CompletableFuture.runAsync(() -> {
             try {
                 log.info("Generating feedback for last answer {} in background", savedAnswer.getId());
@@ -224,12 +238,12 @@ public class InterviewService {
                 // Use new AnswerEvaluationService which integrates Judge AI + Gemini
                 AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
                         savedAnswer.getId(),
-                        question.getContent(),
-                        answerMessage.getContent(),
-                        session.getRole(),
-                        session.getLevel(),
-                        extractMainCompetency(session.getSkill()),
-                        session.getSkill());
+                        questionContent,
+                        answerContent,
+                        role,
+                        level,
+                        extractMainCompetency(skills),
+                        skills);
 
                 answerFeedback.setCreatedAt(LocalDateTime.now());
                 answerFeedbackRepository.save(answerFeedback);

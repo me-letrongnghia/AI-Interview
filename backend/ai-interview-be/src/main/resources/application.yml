@@ -41,7 +41,7 @@ gemini:
 genq:
   service:
     url: ${GENQ_SERVICE_URL:http://localhost:8000}
-    timeout: ${GENQ_SERVICE_TIMEOUT:30}
+    timeout: ${GENQ_SERVICE_TIMEOUT:60}  # Increased to 60s (GenQ can take 37-40s)
     enabled: ${GENQ_SERVICE_ENABLED:true}
 
 # Judge Service Configuration
