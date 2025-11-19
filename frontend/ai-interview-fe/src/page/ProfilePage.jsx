@@ -8,7 +8,7 @@ import { UseAppContext } from "../context/AppContext";
 import { Link } from "react-router-dom";
 
 export default function ProfilePage() {
-  const { setUserProfile } = UseAppContext();
+  const { setUserProfile, userProfile } = UseAppContext();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState({
@@ -17,6 +17,7 @@ export default function ProfilePage() {
     picture: null,
     countSession: 0,
     totalDuration: 0,
+    totalQuestion: 0,
   });
   const [editedProfile, setEditedProfile] = useState({
     email: "",
@@ -40,9 +41,12 @@ export default function ProfilePage() {
       const profileData = {
         email: response.data.email || "",
         fullName: response.data.fullName || "",
-        picture: response.data.picture || null,
+        picture: userProfile.picture || null,
         countSession: response.data.countSession || 0,
+        totalDuration: response.data.totalDuration || 0,
+        totalQuestion: response.data.totalQuestion || 0,
       };
+      console.log("Fetched profile data:", profileData);
       setProfile(profileData);
       setEditedProfile(profileData);
     } catch (error) {
@@ -52,7 +56,7 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
-
+  console.log("totalDrution", profile.totalDuration);
   const handleEdit = () => {
     setIsEditing(true);
     setEditedProfile(profile);
@@ -60,6 +64,18 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
+      // Validate fullName
+      const trimmedFullName = editedProfile.fullName.trim();
+      if (!trimmedFullName) {
+        toast.error("Họ và tên không được để trống!");
+        return;
+      }
+
+      if (trimmedFullName.length < 2) {
+        toast.error("Họ và tên phải có ít nhất 2 ký tự!");
+        return;
+      }
+
       let pictureUrl = editedProfile.picture;
 
       // Nếu có file ảnh mới, upload lên Cloudinary trước
@@ -73,7 +89,7 @@ export default function ProfilePage() {
 
       // Sau đó cập nhật thông tin profile
       const response = await UserApi.Update_Picture({
-        fullName: editedProfile.fullName,
+        fullName: trimmedFullName,
         pictureUrl: pictureUrl,
       });
       const updatedProfileData = {
@@ -81,6 +97,8 @@ export default function ProfilePage() {
         fullName: response.data.fullName,
         picture: response.data.picture,
         countSession: response.data.countSession || profile.countSession,
+        totalDuration: response.data.totalDuration || profile.totalDuration,
+        totalQuestion: response.data.totalQuestion || profile.totalQuestion,
       };
 
       setProfile(updatedProfileData);
@@ -104,6 +122,12 @@ export default function ProfilePage() {
   };
 
   const handleChange = (field, value) => {
+    if (field === "fullName") {
+      // Không cho phép nhập toàn khoảng trắng
+      if (value && !value.trim() && value.length > 0) {
+        return;
+      }
+    }
     setEditedProfile((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -318,18 +342,19 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Additional Info */}
           {!isEditing && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Success Rate</p>
-                  <p className="text-2xl font-bold text-blue-600">85%</p>
+                  <p className="text-sm text-gray-600 mb-1">Total Question</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {profile.totalQuestion}
+                  </p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Total Hours</p>
+                  <p className="text-sm text-gray-600 mb-1">Total Minutes</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    {Math.floor(profile.totalDuration / 60)}h
+                    {profile.totalDuration}m
                   </p>
                 </div>
               </div>

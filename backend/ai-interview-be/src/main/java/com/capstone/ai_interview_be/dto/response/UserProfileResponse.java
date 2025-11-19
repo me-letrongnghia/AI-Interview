@@ -14,9 +14,10 @@ public class UserProfileResponse {
     private String level;
     private Long countSession;
     private Long totalDuration;
+    private Long totalQuestion;
     public UserProfileResponse() {
     }
-    public UserProfileResponse(String refresh_token, String access_token, Long id, String email, String fullName, String picture, String role, String level,Long countSession, Long totalDuration) {
+    public UserProfileResponse(String refresh_token, String access_token, Long id, String email, String fullName, String picture, String role, String level,Long countSession, Long totalDuration, Long totalQuestion) {
         this.refresh_token = refresh_token;
         this.access_token = access_token;
         this.id = id;
@@ -27,6 +28,7 @@ public class UserProfileResponse {
         this.level = level;
         this.countSession = countSession;
         this.totalDuration = totalDuration;
+        this.totalQuestion = totalQuestion;
     }
     public String getAccess_token() {
         return access_token;
@@ -87,5 +89,11 @@ public class UserProfileResponse {
     }
     public void setTotalDuration(Long totalDuration) {
         this.totalDuration = totalDuration;
+    }
+    public Long getTotalQuestion() {
+        return totalQuestion;
+    }
+    public void setTotalQuestion(Long totalQuestion) {
+        this.totalQuestion = totalQuestion;
     }
 }
