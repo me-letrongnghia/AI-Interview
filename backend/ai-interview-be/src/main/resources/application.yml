@@ -44,6 +44,13 @@ genq:
     timeout: ${GENQ_SERVICE_TIMEOUT:30}
     enabled: ${GENQ_SERVICE_ENABLED:true}
 
+# Judge Service Configuration
+judge:
+  service:
+    url: ${JUDGE_SERVICE_URL:http://localhost:8001}
+    timeout: ${JUDGE_SERVICE_TIMEOUT:60}
+    enabled: ${JUDGE_SERVICE_ENABLED:true}
+
 # JWT Configuration
 setTime:
   accessToken: 2 # hours

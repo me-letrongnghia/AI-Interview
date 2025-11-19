@@ -37,6 +37,7 @@ public class InterviewService {
     private final ConversationEntryRepository conversationRepository;
     private final AIService aiService;
     private final ConversationService conversationService;
+    private final AnswerEvaluationService answerEvaluationService;
     private final ObjectMapper objectMapper;
     
     // Phương thức để xử lý câu trả lời và tạo câu hỏi tiếp theo
@@ -66,21 +67,21 @@ public class InterviewService {
             try {
                 log.info("Generating feedback for answer {} in background", savedAnswer.getId());
 
-                AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
+                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
+                AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
+                        savedAnswer.getId(),
                         question.getContent(),
                         answerMessage.getContent(),
                         session.getRole(),
-                        session.getLevel());
+                        session.getLevel(),
+                        extractMainCompetency(session.getSkill()),
+                        session.getSkill());
 
-                // Lưu vào DB
-                AnswerFeedback answerFeedback = new AnswerFeedback();
-                answerFeedback.setAnswerId(savedAnswer.getId());
-                answerFeedback.setFeedbackText(feedbackData.getFeedback());
-                answerFeedback.setSampleAnswer(feedbackData.getSampleAnswer());
                 answerFeedback.setCreatedAt(LocalDateTime.now());
                 answerFeedbackRepository.save(answerFeedback);
 
-                log.info("Feedback generated and saved for answer {}", savedAnswer.getId());
+                log.info("Feedback generated and saved for answer {} with final score: {}", 
+                        savedAnswer.getId(), answerFeedback.getScoreFinal());
 
             } catch (Exception e) {
                 log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
@@ -220,20 +221,21 @@ public class InterviewService {
             try {
                 log.info("Generating feedback for last answer {} in background", savedAnswer.getId());
 
-                AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
+                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
+                AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
+                        savedAnswer.getId(),
                         question.getContent(),
                         answerMessage.getContent(),
                         session.getRole(),
-                        session.getLevel());
+                        session.getLevel(),
+                        extractMainCompetency(session.getSkill()),
+                        session.getSkill());
 
-                AnswerFeedback answerFeedback = new AnswerFeedback();
-                answerFeedback.setAnswerId(savedAnswer.getId());
-                answerFeedback.setFeedbackText(feedbackData.getFeedback());
-                answerFeedback.setSampleAnswer(feedbackData.getSampleAnswer());
                 answerFeedback.setCreatedAt(LocalDateTime.now());
                 answerFeedbackRepository.save(answerFeedback);
 
-                log.info("Feedback generated and saved for last answer {}", savedAnswer.getId());
+                log.info("Feedback generated and saved for last answer {} with final score: {}", 
+                        savedAnswer.getId(), answerFeedback.getScoreFinal());
 
             } catch (Exception e) {
                 log.error("Error generating feedback for last answer {}", savedAnswer.getId(), e);
@@ -246,5 +248,16 @@ public class InterviewService {
                 answerMessage.getContent());
 
         log.info("Completed processing last answer for session {}", sessionId);
+    }
+    
+    /**
+     * Extract main competency from skills list
+     * Returns first skill if available, or empty string
+     */
+    private String extractMainCompetency(List<String> skills) {
+        if (skills != null && !skills.isEmpty()) {
+            return skills.get(0);
+        }
+        return "";
     }
 }

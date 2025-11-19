@@ -56,5 +56,14 @@ public class InterviewFeedbackResponse {
         private String userAnswer;
         private String feedback;
         private String sampleAnswer;
+        
+        // Judge AI evaluation scores
+        private Double scoreCorrectness;
+        private Double scoreCoverage;
+        private Double scoreDepth;
+        private Double scoreClarity;
+        private Double scorePracticality;
+        private Double scoreFinal;
+        private String improvedAnswer;
     }
 }

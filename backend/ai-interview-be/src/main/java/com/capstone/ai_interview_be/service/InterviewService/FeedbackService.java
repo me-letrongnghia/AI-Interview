@@ -75,13 +75,26 @@ public class FeedbackService {
                 
                 if (answerFeedback != null) {
                     try {
+                        // Ưu tiên improvedAnswer từ Judge AI, fallback sang sampleAnswer từ Gemini
+                        String bestAnswer = answerFeedback.getImprovedAnswer() != null && !answerFeedback.getImprovedAnswer().isEmpty()
+                            ? answerFeedback.getImprovedAnswer()
+                            : answerFeedback.getSampleAnswer();
+                        
                         qaFeedbacks.add(QuestionAnswerFeedback.builder()
                             .questionId(entry.getQuestionId())
                             .question(entry.getQuestionContent())
                             .answerId(entry.getAnswerId())
                             .userAnswer(entry.getAnswerContent())
                             .feedback(answerFeedback.getFeedbackText())
-                            .sampleAnswer(answerFeedback.getSampleAnswer())
+                            .sampleAnswer(bestAnswer)  // Best answer: Judge AI improvedAnswer > Gemini sampleAnswer
+                            // Judge AI scores (null nếu Judge AI chưa chạy)
+                            .scoreCorrectness(answerFeedback.getScoreCorrectness())
+                            .scoreCoverage(answerFeedback.getScoreCoverage())
+                            .scoreDepth(answerFeedback.getScoreDepth())
+                            .scoreClarity(answerFeedback.getScoreClarity())
+                            .scorePracticality(answerFeedback.getScorePracticality())
+                            .scoreFinal(answerFeedback.getScoreFinal())
+                            .improvedAnswer(answerFeedback.getImprovedAnswer())  // Judge AI improved answer (có thể null)
                             .build());
                     } catch (Exception e) {
                         log.error("Error parsing criteria scores for answer {}", entry.getAnswerId(), e);
@@ -166,13 +179,26 @@ public class FeedbackService {
                 
                 if (answerFeedback != null) {
                     try {
+                        // Ưu tiên improvedAnswer từ Judge AI, fallback sang sampleAnswer từ Gemini
+                        String bestAnswer = answerFeedback.getImprovedAnswer() != null && !answerFeedback.getImprovedAnswer().isEmpty()
+                            ? answerFeedback.getImprovedAnswer()
+                            : answerFeedback.getSampleAnswer();
+                        
                         qaFeedbacks.add(QuestionAnswerFeedback.builder()
                             .questionId(entry.getQuestionId())
                             .question(entry.getQuestionContent())
                             .answerId(entry.getAnswerId())
                             .userAnswer(entry.getAnswerContent())
                             .feedback(answerFeedback.getFeedbackText())
-                            .sampleAnswer(answerFeedback.getSampleAnswer())
+                            .sampleAnswer(bestAnswer)  // Best answer: Judge AI improvedAnswer > Gemini sampleAnswer
+                            // Judge AI scores (null nếu Judge AI chưa chạy)
+                            .scoreCorrectness(answerFeedback.getScoreCorrectness())
+                            .scoreCoverage(answerFeedback.getScoreCoverage())
+                            .scoreDepth(answerFeedback.getScoreDepth())
+                            .scoreClarity(answerFeedback.getScoreClarity())
+                            .scorePracticality(answerFeedback.getScorePracticality())
+                            .scoreFinal(answerFeedback.getScoreFinal())
+                            .improvedAnswer(answerFeedback.getImprovedAnswer())  // Judge AI improved answer (có thể null)
                             .build());
                     } catch (Exception e) {
                         log.error("Error parsing criteria scores for answer {}", entry.getAnswerId(), e);
