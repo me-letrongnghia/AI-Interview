@@ -645,11 +645,10 @@ export default function InterviewInterface() {
   const [isPracticeSession, setIsPracticeSession] = useState(false);
   const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
 
-  // Interview config based on level - default to intern
-  const [interviewConfig, setInterviewConfig] = useState({
-    minutes: 15,
-    maxQuestions: 10,
-  });
+  // Interview config based on level - wait for API response before setting
+  const [interviewConfig, setInterviewConfig] = useState(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [timerConfig, setTimerConfig] = useState({ minutes: 0, seconds: 0 });
 
   const handleToggleCamera = useCallback(() => {
     if (!streamRef.current) {
@@ -805,10 +804,10 @@ export default function InterviewInterface() {
     navigate(`/feedback/${sessionId}`);
   }, [navigate, stopSpeaking, isRecording, stopListening, sessionId]);
 
-  // Timer with dynamic initial values
+  // Timer with dynamic initial values from timerConfig
   const timerDisplay = useTimer(
-    interviewConfig.minutes,
-    0,
+    timerConfig.minutes,
+    timerConfig.seconds,
     isRunning,
     useCallback(() => {
       setIsRunning(false);
@@ -983,7 +982,7 @@ export default function InterviewInterface() {
               const aiQuestionCount = newHistory.filter(
                 (m) => m.type === "ai" && !m.isSystemMessage
               ).length;
-              if (aiQuestionCount >= interviewConfig.maxQuestions) {
+              if (interviewConfig && aiQuestionCount >= interviewConfig.maxQuestions) {
                 toast.warning(
                   `Reached maximum ${interviewConfig.maxQuestions} questions! Ending interview...`
                 );
@@ -1002,7 +1001,7 @@ export default function InterviewInterface() {
           break;
       }
     },
-    [speak, setIsLoading, interviewConfig.maxQuestions, handleLeaveRoom]
+    [speak, setIsLoading, interviewConfig, handleLeaveRoom]
   );
 
   // Initialize interview session
@@ -1024,56 +1023,91 @@ export default function InterviewInterface() {
         if (sessionResponse && sessionResponse.data) {
           const sessionData = sessionResponse.data;
 
-          // Check if this is a practice session - NEW
+          // Check if this is a practice session
           setIsPracticeSession(Boolean(sessionData.isPractice));
           if (sessionData.isPractice) {
             console.log("🔄 Practice mode detected!");
           }
 
-          // Use duration and questionCount from user selection
+          // Determine config
+          let config;
           if (sessionData.duration && sessionData.questionCount) {
-            const config = {
+            config = {
               minutes: sessionData.duration,
               maxQuestions: sessionData.questionCount,
             };
-            setInterviewConfig(config);
             console.log(
               `✅ Interview configured from user selection: ${config.minutes}min, ${config.maxQuestions} questions`
             );
           } else if (sessionData.level) {
-            // Fallback to level-based config if no duration/questionCount
             console.warn(
               "⚠️ No duration/questionCount, falling back to level-based config"
             );
-            const level = sessionData.level;
-            const config = getInterviewConfig(level);
-            setInterviewConfig(config);
+            config = getInterviewConfig(sessionData.level);
             console.log(
-              `✅ Interview configured for ${level}: ${config.minutes}min, ${config.maxQuestions} questions`
+              `✅ Interview configured for ${sessionData.level}: ${config.minutes}min, ${config.maxQuestions} questions`
             );
           } else {
             console.warn("⚠️ No config data, using default intern config");
-            const defaultConfig = getInterviewConfig("intern");
-            setInterviewConfig(defaultConfig);
+            config = getInterviewConfig("intern");
           }
 
-          // Auto-start timer after config is loaded
+          // Calculate remaining time from startedAt and elapsedSeconds
+          let remainingMinutes = config.minutes;
+          let remainingSeconds = 0;
+
+          if (sessionData.startedAt && sessionData.elapsedSeconds > 0) {
+            // Timer already started (reload case)
+            const totalSeconds = config.minutes * 60;
+            const remainingTotalSeconds = Math.max(
+              0,
+              totalSeconds - sessionData.elapsedSeconds
+            );
+            remainingMinutes = Math.floor(remainingTotalSeconds / 60);
+            remainingSeconds = remainingTotalSeconds % 60;
+
+            console.log(
+              `⏱️ Reload detected - Started at: ${sessionData.startedAt}, Elapsed: ${sessionData.elapsedSeconds}s, Remaining: ${remainingMinutes}m ${remainingSeconds}s`
+            );
+          } else {
+            // First time - start timer
+            console.log("🚀 First time - Starting timer now");
+
+            ApiInterviews.startTimer(sessionId)
+              .then(() => {
+                console.log("✅ Timer started on backend");
+              })
+              .catch((err) => {
+                console.warn("⚠️ Could not start timer:", err);
+              });
+          }
+
+          // Set configs
+          setInterviewConfig(config);
+          setTimerConfig({ minutes: remainingMinutes, seconds: remainingSeconds });
+          setConfigLoaded(true);
+
+          // Start timer after config is loaded
           setIsRunning(true);
         } else {
           console.warn("⚠️ No session data, using default intern config");
           const defaultConfig = getInterviewConfig("intern");
           setInterviewConfig(defaultConfig);
+          setTimerConfig({ minutes: defaultConfig.minutes, seconds: 0 });
+          setConfigLoaded(true);
           setIsRunning(true);
         }
       })
       .catch((err) => {
         console.warn(
-          "⚠️ Could not fetch session info (API may not exist):",
+          "⚠️ Could not fetch session info:",
           err.message
         );
-        // Fallback: Use intern config and start timer
+        // Fallback: Use intern config
         const defaultConfig = getInterviewConfig("intern");
         setInterviewConfig(defaultConfig);
+        setTimerConfig({ minutes: defaultConfig.minutes, seconds: 0 });
+        setConfigLoaded(true);
         console.log("🔄 Using fallback intern config:", defaultConfig);
         setIsRunning(true);
       })
@@ -1254,6 +1288,12 @@ export default function InterviewInterface() {
   const sendMessage = useCallback(() => {
     if (!chatInput.trim()) return;
 
+    // Don't allow sending if config not loaded yet
+    if (!interviewConfig) {
+      console.warn("⚠️ Interview config not loaded yet");
+      return;
+    }
+
     // Don't allow sending if loading or no question ID yet
     if (isLoading) {
       toast.warn("AI is still processing. Please wait.");
@@ -1284,12 +1324,13 @@ export default function InterviewInterface() {
     const currentAnsweredCount = chatHistory.filter(
       (m) => m.type === "user"
     ).length;
-    const willBeLastAnswer =
-      currentAnsweredCount + 1 >= interviewConfig.maxQuestions;
+    const willBeLastAnswer = interviewConfig
+      ? currentAnsweredCount + 1 >= interviewConfig.maxQuestions
+      : false;
 
     console.log(
       `📊 Answering question ${currentAnsweredCount + 1}/${
-        interviewConfig.maxQuestions
+        interviewConfig?.maxQuestions || 0
       }`
     );
 
@@ -1304,7 +1345,7 @@ export default function InterviewInterface() {
 
         const congratsMessage = {
           type: "ai",
-          text: `🎉 Congratulations! You've successfully completed all ${interviewConfig.maxQuestions} questions. Thank you for your participation. The interview will end shortly...`,
+          text: `🎉 Congratulations! You've successfully completed all ${interviewConfig?.maxQuestions || 0} questions. Thank you for your participation. The interview will end shortly...`,
           time: formatTime(new Date()),
           id: `congrats-${Date.now()}`,
           isSystemMessage: true, // NEW: Mark as system message to exclude from count
@@ -1319,7 +1360,7 @@ export default function InterviewInterface() {
 
         // Show toast
         toast.success(
-          `You've completed all ${interviewConfig.maxQuestions} questions! Great job!`
+          `You've completed all ${interviewConfig?.maxQuestions || 0} questions! Great job!`
         );
 
         // Calculate speaking time (roughly 150 words per minute = 2.5 words per second)
@@ -1394,7 +1435,7 @@ export default function InterviewInterface() {
     resetTranscript,
     isLoading,
     handleSocketMessage,
-    interviewConfig.maxQuestions,
+    interviewConfig,
     handleLeaveRoom,
     speak,
     chatHistory,
@@ -1500,6 +1541,21 @@ export default function InterviewInterface() {
       }
     };
   }, []); // Empty dependency - only runs on mount/unmount
+
+  // Show loading screen until config is loaded
+  if (!configLoaded || !interviewConfig) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+          <p className="text-lg font-semibold text-gray-700">
+            Loading interview configuration...
+          </p>
+          <p className="text-sm text-gray-500 mt-2">Please wait...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <InterviewUI

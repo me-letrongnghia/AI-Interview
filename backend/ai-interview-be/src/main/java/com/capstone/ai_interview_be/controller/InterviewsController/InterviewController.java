@@ -126,6 +126,20 @@ public class InterviewController {
 
         InterviewSession session = sessionService.getSessionById(sessionId);
 
+        // Calculate elapsed time from startedAt
+        Integer totalElapsedSeconds = 0;
+        if (session.getStartedAt() != null) {
+            long elapsedFromStart = java.time.Duration.between(
+                session.getStartedAt(),
+                java.time.LocalDateTime.now()
+            ).getSeconds();
+            
+            totalElapsedSeconds = (int) elapsedFromStart;
+            
+            log.info("Session {} started at {}, elapsed: {}s", 
+                sessionId, session.getStartedAt(), totalElapsedSeconds);
+        }
+
         // Map to DTO response
         InterviewSessionInfoResponse response =
                 InterviewSessionInfoResponse.builder()
@@ -143,10 +157,41 @@ public class InterviewController {
             .updatedAt(session.getUpdatedAt())
             .duration(session.getDuration())
             .questionCount(session.getQuestionCount())
+            .startedAt(session.getStartedAt())
+            .elapsedSeconds(totalElapsedSeconds)
             .build();
         
         return ResponseEntity.ok(response);
     }
+
+    // Start timer when user enters InterviewPage (only sets once)
+    @PostMapping("/sessions/{sessionId}/start-timer")
+    public ResponseEntity<Map<String, Object>> startTimer(@PathVariable Long sessionId) {
+        try {
+            InterviewSession session = sessionService.getSessionById(sessionId);
+            
+            // Only set startedAt if not already set (first time)
+            if (session.getStartedAt() == null) {
+                session.setStartedAt(java.time.LocalDateTime.now());
+                sessionService.updateSession(session);
+                log.info("Timer started for session {} at {}", 
+                    sessionId, session.getStartedAt());
+            } else {
+                log.info("Timer already started for session {} at {}", 
+                    sessionId, session.getStartedAt());
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Timer started",
+                "startedAt", session.getStartedAt().toString()
+            ));
+        } catch (Exception e) {
+            log.error("Error starting timer: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     private ChatMessageDTO createQuestionMessage(InterviewQuestion question, Long sessionId) {
         ChatMessageDTO message = new ChatMessageDTO();
         message.setId("q-" + question.getId());

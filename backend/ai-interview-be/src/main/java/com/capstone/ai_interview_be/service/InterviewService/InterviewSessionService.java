@@ -148,6 +148,14 @@ public class InterviewSessionService {
         sessionRepository.save(session);
         log.info("Session status updated successfully");
     }
+
+    // Update session entity (for updating startedAt and other fields)
+    @Transactional
+    public void updateSession(InterviewSession session) {
+        log.info("Updating session: {}", session.getId());
+        session.setUpdatedAt(java.time.LocalDateTime.now());
+        sessionRepository.save(session);
+    }
     
     // Xóa session theo ID và tất cả dữ liệu liên quan
     @Transactional

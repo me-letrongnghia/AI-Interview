@@ -30,4 +30,6 @@ public class InterviewSessionInfoResponse {
     private Boolean isPractice;
     private Long originalSessionId;
     private Long feedbackId;
+    private LocalDateTime startedAt;
+    private Integer elapsedSeconds;
 }

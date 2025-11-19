@@ -69,8 +69,12 @@ public class InterviewSession {
 
     @Column(name = "original_session_id")
     private Long originalSessionId;
+    
     @Column(name = "feedback_id")
     private Long feedbackId;
+    
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
