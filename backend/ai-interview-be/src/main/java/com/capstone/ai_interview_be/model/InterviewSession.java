@@ -24,6 +24,20 @@ public class InterviewSession {
     
     @Column(name = "user_id")
     private Long userId;
+    
+    // Relationships
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private UserEntity user;
+    
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<InterviewQuestion> questions;
+    
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ConversationEntry> conversationEntries;
+    
+    @OneToOne(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private InterviewFeedback feedback;
 
     private String role;
 

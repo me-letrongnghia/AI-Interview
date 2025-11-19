@@ -1,11 +1,7 @@
 package com.capstone.ai_interview_be.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import java.util.List;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
@@ -26,6 +22,13 @@ public class UserEntity {
     private String picture;
     @Column(name = "enabled", nullable = false)
     private boolean enabled = false; // false khi mới đăng ký
+    
+    // Relationships
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<InterviewSession> interviewSessions;
+    
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private VerifyCodeEntity verifyCode;
     public UserEntity() {
     }
     public UserEntity(Long id, String email, String password, String fullName, String role, String picture, boolean enabled) {

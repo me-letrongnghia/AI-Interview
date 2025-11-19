@@ -2,12 +2,7 @@ package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,6 +19,10 @@ public class InterviewFeedback {
     
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", insertable = false, updatable = false)
+    private InterviewSession session;
     
     @Column(name = "overview", columnDefinition = "TEXT")
     private String overview;

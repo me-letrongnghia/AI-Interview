@@ -39,7 +39,6 @@ public class FeedbackController {
                 InterviewFeedbackResponse feedback = feedbackService.generateSessionFeedback(sessionId);
                 return ResponseEntity.ok(feedback);
             }
-            // Re-throw other exceptions
             throw e;
         }
     }

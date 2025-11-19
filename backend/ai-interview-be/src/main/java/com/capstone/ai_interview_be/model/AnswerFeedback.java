@@ -4,12 +4,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedDate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +21,10 @@ public class AnswerFeedback {
     
     @Column(name = "answer_id", nullable = false)
     private Long answerId;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "answer_id", insertable = false, updatable = false)
+    private InterviewAnswer answer;
     
     @Column(name = "feedback_text", columnDefinition = "TEXT")
     private String feedbackText;
