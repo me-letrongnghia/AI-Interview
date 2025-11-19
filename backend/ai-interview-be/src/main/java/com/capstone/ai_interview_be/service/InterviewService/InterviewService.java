@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -63,7 +64,7 @@ public class InterviewService {
         InterviewAnswer savedAnswer = answerRepository.save(answer);
 
         // Eager fetch skills BEFORE async to avoid LazyInitializationException
-        List<String> skills = session.getSkill();  // Force Hibernate to load collection NOW
+        List<String> skills = new ArrayList<>(session.getSkill());  // Force Hibernate to initialize collection NOW
         String role = session.getRole();
         String level = session.getLevel();
         String questionContent = question.getContent();
@@ -225,7 +226,7 @@ public class InterviewService {
         log.info("Saved last answer {} for session {}", savedAnswer.getId(), sessionId);
 
         // Eager fetch skills BEFORE async to avoid LazyInitializationException
-        List<String> skills = session.getSkill();
+        List<String> skills = new ArrayList<>(session.getSkill());  // Force Hibernate to initialize collection NOW
         String role = session.getRole();
         String level = session.getLevel();
         String questionContent = question.getContent();
