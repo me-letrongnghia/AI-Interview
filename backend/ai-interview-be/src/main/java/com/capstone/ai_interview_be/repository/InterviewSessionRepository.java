@@ -45,4 +45,8 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     @Query("SELECT COALESCE(SUM(s.duration), 0) FROM InterviewSession s WHERE s.userId = :userId")
     Long sumDurationByUserId(@Param("userId") Long userId);
     
+    // Đếm tổng số câu hỏi theo userId từ trường question_count
+    @Query("SELECT COALESCE(SUM(s.questionCount), 0) FROM InterviewSession s WHERE s.userId = :userId")
+    Long sumQuestionCountByUserId(@Param("userId") Long userId);
+    
 }

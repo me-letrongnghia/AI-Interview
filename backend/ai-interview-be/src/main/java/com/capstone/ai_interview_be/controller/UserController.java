@@ -30,6 +30,7 @@ public class UserController {
         InterviewSession session = interviewSessionRepository.findLatestSessionWithCvByUserId(user.getId()).orElse(null);
         Long countSession = interviewSessionRepository.countByUserId(user.getId());
         Long totalDuration = interviewSessionRepository.sumDurationByUserId(user.getId());
+        Long totalQuestion = interviewSessionRepository.sumQuestionCountByUserId(user.getId());
         UserProfileResponse response = new UserProfileResponse();
         response.setId(user.getId());
         response.setEmail(user.getEmail());
@@ -39,6 +40,7 @@ public class UserController {
         response.setPicture(user.getPicture());
         response.setCountSession(countSession);
         response.setTotalDuration(totalDuration);
+        response.setTotalQuestion(totalQuestion);
         return ResponseEntity.ok(response);
     }
     @PutMapping("/update-picture")
