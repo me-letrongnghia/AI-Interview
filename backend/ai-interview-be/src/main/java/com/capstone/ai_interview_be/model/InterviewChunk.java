@@ -21,6 +21,11 @@ public class InterviewChunk {
     @Column(name = "question_id", nullable = false)
     private Long questionId;
     
+    // Relationships
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", insertable = false, updatable = false)
+    private InterviewQuestion question;
+    
     @Column(name = "chunk_order", nullable = false)
     private Integer chunkOrder;
     
@@ -29,10 +34,6 @@ public class InterviewChunk {
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "question_id", insertable = false, updatable = false)
-    private InterviewQuestion question;
     
     @PrePersist
     protected void onCreate() {

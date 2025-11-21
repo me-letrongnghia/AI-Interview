@@ -148,12 +148,45 @@ public class InterviewSessionService {
         sessionRepository.save(session);
         log.info("Session status updated successfully");
     }
+
+    // Update session entity (for updating startedAt and other fields)
+    @Transactional
+    public void updateSession(InterviewSession session) {
+        log.info("Updating session: {}", session.getId());
+        session.setUpdatedAt(java.time.LocalDateTime.now());
+        sessionRepository.save(session);
+    }
     
     // Xóa session theo ID và tất cả dữ liệu liên quan
     @Transactional
     public void deleteSession(Long sessionId) {
         log.info("Deleting sessionId: {} and all related data", sessionId);
         InterviewSession session = getSessionById(sessionId);
+        
+        // 0. Nếu đây là session gốc (không phải practice), xóa tất cả practice sessions của nó trước
+        if (!Boolean.TRUE.equals(session.getIsPractice())) {
+            log.info("This is an original session. Checking for practice sessions...");
+            java.util.List<InterviewSession> practiceSessions = 
+                sessionRepository.findByOriginalSessionIdOrderByCreatedAtDesc(sessionId);
+            if (!practiceSessions.isEmpty()) {
+                log.info("Found {} practice sessions to delete", practiceSessions.size());
+                for (InterviewSession practiceSession : practiceSessions) {
+                    log.info("Deleting practice session: {}", practiceSession.getId());
+                    deleteSingleSession(practiceSession);
+                }
+            }
+        }
+        
+        // Xóa session hiện tại (gốc hoặc practice)
+        deleteSingleSession(session);
+        
+        log.info("Session {} and all related data deleted successfully", sessionId);
+    }
+    
+    // Helper method để xóa một session cụ thể và dữ liệu liên quan
+    private void deleteSingleSession(InterviewSession session) {
+        Long sessionId = session.getId();
+        log.info("Deleting single session: {}", sessionId);
         
         // 1. Xóa feedback (nếu có)
         if (session.getFeedbackId() != null) {
@@ -191,7 +224,7 @@ public class InterviewSessionService {
         log.info("Deleting session: {}", sessionId);
         sessionRepository.delete(session);
         
-        log.info("Session {} and all related data deleted successfully", sessionId);
+        log.info("Single session {} deleted", sessionId);
     }
     
     // Lấy thống kê session cho user

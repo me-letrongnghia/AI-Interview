@@ -14,6 +14,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AboutPage } from "./page/AboutPage";
 import FeedbackPage from "./page/FeedbackPage";
 import HistoryPage from "./page/HistoryPage";
+import ProfilePage from "./page/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +38,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <OptionPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/profile",
+    element: (
+      <ProtectedRoute>
+        <ProfilePage />
       </ProtectedRoute>
     ),
   },

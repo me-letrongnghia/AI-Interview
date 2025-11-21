@@ -20,6 +20,10 @@ export const ApiInterviews = {
   submitAnswer: (sessionId, body) =>
     Https.post(`/api/interviews/${sessionId}/answers`, body),
 
+  // Start timer when user enters InterviewPage (only sets once)
+  startTimer: (sessionId) =>
+    Https.post(`/api/interviews/sessions/${sessionId}/start-timer`),
+
   // Legacy methods for backward compatibility
   Post_Interview: (body) => Https.post("/api/interviews/sessions", body),
 

@@ -187,8 +187,11 @@ export default function FeedbackPage() {
 
   if (loading)
     return (
-      <div className='min-h-screen flex items-center justify-center text-gray-600'>
-        Loading feedback...
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Đang tải...</p>
+        </div>
       </div>
     );
 
@@ -487,9 +490,12 @@ export default function FeedbackPage() {
               {showPracticeHistory && (
                 <div className="px-6 pb-6 border-t border-gray-200">
                   {loadingPractice ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
+                    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto"></div>
+                      <p className="mt-4 text-gray-600 font-medium">Đang tải...</p>
                     </div>
+                  </div>
                   ) : practiceSessions.length > 0 ? (
                     <div className="overflow-x-auto pb-4 pt-6">
                       <div className="flex gap-4 min-w-max">

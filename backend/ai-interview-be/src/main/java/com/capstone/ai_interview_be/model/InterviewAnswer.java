@@ -1,6 +1,7 @@
 package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,16 @@ public class InterviewAnswer {
     
     @Column(name = "question_id", nullable = false)
     private Long questionId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", insertable = false, updatable = false)
+    private InterviewQuestion question;
+    
+    @OneToOne(mappedBy = "answer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private AnswerFeedback answerFeedback;
+    
+    @OneToMany(mappedBy = "answer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ConversationEntry> conversationEntries;
     
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;

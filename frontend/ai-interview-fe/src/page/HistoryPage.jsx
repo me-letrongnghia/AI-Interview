@@ -261,25 +261,37 @@ const HistoryPage = () => {
                         >
                           <Trash2 size={18} />
                         </button>
-                        <button
-                          disabled={session.feedbackId == null}
-                          onClick={() => handleDetailClick(session.id)}
-                          className={`inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300
-                            ${
-                              session.feedbackId != null
-                                ? "text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-200 cursor-pointer"
-                                : "text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-70"
-                            }`}
-                        >
-                          <span>
-                            {session.feedbackId != null
-                              ? "View Details"
-                              : "Processing"}
-                          </span>
-                          {session.feedbackId != null && (
+                        
+                        {/* Show Continue Interview button for in_progress sessions */}
+                        {session.status === "in_progress" ? (
+                          <button
+                            onClick={() => navigate(`/interview/${session.id}`)}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:shadow-xl transition-all duration-300"
+                          >
+                            <span>Continue Interview</span>
                             <ChevronRight size={16} />
-                          )}
-                        </button>
+                          </button>
+                        ) : (
+                          <button
+                            disabled={session.feedbackId == null}
+                            onClick={() => handleDetailClick(session.id)}
+                            className={`inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300
+                              ${
+                                session.feedbackId != null
+                                  ? "text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-200 cursor-pointer"
+                                  : "text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-70"
+                              }`}
+                          >
+                            <span>
+                              {session.feedbackId != null
+                                ? "View Details"
+                                : "Processing"}
+                            </span>
+                            {session.feedbackId != null && (
+                              <ChevronRight size={16} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
 

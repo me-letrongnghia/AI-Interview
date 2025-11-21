@@ -29,6 +29,18 @@ public class ConversationEntry {
     @Column(name = "answer_id", nullable = true)
     private Long answerId;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", insertable = false, updatable = false)
+    private InterviewSession session;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", insertable = false, updatable = false)
+    private InterviewQuestion question;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "answer_id", insertable = false, updatable = false)
+    private InterviewAnswer answer;
+    
     @Column(name = "question_content", nullable = false, columnDefinition = "TEXT")
     private String questionContent;
     

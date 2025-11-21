@@ -22,4 +22,11 @@ public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer
     @Modifying
     @Query("DELETE FROM InterviewAnswer a WHERE a.questionId IN (SELECT q.id FROM InterviewQuestion q WHERE q.sessionId = :sessionId)")
     void deleteBySessionId(@Param("sessionId") Long sessionId);
+
+    /// Lấy tất cả answers của các questions trong một session
+    @Query("SELECT a FROM InterviewAnswer a " +
+           "WHERE a.questionId IN " +
+           "(SELECT q.id FROM InterviewQuestion q WHERE q.sessionId = :sessionId) " +
+           "ORDER BY a.createdAt ASC")
+    List<InterviewAnswer> findAnswersBySessionId(@Param("sessionId") Long sessionId);
 }

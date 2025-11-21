@@ -28,6 +28,10 @@ public class AnswerFeedback {
     @Column(name = "answer_id", nullable = false)
     private Long answerId;
     
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "answer_id", insertable = false, updatable = false)
+    private InterviewAnswer answer;
+    
     @Column(name = "feedback_text", columnDefinition = "TEXT")
     private String feedbackText;
     
