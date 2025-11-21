@@ -25,6 +25,12 @@ public class GenQService {
     
     @Value("${genq.service.timeout:30}")
     private int timeoutSeconds;
+
+    @Value("${genq.service.max-tokens:80}")
+    private int maxTokens;
+
+    @Value("${genq.service.temperature:0.7}")
+    private double temperature;
     
     // Cache health check result để tránh gọi quá nhiều
     private volatile boolean lastHealthCheckResult = false;
@@ -181,8 +187,9 @@ public class GenQService {
             requestBody.put("skills", skills != null ? skills : List.of());
             requestBody.put("previous_question", previousQuestion != null ? previousQuestion : "");
             requestBody.put("previous_answer", previousAnswer != null ? previousAnswer : "");
-            requestBody.put("max_tokens", 80);  // Tăng từ 48 lên 80 để câu hỏi tự nhiên hơn (15-30 words)
-            requestBody.put("temperature", 0.7);
+            requestBody.put("previous_answer", previousAnswer != null ? previousAnswer : "");
+            requestBody.put("max_tokens", maxTokens);
+            requestBody.put("temperature", temperature);
 
             if (cvText != null && !cvText.trim().isEmpty()) {
                 requestBody.put("cv_text", cvText);

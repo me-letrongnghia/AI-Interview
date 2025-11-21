@@ -12,11 +12,14 @@ from src.models.schemas import (
     InitialQuestionResponse,
     EvaluateAnswerRequest,
     EvaluateAnswerResponse,
+    EvaluateOverallFeedbackRequest,
+    EvaluateOverallFeedbackResponse,
     HealthResponse
 )
 from src.services.model_loader import model_manager, judge_model_manager
 from src.services.question_generator import question_generator
 from src.services.answer_evaluator import answer_evaluator
+from src.services.overall_feedback_evaluator import overall_feedback_evaluator
 from src.core.config import MODEL_PATH, JUDGE_MODEL_PATH, MAX_TOKENS_DEFAULT
 
 logger = logging.getLogger(__name__)
@@ -30,13 +33,20 @@ async def root():
     """Endpoint gốc"""
     return {
         "service": "AI Interview - GenQ & Judge Service",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "running",
         "endpoints": {
             "health": "/health",
             "initial": "/api/v1/initial-question",
             "generate": "/api/v1/generate-question",
-            "evaluate": "/api/v1/evaluate-answer"
+            "evaluate": "/api/v1/evaluate-answer",
+            "overall-feedback": "/api/v1/evaluate-overall-feedback"
+        },
+        "features": {
+            "question_generation": "GenQ model",
+            "answer_evaluation": "Judge AI model (primary)",
+            "overall_feedback": "Judge AI model (primary)",
+            "fallback": "Gemini (when Judge AI unavailable)"
         }
     }
 
@@ -283,4 +293,103 @@ async def generate_question(request: GenerateQuestionRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate question: {str(e)}"
+        )
+
+
+@router.post("/api/v1/evaluate-overall-feedback", response_model=EvaluateOverallFeedbackResponse)
+async def evaluate_overall_feedback_endpoint(request: EvaluateOverallFeedbackRequest):
+    """
+    Đánh giá overall feedback cho toàn bộ buổi phỏng vấn sử dụng Judge AI model
+    
+    - **conversation**: Danh sách các cặp Q&A với scores và feedback
+    - **role**: Vị trí ứng tuyển (VD: "Backend Developer")
+    - **seniority**: Cấp độ kinh nghiệm (VD: "Mid-level", "Senior")
+    - **skills**: Danh sách kỹ năng (VD: ["Java", "Spring Boot"])
+    
+    Trả về:
+    - **overview**: Rating tổng quan (EXCELLENT/GOOD/AVERAGE/BELOW AVERAGE/POOR)
+    - **assessment**: Đánh giá tổng quan chi tiết (4-6 câu)
+    - **strengths**: Danh sách điểm mạnh (2-5 items)
+    - **weaknesses**: Danh sách điểm yếu (2-4 items)
+    - **recommendations**: Khuyến nghị cải thiện
+    - **generation_time**: Thời gian đánh giá
+    """
+    try:
+        logger.info(f"Evaluating overall feedback for session - Role: {request.role}, Level: {request.seniority}, {len(request.conversation)} Q&A pairs")
+        
+        start_time = time.time()
+        
+        # Lazy load Judge model on first request
+        if not judge_model_manager.is_loaded():
+            logger.info("[Judge Overall] Loading model on first request...")
+            logger.info("[Judge Overall] Unloading GenQ model to free memory...")
+            try:
+                # Free memory by unloading GenQ model temporarily
+                if model_manager.is_loaded():
+                    model_manager.cleanup()
+                    logger.info("[Judge Overall] GenQ model unloaded, freed ~3GB RAM")
+                
+                # Now load Judge model
+                judge_model_manager.load()
+                logger.info("[Judge Overall] Model loaded successfully")
+            except Exception as load_error:
+                logger.error(f"[Judge Overall] Failed to load model: {load_error}")
+                # Try to reload GenQ model if Judge failed
+                if not model_manager.is_loaded():
+                    logger.info("[Judge Overall] Reloading GenQ model after failure...")
+                    try:
+                        model_manager.load()
+                    except:
+                        pass
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Failed to load Judge model: {str(load_error)}. Try increasing system virtual memory or use separate services."
+                )
+        
+        # Convert request conversation to expected format
+        conversation_data = []
+        for qa in request.conversation:
+            conversation_data.append({
+                "sequence_number": qa.sequence_number,
+                "question": qa.question,
+                "answer": qa.answer,
+                "scores": qa.scores,
+                "feedback": qa.feedback
+            })
+        
+        # Evaluate overall feedback using Judge AI
+        evaluation = overall_feedback_evaluator.evaluate_overall_feedback(
+            conversation=conversation_data,
+            role=request.role,
+            seniority=request.seniority,
+            skills=request.skills
+        )
+        
+        generation_time = time.time() - start_time
+        
+        logger.info(f"Overall feedback evaluation complete in {generation_time:.2f}s - Overview: {evaluation['overview']}")
+        
+        return EvaluateOverallFeedbackResponse(
+            overview=evaluation["overview"],
+            assessment=evaluation["assessment"],
+            strengths=evaluation["strengths"],
+            weaknesses=evaluation["weaknesses"],
+            recommendations=evaluation["recommendations"],
+            generation_time=round(generation_time, 2)
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except RuntimeError as e:
+        logger.error(f"Runtime error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Judge model runtime error: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to evaluate overall feedback: {str(e)}"
         )

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.OverallFeedbackData;
@@ -15,6 +16,7 @@ import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
+import reactor.util.retry.Retry;
 
 @Service
 @Slf4j
@@ -22,8 +24,11 @@ public class GeminiService {
 
     private static final String DEFAULT_ERROR_MESSAGE = "Sorry, I couldn't generate a response at the moment.";
     private static final String API_ERROR_MESSAGE = "Sorry, there was an error with the AI service.";
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(90); // Increased for retries
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
+    private static final int MAX_RETRIES = 3;
+    private static final Duration RETRY_MIN_BACKOFF = Duration.ofMillis(500);
+    private static final Duration RETRY_MAX_BACKOFF = Duration.ofSeconds(5);
 
     private final WebClient webClient;
     private final String apiKey;
@@ -72,6 +77,26 @@ public class GeminiService {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(Map.class)
+                    .retryWhen(Retry.backoff(MAX_RETRIES, RETRY_MIN_BACKOFF)
+                            .maxBackoff(RETRY_MAX_BACKOFF)
+                            .filter(throwable -> {
+                                // Retry on 503 Service Unavailable and 429 Too Many Requests
+                                if (throwable instanceof WebClientResponseException) {
+                                    WebClientResponseException ex = (WebClientResponseException) throwable;
+                                    int status = ex.getStatusCode().value();
+                                    if (status == 503 || status == 429) {
+                                        log.warn("Gemini API returned {}, retrying... ({})", status, ex.getMessage());
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            })
+                            .doBeforeRetry(retrySignal -> {
+                                log.info("Retry attempt {} for Gemini API after {}ms",
+                                        retrySignal.totalRetries() + 1,
+                                        retrySignal.totalRetriesInARow() * RETRY_MIN_BACKOFF.toMillis());
+                            })
+                    )
                     .timeout(REQUEST_TIMEOUT)
                     .block();
 

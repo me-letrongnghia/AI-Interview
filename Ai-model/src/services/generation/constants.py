@@ -30,7 +30,7 @@ MAX_ANSWER_DISPLAY_CHARS = 500
 
 # Retry settings
 MAX_RETRY_ATTEMPTS = 3
-MIN_QUESTION_WORDS = 10
+MIN_QUESTION_WORDS = 8  # Lowered from 10 to accept slightly shorter natural questions
 MAX_QUESTION_WORDS = 60  # Allow longer, more detailed questions
 RETRY_TEMP_INCREASE = 0.10  # Smaller temp increase for smoother quality progression
 

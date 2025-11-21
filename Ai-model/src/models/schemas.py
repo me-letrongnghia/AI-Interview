@@ -173,3 +173,79 @@ class HealthResponse(BaseModel):
     model_path: str
     
     model_config = {"protected_namespaces": ()}
+
+
+class ConversationQA(BaseModel):
+    """Model cho một cặp Q&A trong conversation history"""
+    sequence_number: int = Field(..., description="Số thứ tự câu hỏi")
+    question: str = Field(..., description="Câu hỏi")
+    answer: str = Field(..., description="Câu trả lời")
+    scores: Dict[str, float] = Field(..., description="Điểm số đánh giá (correctness, coverage, depth, clarity, practicality, final)")
+    feedback: List[str] = Field(..., description="Feedback chi tiết cho câu trả lời")
+
+
+class EvaluateOverallFeedbackRequest(BaseModel):
+    """Model request để đánh giá overall feedback cho toàn bộ session"""
+    conversation: List[ConversationQA] = Field(..., description="Danh sách các cặp Q&A với scores và feedback")
+    role: str = Field(..., description="Vị trí ứng tuyển (VD: Backend Developer)")
+    seniority: str = Field(..., description="Cấp độ kinh nghiệm (VD: Mid-level, Senior)")
+    skills: List[str] = Field(default_factory=list, description="Danh sách kỹ năng yêu cầu")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "conversation": [
+                    {
+                        "sequence_number": 1,
+                        "question": "Explain dependency injection in Spring Boot",
+                        "answer": "Dependency injection is a design pattern...",
+                        "scores": {
+                            "correctness": 0.85,
+                            "coverage": 0.80,
+                            "depth": 0.75,
+                            "clarity": 0.90,
+                            "practicality": 0.70,
+                            "final": 0.80
+                        },
+                        "feedback": [
+                            "Strong: Clear explanation of DI concepts",
+                            "Good: Mentioned IoC container",
+                            "Improve: Could add code examples"
+                        ]
+                    },
+                    {
+                        "sequence_number": 2,
+                        "question": "What are Spring Boot annotations?",
+                        "answer": "Spring Boot uses annotations like @SpringBootApplication...",
+                        "scores": {
+                            "correctness": 0.75,
+                            "coverage": 0.70,
+                            "depth": 0.65,
+                            "clarity": 0.80,
+                            "practicality": 0.75,
+                            "final": 0.73
+                        },
+                        "feedback": [
+                            "Strong: Listed common annotations",
+                            "Improve: Explain @ComponentScan in detail",
+                            "Missing: Discussion of custom annotations"
+                        ]
+                    }
+                ],
+                "role": "Java Backend Developer",
+                "seniority": "Mid-level",
+                "skills": ["Spring Boot", "Java", "Dependency Injection"]
+            }
+        }
+
+
+class EvaluateOverallFeedbackResponse(BaseModel):
+    """Model response cho overall feedback evaluation"""
+    overview: str = Field(..., description="Rating tổng quan (EXCELLENT/GOOD/AVERAGE/BELOW AVERAGE/POOR)")
+    assessment: str = Field(..., description="Đánh giá tổng quan chi tiết (4-6 câu)")
+    strengths: List[str] = Field(..., description="Danh sách điểm mạnh (2-5 items)")
+    weaknesses: List[str] = Field(..., description="Danh sách điểm yếu (2-4 items)")
+    recommendations: str = Field(..., description="Khuyến nghị cải thiện")
+    generation_time: float = Field(..., description="Thời gian đánh giá (giây)")
+    
+    model_config = {"protected_namespaces": ()}

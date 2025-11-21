@@ -43,6 +43,8 @@ genq:
     url: ${GENQ_SERVICE_URL:http://localhost:8000}
     timeout: ${GENQ_SERVICE_TIMEOUT:60}  # Increased to 60s (GenQ can take 37-40s)
     enabled: ${GENQ_SERVICE_ENABLED:true}
+    max-tokens: ${GENQ_MAX_TOKENS:80}
+    temperature: ${GENQ_TEMPERATURE:0.7}
 
 # Judge Service Configuration
 judge:
@@ -55,6 +57,8 @@ judge:
 setTime:
   accessToken: 2 # hours
   refreshToken: 72 # hours
+  cookie:
+    secure: ${COOKIE_SECURE:false} # Set to true in production
 
 # Firebase Configuration
 firebase:

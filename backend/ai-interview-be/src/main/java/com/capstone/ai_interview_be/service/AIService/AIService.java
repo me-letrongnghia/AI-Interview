@@ -20,41 +20,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIService {
     
     private final GenQService genQService;
+    private final JudgeService judgeService;
+    private final JudgeOverallFeedbackService judgeOverallFeedbackService;
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    // Phương thức để tạo câu hỏi phỏng vấn đầu tiên với CV và JD text
     public String generateFirstQuestion(String role, String level, List<String> skills, 
                                        String cvText, String jdText) {
-        log.info("Generating first question");   
-        // Thử GenQ service trước
         if (genQService.isServiceHealthy()) {
-            log.info("Using GenQ service for first question generation");
+            log.info("Using GenQ for first question");
             return genQService.generateFirstQuestion(role, level, skills, cvText, jdText);
         }
-        // Fallback về Gemini
-        log.warn("GenQ service unavailable, falling back to Gemini for first question");
+        
+        log.warn("GenQ unavailable, using Gemini fallback");
         try {
             return geminiService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
-            log.error("Error generating first question with Gemini AI, using fallback", e);
+            log.error("Gemini failed: {}", e.getMessage());
             return "Please tell me a little bit about yourself and your background.";
         }
     }
     
-    // Phương thức để tạo câu hỏi phỏng vấn đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
-     
-    // Phương thức để tạo câu hỏi tiếp theo với CV và JD text
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
                                      String previousQuestion, String previousAnswer, String cvText, String jdText,
                                      List<ConversationEntry> conversationHistory) {
-        log.info("Generating next question with {} history entries", 
-                conversationHistory != null ? conversationHistory.size() : 0);
-
-        // Chuyển đổi ConversationEntry sang format cho AI
         List<Map<String, String>> historyForAI = null;
         if (conversationHistory != null && !conversationHistory.isEmpty()) {
             historyForAI = conversationHistory.stream()
@@ -67,76 +59,59 @@ public class AIService {
                 .collect(java.util.stream.Collectors.toList());
         }
 
-        // Thử GenQ service trước
         if (genQService.isServiceHealthy()) {
-            log.info("Using GenQ service for next question generation");
+            log.info("Using GenQ for next question");
             return genQService.generateNextQuestion(sessionRole, sessionLevel, sessionSkill, 
                                                    previousQuestion, previousAnswer, cvText, jdText, historyForAI);
         }
-        // Fallback về Gemini
-        log.warn("GenQ service unavailable, falling back to Gemini for next question");
+        
+        log.warn("GenQ unavailable, using Gemini fallback");
         try {
             return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                                                         previousQuestion, previousAnswer);
         } catch (Exception e) {
-            log.error("Error generating next question", e);
+            log.error("Next question error: {}", e.getMessage());
             return "Can you tell me about a challenging project you've worked on recently?";
         }
     }
     
-    // Phương thức để tạo câu hỏi tiếp theo
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
                                      String previousQuestion, String previousAnswer) {
         return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel, 
                                    previousQuestion, previousAnswer, null, null, null);
     }
     
-    // Phương thức để trích xuất dữ liệu từ CV, JD
     public DataScanResponse extractData(String Text) {
         try {
-            log.info("Extracting data from CV, JD text: {}", Text != null ? Text.substring(0, Math.min(100, Text.length())) : "null");
             String jsonResponse = geminiService.generateData(Text);
-
-            log.info("Raw JSON response from Gemini: {}", jsonResponse);
-            // Kiểm tra response rỗng
+            
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                log.warn("Empty response from Gemini service");
+                log.warn("Empty Gemini response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             
-            // Kiểm tra lỗi trong response
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
-                log.error("Gemini service returned error message: {}", jsonResponse);
+                log.error("Gemini error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             
-            // Clean JSON response nếu cần
             String cleanedJson = cleanJsonResponse(jsonResponse);
-            log.info("Cleaned JSON: {}", cleanedJson);
-            
-            // Parse JSON thành DataScanResponse
-            DataScanResponse response = objectMapper.readValue(cleanedJson, DataScanResponse.class);
-            log.info("Successfully parsed DataScanResponse: {}", response);
-            
-            return response;
+            return objectMapper.readValue(cleanedJson, DataScanResponse.class);
             
         } catch (Exception e) {
-            log.error("Error parsing CV data extraction response: {}", e.getMessage());
+            log.error("Extract data error: {}", e.getMessage());
             return new DataScanResponse("null", "null", Arrays.asList(), "en");
         }
     }
 
-    // Hàm để làm sạch JSON response nếu có ký tự thừa
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null) return "{}";
         
-        // Remove markdown code fences (```json, ```, etc.)
         String cleaned = jsonResponse
-            .replaceAll("```json\\s*", "")  // Remove ```json
-            .replaceAll("```\\s*", "")       // Remove trailing ```
+            .replaceAll("```json\\s*", "")
+            .replaceAll("```\\s*", "")
             .trim();
         
-        // Extract JSON object
         int start = cleaned.indexOf("{");
         int end = cleaned.lastIndexOf("}"); 
         if (start != -1 && end != -1 && end > start) {
@@ -145,17 +120,11 @@ public class AIService {
         return cleaned;
     }
 
-    // Generate feedback cho một câu trả lời
-    // Ưu tiên GenQ service, fallback về Gemini nếu không khả dụng
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
-        log.info("Generating answer feedback for question: {}", question);
-        
-        // Hiện tại chỉ dùng Gemini vì GenQ chưa được train cho feedback
-        // Sau này có thể thêm GenQ service khi model đã được train
         try {
             return geminiService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
-            log.error("Error generating answer feedback with Gemini, using fallback", e);
+            log.error("Answer feedback error: {}", e.getMessage());
             return AnswerFeedbackData.builder()
                     .feedback("Unable to generate detailed feedback at this moment.")
                     .sampleAnswer("Please review the question and try to provide more specific details.")
@@ -163,35 +132,59 @@ public class AIService {
         }
     }
 
-    // Generate overall feedback cho cả session
-    // Ưu tiên GenQ service, fallback về Gemini nếu không khả dụng     
     public OverallFeedbackData generateOverallFeedback(
             List<ConversationEntry> conversation,
             String role,
             String level,
             List<String> skills) {
-        log.info("Generating overall feedback for session with {} questions", conversation.size());
+        log.info("Generating overall feedback for {} questions", conversation.size());
         
-        // Hiện tại chỉ dùng Gemini vì GenQ chưa được train cho feedback
-        // Sau này có thể thêm GenQ service khi model đã được train
+        if (judgeOverallFeedbackService.isServiceHealthy()) {
+            log.info("Using Judge AI (PRIMARY)");
+            try {
+                var judgeResponse = judgeOverallFeedbackService.evaluateOverallFeedback(
+                        conversation, role, level, skills);
+                
+                if (judgeResponse != null && judgeResponse.getOverview() != null) {
+                    return OverallFeedbackData.builder()
+                            .overview(judgeResponse.getOverview())
+                            .assessment(judgeResponse.getAssessment())
+                            .strengths(judgeResponse.getStrengths())
+                            .weaknesses(judgeResponse.getWeaknesses())
+                            .recommendations(judgeResponse.getRecommendations())
+                            .build();
+                }
+                
+                log.warn("Judge AI invalid response, falling back");
+            } catch (Exception e) {
+                log.error("Judge AI error, falling back: {}", e.getMessage());
+            }
+        } else {
+            log.warn("Judge AI unavailable, using Gemini (BACKUP)");
+        }
+        
+        log.info("Using Gemini fallback");
         try {
             return geminiService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
-            log.error("Error generating overall feedback with Gemini, using fallback", e);
+            log.error("Gemini failed, using hardcoded fallback: {}", e.getMessage());
             return OverallFeedbackData.builder()
-                    .overview("Session feedback unavailable at this moment.")
-                    .assessment("Thank you for completing the interview. Your performance showed potential.")
+                    .overview("AVERAGE")
+                    .assessment("Thank you for completing the interview. Your performance showed potential. "
+                               + "Due to technical difficulties, we could not generate detailed automated feedback. "
+                               + "A human reviewer will evaluate your responses shortly.")
                     .strengths(java.util.Arrays.asList(
-                        "Participated in the interview",
-                        "Attempted to answer questions"
+                        "Participated in the complete interview session",
+                        "Attempted to answer all questions",
+                        "Maintained professional communication"
                     ))
                     .weaknesses(java.util.Arrays.asList(
-                        "Could provide more detailed responses"
+                        "Detailed automated evaluation unavailable",
+                        "Manual review required for comprehensive feedback"
                     ))
-                    .recommendations("Continue practicing technical interview questions and focus on providing detailed, structured answers.")
+                    .recommendations("Continue practicing technical interview questions and focus on providing detailed, structured answers. "
+                                   + "A human reviewer will provide more specific feedback based on your responses.")
                     .build();
         }
     }
-
-
 }

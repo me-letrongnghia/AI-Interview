@@ -24,14 +24,34 @@ services:
     container_name: ai_genq_service
     ports:
       - "8000:8000"
+    volumes:
+      # Mount model directories (adjust path to your local model location)
+      - ./Ai-model/model/Merge:/app/model/Merge:ro
+      - ./Ai-model/model/Judge_merge:/app/model/Judge_merge:ro
+      # Persistent cache directories
+      - genq_cache:/app/cache
+      - genq_hf_cache:/app/hf_cache
+    environment:
+      - MODEL_PATH=/app/model/Merge
+      - JUDGE_MODEL_PATH=/app/model/Judge_merge
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=INFO
     networks:
       - app_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=10)"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
   backend:
     build:
@@ -69,6 +89,8 @@ services:
 
 volumes:
   mysql_data:
+  genq_cache:
+  genq_hf_cache:
 
 networks:
   app_network:

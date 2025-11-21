@@ -29,6 +29,9 @@ public class AuthController {
     private final AuthService authService;
     private final VerifyCodeService verificationService;
 
+    @org.springframework.beans.factory.annotation.Value("${setTime.cookie.secure}")
+    private boolean isCookieSecure;
+
     // Phương thức để đăng nhập người dùng và tạo JWT token
     @PostMapping("/login")
     public ResponseEntity<UserProfileResponse> authLogin(@RequestBody LoginRequest request,HttpServletResponse response) {
@@ -38,7 +41,7 @@ public class AuthController {
         // Set Cookie
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(isCookieSecure)
                 .path("/api/auth/refresh-token")
                 .sameSite("Lax")
                 .maxAge(7 * 24 * 60 * 60).build();
@@ -64,7 +67,7 @@ public class AuthController {
         // Set Cookie
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(isCookieSecure)
                 .path("/api/auth/refresh-token")
                 .sameSite("Lax")
                 .maxAge(7 * 24 * 60 * 60).build();
@@ -87,7 +90,7 @@ public class AuthController {
         // Clear the refresh token cookie
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(isCookieSecure)
                 .path("/api/auth/refresh-token")
                 .sameSite("Lax")
                 .maxAge(0).build();
