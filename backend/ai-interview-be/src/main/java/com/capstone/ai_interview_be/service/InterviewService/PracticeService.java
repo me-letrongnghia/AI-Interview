@@ -13,6 +13,7 @@ import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.repository.InterviewSessionRepository;
 import com.capstone.ai_interview_be.repository.InterviewAnswerRepository;
 import com.capstone.ai_interview_be.repository.AnswerFeedbackRepository;
+import com.capstone.ai_interview_be.service.AIService.AIService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ public class PracticeService {
     private final InterviewFeedbackRepository feedbackRepository;
     private final InterviewAnswerRepository answerRepository;
     private final AnswerFeedbackRepository answerFeedbackRepository;
+    private final AIService aiService;
+    private final ConversationService conversationService;
 
      // Tạo practice session từ original session
      // Clone metadata + tất cả câu hỏi từ session gốc
@@ -206,5 +209,97 @@ public class PracticeService {
         sessionRepository.delete(practiceSession);
         
         log.info("Practice session {} and all related data deleted successfully", practiceSessionId);
+    }
+
+    // Create new session with same context (metadata) but no questions
+    // AI will generate new questions during interview
+    @Transactional
+    public CreatePracticeResponse createSessionWithSameContext(Long userId, Long originalSessionId) {
+        log.info("Creating new session with same context from original session {} for user {}", originalSessionId, userId);
+
+        // Get original session
+        InterviewSession originalSession = sessionRepository.findById(originalSessionId)
+                .orElseThrow(() -> new RuntimeException("Original session not found"));
+
+        // Verify ownership
+        if (!originalSession.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You can only practice your own interviews");
+        }
+
+        // Verify session is completed
+        if (!"completed".equals(originalSession.getStatus())) {
+            throw new RuntimeException("Can only practice completed sessions");
+        }
+
+        // For practice sessions, use the original session id
+        Long baseSessionId = Boolean.TRUE.equals(originalSession.getIsPractice()) 
+            ? originalSession.getOriginalSessionId() 
+            : originalSessionId;
+
+        // Create new session with same context (metadata only, no questions)
+        InterviewSession newSession = new InterviewSession();
+        newSession.setUserId(userId);
+        newSession.setRole(originalSession.getRole());
+        newSession.setLevel(originalSession.getLevel());
+
+        // Clone skills list to avoid shared references
+        if (originalSession.getSkill() != null) {
+            newSession.setSkill(new java.util.ArrayList<>(originalSession.getSkill()));
+        }
+
+        newSession.setLanguage(originalSession.getLanguage());
+        newSession.setTitle("Practice: " + originalSession.getRole() + " - Same Context");
+        newSession.setDescription("Practice with same context for: " + originalSession.getRole());
+        newSession.setCvText(originalSession.getCvText());
+        newSession.setJdText(originalSession.getJdText());
+        newSession.setDuration(originalSession.getDuration());
+        newSession.setQuestionCount(originalSession.getQuestionCount());
+        newSession.setSource(originalSession.getSource());
+        newSession.setStatus("in_progress");
+        newSession.setIsPractice(true);
+        newSession.setOriginalSessionId(baseSessionId);
+
+        newSession = sessionRepository.save(newSession);
+        log.info("Created new session with id {} (same context, new questions)", newSession.getId());
+
+        // Generate first question using AI
+        String firstQuestionContent;
+        try {
+            log.info("Generating first question using AI for session {}", newSession.getId());
+            firstQuestionContent = aiService.generateFirstQuestion(
+                newSession.getRole(),
+                newSession.getLevel(),
+                newSession.getSkill() != null ? newSession.getSkill() : java.util.Arrays.asList(),
+                newSession.getCvText(),
+                newSession.getJdText()
+            );
+            log.info("AI generated first question: {}", firstQuestionContent);
+        } catch (Exception e) {
+            log.error("Error generating first question with AI, using fallback", e);
+            firstQuestionContent = "Please tell me a little bit about yourself and your background.";
+        }
+
+        // Save first question to database
+        InterviewQuestion firstQuestion = new InterviewQuestion();
+        firstQuestion.setSessionId(newSession.getId());
+        firstQuestion.setContent(firstQuestionContent);
+        InterviewQuestion savedQuestion = questionRepository.save(firstQuestion);
+        log.info("Saved first question with ID: {}", savedQuestion.getId());
+
+        // Create conversation entry
+        conversationService.createConversationEntry(
+            newSession.getId(),
+            savedQuestion.getId(),
+            firstQuestionContent
+        );
+
+        log.info("Successfully created new session {} with same context and first question (total expected: {})",
+                newSession.getId(), newSession.getQuestionCount());
+
+        return CreatePracticeResponse.builder()
+                .practiceSessionId(newSession.getId())
+                .message("New practice session created successfully with same context")
+                .questionCount(newSession.getQuestionCount()) // Use same question count as original session
+                .build();
     }
 }

@@ -170,6 +170,31 @@ public class PracticeController {
             ));
         }
     }
+
+    // POST /api/practice/new-session-same-context/{originalSessionId}
+    // Create new session with same context but new questions
+    @PostMapping("/new-session-same-context/{originalSessionId}")
+    public ResponseEntity<?> createSessionWithSameContext(
+            @PathVariable Long originalSessionId,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Long userId = extractUserId(authHeader);
+            log.info("User {} creating new session with same context from original {}", userId, originalSessionId);
+
+            CreatePracticeResponse response = practiceService.createSessionWithSameContext(userId, originalSessionId);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", response
+            ));
+        } catch (Exception e) {
+            log.error("Error creating session with same context", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
     
     private Long extractUserId(String authHeader) {
         String token = authHeader.replace("Bearer ", "");

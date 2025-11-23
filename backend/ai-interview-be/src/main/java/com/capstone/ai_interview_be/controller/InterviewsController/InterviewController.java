@@ -51,63 +51,72 @@ public class InterviewController {
 
         // Get session to check if it's practice mode
         InterviewSession session = sessionService.getSessionById(sessionId);
-        Boolean checkQuesion = questionRepository.existsBySessionId(sessionId);
-        if(checkQuesion){
-            List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        
+        List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        
+        if (!questions.isEmpty()) {
             List<InterviewAnswer> answers = answerRepository.findAnswersBySessionId(sessionId);
-            // Tạo Map để lookup answers theo questionId
-            Map<Long, InterviewAnswer> answerMap = answers.stream()
-                .collect(Collectors.toMap(
-                    InterviewAnswer::getQuestionId,
-                    answer -> answer,
-                    (existing, replacement) -> existing
-                ));
-            // Merge questions và answers thành timeline
-            List<ChatMessageDTO> messages = new ArrayList<>();
-            for (InterviewQuestion question : questions) {
-                // Add AI question
-                ChatMessageDTO questionMsg = createQuestionMessage(question, sessionId);
-                messages.add(questionMsg);
+            
+            // If has answers → This is a reload/continue, return answered questions + next unanswered
+            if (!answers.isEmpty()) {
+                log.info("Session {} has history ({} questions, {} answers) - returning answered questions + next unanswered", 
+                         sessionId, questions.size(), answers.size());
                 
-                // Add user answer if exists
-                InterviewAnswer answer = answerMap.get(question.getId());
-                if (answer != null) {
-                    ChatMessageDTO answerMsg = createAnswerMessage(answer, question, sessionId);
-                    messages.add(answerMsg);
+                // Create answer map for quick lookup
+                Map<Long, InterviewAnswer> answerMap = answers.stream()
+                    .collect(Collectors.toMap(
+                        InterviewAnswer::getQuestionId,
+                        answer -> answer,
+                        (existing, replacement) -> existing
+                    ));
+                
+                // Build conversation with ONLY answered questions + next unanswered
+                List<ChatMessageDTO> messages = new ArrayList<>();
+                boolean foundUnanswered = false;
+                
+                for (InterviewQuestion question : questions) {
+                    InterviewAnswer answer = answerMap.get(question.getId());
+                    
+                    if (answer != null) {
+                        // Add answered question + answer
+                        ChatMessageDTO questionMsg = createQuestionMessage(question, sessionId);
+                        messages.add(questionMsg);
+                        
+                        ChatMessageDTO answerMsg = createAnswerMessage(answer, question, sessionId);
+                        messages.add(answerMsg);
+                    } else if (!foundUnanswered) {
+                        // Add ONLY the FIRST unanswered question
+                        ChatMessageDTO questionMsg = createQuestionMessage(question, sessionId);
+                        messages.add(questionMsg);
+                        foundUnanswered = true;
+                        break; // Stop here, don't add remaining questions
+                    }
                 }
                 
+                // Messages already in correct order (Q1, A1, Q2, A2, Q3) - no sorting needed
+                
+                ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
+                    .success(true)
+                    .data(messages)
+                    .build();
+                return ResponseEntity.ok(chatHistoryResponse);
             }
-            // Sort by timestamp để đảm bảo thứ tự đúng
-            messages.sort(Comparator.comparing(ChatMessageDTO::getTimestamp));
+            
+            // If NO answers yet → New practice session, return only FIRST question
+            log.info("Practice session {} - has {} pre-loaded questions but NO answers yet, returning FIRST question only", 
+                     sessionId, questions.size());
+            
+            InterviewQuestion firstQuestion = questions.get(0);
             ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
-            .success(true)
-            .data(messages)
-            .build();
+                .success(false)
+                .question(firstQuestion)
+                .build();
             return ResponseEntity.ok(chatHistoryResponse);
         }
-
-        InterviewQuestion question;
-        if (Boolean.TRUE.equals(session.getIsPractice())) {
-            // Practice session: get FIRST question (oldest by creation time)
-            log.info("Practice session {} - returning FIRST question", sessionId);
-            question = questionRepository.findTopBySessionIdOrderByCreatedAtAsc(sessionId);
-        } else {
-            // Normal session: get LATEST question (newest by creation time)
-            log.info("Normal session {} - returning LATEST question", sessionId);
-            question = questionRepository.findTopBySessionIdOrderByCreatedAtDesc(sessionId);
-        }
-
-        if (question == null) {
-            log.warn("No questions found for session {}", sessionId);
-            return ResponseEntity.notFound().build();
-        }
-
-        log.info("Returning question {} for session {}", question.getId(), sessionId);
-        ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
-        .success(false)
-        .question(question)
-        .build();
-        return ResponseEntity.ok(chatHistoryResponse);
+        
+        // No questions at all
+        log.warn("No questions found for session {}", sessionId);
+        return ResponseEntity.notFound().build();
     }
 
     // Endpoint to get all interview questions

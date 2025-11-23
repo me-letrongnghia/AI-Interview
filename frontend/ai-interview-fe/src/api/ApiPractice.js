@@ -45,4 +45,14 @@ export const ApiPractice = {
     );
     return response.data;
   },
+
+  // Create new session with same context (new questions)
+  createSessionWithSameContext: async (originalSessionId) => {
+    const response = await axios.post(
+      `${BASE_URL}/new-session-same-context/${originalSessionId}`,
+      {},
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  },
 };
