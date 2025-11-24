@@ -122,8 +122,8 @@ public class AuthService {
         userProfileResponse.setAccess_token(accessToken);
         userProfileResponse.setRefresh_token(refreshToken);
         userProfileResponse.setEmail(email);
-        userProfileResponse.setFullName(fullName);
-        userProfileResponse.setPicture(picture);
+        userProfileResponse.setFullName(userEntity.getFullName());
+        userProfileResponse.setPicture(userEntity.getPicture());
         return userProfileResponse;
     }
     public UserProfileResponse refreshToken(String refreshToken) {
