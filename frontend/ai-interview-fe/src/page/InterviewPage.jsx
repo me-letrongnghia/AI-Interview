@@ -1653,8 +1653,8 @@ export default function InterviewInterface() {
       <Loading
         message={
           showInitialLoading
-            ? "Preparing interview..."
-            : "Loading interview configuration..."
+            ? "Preparing interview"
+            : "Loading interview configuration"
         }
         fullScreen={true}
       />

@@ -1,4 +1,5 @@
 import React from "react";
+import loadingGif from "../assets/loading.gif";
 
 /**
  * Loading Component - Simple minimal loading indicator
@@ -12,12 +13,18 @@ export default function Loading({
   if (fullScreen) {
     return (
       <div className='fixed inset-0 bg-white flex items-center justify-center z-50'>
-        <div className='text-center'>
-          {/* Simple spinner */}
-          <div className='w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4'></div>
+        <div className='text-center flex flex-col items-center -mt-10'>
+          {/* GIF Spinner */}
+          <img
+            src={loadingGif}
+            alt="Loading..."
+            className="w-32 h-32 object-contain mb-2"
+          />
 
           {/* Message */}
-          <p className='text-gray-600 text-sm font-medium'>{message}</p>
+          <p className='text-xl font-bold tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 animate-shimmer'>
+            {message}
+          </p>
         </div>
       </div>
     );
@@ -26,9 +33,15 @@ export default function Loading({
   // Inline loading - simple spinner
   return (
     <div className={`flex flex-col items-center justify-center ${className}`}>
-      <div className='w-8 h-8 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin'></div>
+      <img
+        src={loadingGif}
+        alt="Loading..."
+        className="w-20 h-20 object-contain"
+      />
       {message && (
-        <p className='text-gray-600 text-xs font-medium mt-2'>{message}</p>
+        <p className='text-sm font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 animate-shimmer mt-1'>
+          {message}
+        </p>
       )}
     </div>
   );
@@ -56,11 +69,15 @@ export function ButtonLoading({ className = "" }) {
 /**
  * Card Loading - Simple loading for cards
  */
-export function CardLoading({ message = "Loading..." }) {
+export function CardLoading({ message = "Loading" }) {
   return (
-    <div className='flex flex-col items-center justify-center py-8'>
-      <div className='w-10 h-10 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mb-3'></div>
-      <p className='text-gray-600 text-sm'>{message}</p>
+    <div className='flex flex-col items-center justify-center py-10'>
+      <img
+        src={loadingGif}
+        alt="Loading"
+        className="w-24 h-24 object-contain mb-2"
+      />
+      <p className='text-sm font-semibold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-400 via-gray-600 to-gray-400 animate-shimmer'>{message}</p>
     </div>
   );
 }

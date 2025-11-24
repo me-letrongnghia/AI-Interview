@@ -233,7 +233,7 @@ const HistoryPage = () => {
         {(loading || showInitialLoading) && (
           <Loading
             message={
-              showInitialLoading ? "Loading history..." : "Loading data..."
+              showInitialLoading ? "Loading history" : "Loading data"
             }
             fullScreen={showInitialLoading}
             className={showInitialLoading ? "" : "py-20"}

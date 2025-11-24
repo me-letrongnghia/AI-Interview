@@ -202,7 +202,7 @@ export default function FeedbackPage() {
   if (loading || showInitialLoading)
     return (
       <Loading
-        message={showInitialLoading ? "Loading feedback..." : "LOADING..."}
+        message={showInitialLoading ? "Loading feedback" : "LOADING"}
         fullScreen
       />
     );

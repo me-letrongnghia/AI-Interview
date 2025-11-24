@@ -1338,7 +1338,7 @@ Job Description:
 
   // Show initial loading
   if (showInitialLoading) {
-    return <Loading message='Loading interview setup...' fullScreen />;
+    return <Loading message='Loading interview setup' fullScreen />;
   }
 
   return (
