@@ -17,18 +17,21 @@ OVERALL_FEEDBACK_MAX_TOKENS = 2048
 # ==========================
 #  JUDGE OVERALL FEEDBACK SYSTEM PROMPT
 # ==========================
-JUDGE_OVERALL_SYSTEM_PROMPT = """You are an expert technical interview evaluator. After reviewing a complete interview session with multiple Q&A pairs, provide comprehensive overall feedback.
+JUDGE_OVERALL_SYSTEM_PROMPT = """You are a STRICT technical interview evaluator. Be HONEST and OBJECTIVE based on actual performance scores. Return ONLY valid JSON, no other text.
 
-Evaluate the candidate's complete interview performance and return ONLY valid JSON, no other text.
+CRITICAL: Base your rating on the ACTUAL AVERAGE FINAL SCORES:
 
-Your evaluation must include:
-
-1. OVERVIEW RATING - ONE of these exact values:
-   - "EXCELLENT": Outstanding performance (90%+ accuracy), exceeds expectations, expert knowledge
-   - "GOOD": Strong performance (70-89% accuracy), meets/exceeds expectations, solid understanding
-   - "AVERAGE": Adequate performance (50-69% accuracy), meets basic expectations, some gaps
-   - "BELOW AVERAGE": Weak performance (30-49% accuracy), falls short, significant gaps
-   - "POOR": Very weak performance (<30% accuracy), major gaps, below minimum requirements
+1. OVERVIEW RATING - Use these STRICT criteria based on average final score:
+   - "EXCELLENT": 0.85-1.0 average (Outstanding, exceeds expectations, expert knowledge)
+   - "GOOD": 0.70-0.84 average (Strong performance, meets expectations, solid understanding)
+   - "AVERAGE": 0.50-0.69 average (Adequate but with gaps, needs improvement)
+   - "BELOW AVERAGE": 0.30-0.49 average (Weak performance, significant gaps, falls short)
+   - "POOR": 0.0-0.29 average (Very weak, major gaps, below minimum requirements)
+   
+IMPORTANT: 
+- If candidate answered "I don't know" or gave irrelevant answers, this is POOR/BELOW AVERAGE
+- Do NOT be lenient - use the actual scores to determine the rating
+- One good answer cannot compensate for multiple poor answers
 
 2. ASSESSMENT: A comprehensive 4-6 sentence paragraph covering:
    - Overall performance summary
@@ -100,9 +103,11 @@ class OverallFeedbackEvaluator:
         Returns:
             Prompt đã format theo chat template của Qwen
         """
-        # Build conversation summary
+        # Build conversation summary and calculate average score
         conversation_text = ""
         total_questions = len(conversation)
+        total_score = 0.0
+        score_count = 0
         
         for qa in conversation:
             seq = qa.get('sequence_number', 0)
@@ -111,10 +116,30 @@ class OverallFeedbackEvaluator:
             scores = qa.get('scores', {})
             feedback = qa.get('feedback', [])
             
+            # Calculate average score
+            final_score = scores.get('final', 0.0)
+            total_score += final_score
+            score_count += 1
+            
             conversation_text += f"\n**Question {seq}:** {question}\n"
             conversation_text += f"**Answer {seq}:** {answer}\n"
             conversation_text += f"**Scores:** {scores}\n"
             conversation_text += f"**Feedback:** {feedback}\n"
+        
+        # Calculate overall average
+        average_score = total_score / score_count if score_count > 0 else 0.0
+        
+        # Determine expected rating based on average score
+        if average_score >= 0.85:
+            expected_rating = "EXCELLENT"
+        elif average_score >= 0.70:
+            expected_rating = "GOOD"
+        elif average_score >= 0.50:
+            expected_rating = "AVERAGE"
+        elif average_score >= 0.30:
+            expected_rating = "BELOW AVERAGE"
+        else:
+            expected_rating = "POOR"
         
         skills_text = ', '.join(skills) if skills else 'General'
         
@@ -126,13 +151,19 @@ class OverallFeedbackEvaluator:
 - Skills: {skills_text}
 - Total Questions: {total_questions}
 
+**PERFORMANCE METRICS:**
+- Average Final Score: {average_score:.2f}
+- Expected Rating Range: {expected_rating}
+
+**CRITICAL: Your overview rating MUST align with the average score above. Do NOT be lenient.**
+
 **Interview Conversation:**{conversation_text}
 
-Based on the above session, provide comprehensive overall feedback in JSON format with:
-- overview: Performance rating (EXCELLENT/GOOD/AVERAGE/BELOW AVERAGE/POOR)
-- assessment: 4-6 sentence paragraph
-- strengths: List of 2-5 key strengths
-- weaknesses: List of 2-4 areas needing improvement
+Based on the above session and the AVERAGE SCORE of {average_score:.2f}, provide comprehensive overall feedback in JSON format with:
+- overview: Performance rating (MUST match the score: {expected_rating} for {average_score:.2f})
+- assessment: 4-6 sentence paragraph (be HONEST about performance level)
+- strengths: List of 2-5 key strengths (or 1-2 if score is low)
+- weaknesses: List of 2-4 areas needing improvement (more if score is low)
 - recommendations: Actionable guidance paragraph"""
 
         # Dùng đúng format chat của Qwen

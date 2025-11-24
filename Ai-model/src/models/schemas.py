@@ -177,11 +177,13 @@ class HealthResponse(BaseModel):
 
 class ConversationQA(BaseModel):
     """Model cho một cặp Q&A trong conversation history"""
-    sequence_number: int = Field(..., description="Số thứ tự câu hỏi")
+    sequence_number: int = Field(..., description="Số thứ tự câu hỏi", alias="sequenceNumber")
     question: str = Field(..., description="Câu hỏi")
     answer: str = Field(..., description="Câu trả lời")
     scores: Dict[str, float] = Field(..., description="Điểm số đánh giá (correctness, coverage, depth, clarity, practicality, final)")
     feedback: List[str] = Field(..., description="Feedback chi tiết cho câu trả lời")
+    
+    model_config = {"populate_by_name": True}
 
 
 class EvaluateOverallFeedbackRequest(BaseModel):
