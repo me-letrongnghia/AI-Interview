@@ -104,65 +104,93 @@ public class InterviewService {
                 // feedback
         );
 
-        // For PRACTICE sessions: Return pre-generated question instead of calling AI
+        // For PRACTICE sessions with OLD QUESTIONS: Return pre-generated question instead of calling AI
         if (Boolean.TRUE.equals(session.getIsPractice())) {
-            log.info("Practice mode detected - returning next pre-generated question");
+            log.info("Practice mode detected - checking question type");
 
             // Get all questions for this practice session
             List<InterviewQuestion> allQuestions = questionRepository
                     .findBySessionIdOrderByCreatedAtAsc(sessionId);
 
-            // Find current question index
-            int currentIndex = -1;
-            for (int i = 0; i < allQuestions.size(); i++) {
-                if (allQuestions.get(i).getId().equals(question.getId())) {
-                    currentIndex = i;
-                    break;
+            // Check if this is practice with OLD questions (multiple pre-generated) or SAME CONTEXT (only 1 pre-generated)
+            // If questionCount matches actual question count, it's OLD questions
+            // If questionCount > actual question count, it's SAME CONTEXT (generate new)
+            long currentQuestionCount = questionRepository.countBySessionId(sessionId);
+            
+            if (currentQuestionCount >= session.getQuestionCount()) {
+                // Practice with OLD questions - all questions pre-generated
+                log.info("Practice with OLD questions detected - using pre-generated questions");
+                
+                // Find current question index
+                int currentIndex = -1;
+                for (int i = 0; i < allQuestions.size(); i++) {
+                    if (allQuestions.get(i).getId().equals(question.getId())) {
+                        currentIndex = i;
+                        break;
+                    }
                 }
-            }
 
-            if (currentIndex == -1) {
-                throw new RuntimeException("Current question not found in practice session");
-            }
+                if (currentIndex == -1) {
+                    throw new RuntimeException("Current question not found in practice session");
+                }
 
-            // Check if there's a next question
-            if (currentIndex < allQuestions.size() - 1) {
-                InterviewQuestion nextQuestion = allQuestions.get(currentIndex + 1);
+                // Check if there's a next question
+                if (currentIndex < allQuestions.size() - 1) {
+                    InterviewQuestion nextQuestion = allQuestions.get(currentIndex + 1);
 
-                // Check if conversation entry exists, create if not
-                ConversationEntry existingEntry = conversationRepository.findByQuestionId(nextQuestion.getId());
-                if (existingEntry == null) {
-                    log.info("Creating conversation entry for pre-generated question {}", nextQuestion.getId());
-                    conversationService.createConversationEntry(
-                            sessionId,
+                    // Check if conversation entry exists, create if not
+                    ConversationEntry existingEntry = conversationRepository.findByQuestionId(nextQuestion.getId());
+                    if (existingEntry == null) {
+                        log.info("Creating conversation entry for pre-generated question {}", nextQuestion.getId());
+                        conversationService.createConversationEntry(
+                                sessionId,
+                                nextQuestion.getId(),
+                                nextQuestion.getContent());
+                    }
+
+                    ProcessAnswerResponse.NextQuestion nextQuestionDto = new ProcessAnswerResponse.NextQuestion(
                             nextQuestion.getId(),
                             nextQuestion.getContent());
+
+                    log.info("Returned pre-generated question {} of {}", currentIndex + 2, allQuestions.size());
+
+                    return new ProcessAnswerResponse(
+                            savedAnswer.getId(),
+                            savedAnswer.getFeedback(),
+                            nextQuestionDto);
+                } else {
+                    // No more questions - practice session ends
+                    log.info("Practice session completed - no more questions");
+                    return new ProcessAnswerResponse(
+                            savedAnswer.getId(),
+                            savedAnswer.getFeedback(),
+                            null // No next question
+                    );
                 }
-
-                ProcessAnswerResponse.NextQuestion nextQuestionDto = new ProcessAnswerResponse.NextQuestion(
-                        nextQuestion.getId(),
-                        nextQuestion.getContent());
-
-                log.info("Returned pre-generated question {} of {}", currentIndex + 2, allQuestions.size());
-
-                return new ProcessAnswerResponse(
-                        savedAnswer.getId(),
-                        savedAnswer.getFeedback(),
-                        nextQuestionDto);
             } else {
-                // No more questions - practice session ends
-                log.info("Practice session completed - no more questions");
-                return new ProcessAnswerResponse(
-                        savedAnswer.getId(),
-                        savedAnswer.getFeedback(),
-                        null // No next question
-                );
+                // Practice with SAME CONTEXT - only first question pre-generated, generate new questions
+                log.info("Practice with SAME CONTEXT detected - will generate new question using AI (current: {}, target: {})",
+                        currentQuestionCount, session.getQuestionCount());
+                // Fall through to AI generation below
             }
         }
 
+        // Check if we've reached the question limit
+        long currentQuestionCount = questionRepository.countBySessionId(sessionId);
+        if (session.getQuestionCount() != null && currentQuestionCount >= session.getQuestionCount()) {
+            log.info("Session {} has reached question limit ({}/{}), ending interview",
+                    sessionId, currentQuestionCount, session.getQuestionCount());
+            return new ProcessAnswerResponse(
+                    savedAnswer.getId(),
+                    savedAnswer.getFeedback(),
+                    null // No next question - interview ends
+            );
+        }
+
         // Tạo câu hỏi tiếp theo bằng AI với CV/JD text từ session
-        log.info("Generating next question for session {}, CV text: {}, JD text: {}",
-                sessionId, session.getCvText() != null, session.getJdText() != null);
+        log.info("Generating next question for session {} ({}/{}), CV text: {}, JD text: {}",
+                sessionId, currentQuestionCount + 1, session.getQuestionCount(),
+                session.getCvText() != null, session.getJdText() != null);
 
         // Lấy 20 cặp Q&A gần nhất làm context
         List<ConversationEntry> recentHistory = conversationService.getRecentConversation(sessionId, 20);
@@ -195,6 +223,9 @@ public class InterviewService {
         ProcessAnswerResponse.NextQuestion nextQuestionDto = new ProcessAnswerResponse.NextQuestion(
                 savedNextQuestion.getId(),
                 savedNextQuestion.getContent());
+
+        log.info("Generated question {} of {} for session {}",
+                currentQuestionCount + 1, session.getQuestionCount(), sessionId);
 
         return new ProcessAnswerResponse(
                 savedAnswer.getId(),
