@@ -2,6 +2,9 @@ package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "interview_question")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class InterviewQuestion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,16 +27,20 @@ public class InterviewQuestion {
     private Long sessionId;
     
     // Relationships
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", insertable = false, updatable = false)
     private InterviewSession session;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InterviewAnswer> answers;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InterviewChunk> chunks;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ConversationEntry> conversationEntries;
     

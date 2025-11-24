@@ -11,8 +11,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
+    open-in-view: false  # Disable to prevent lazy loading issues
+  
+  jackson:
+    serialization:
+      fail-on-empty-beans: false  # Prevent errors on empty beans
 
   mail:
     host: smtp.gmail.com

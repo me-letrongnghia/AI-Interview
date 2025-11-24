@@ -30,14 +30,12 @@ import {
 import { FeedbackApi } from "../api/FeedbackAPI";
 import { ApiPractice } from "../api/ApiPractice";
 import { toast } from "react-toastify";
-import Loading, { CardLoading } from "../components/Loading";
 
 export default function FeedbackPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [showInitialLoading, setShowInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -224,23 +222,18 @@ export default function FeedbackPage() {
         toast.error(err?.message || "Error fetching feedback");
         setError(err?.message);
       } finally {
-        // Show loading for 1 second before displaying content
-        setTimeout(() => {
-          setLoading(false);
-          setShowInitialLoading(false);
-        }, 1000);
+        setLoading(false);
       }
     };
 
     fetchFeedback();
   }, [sessionId]);
 
-  if (loading || showInitialLoading)
+  if (loading)
     return (
-      <Loading
-        message={showInitialLoading ? "Loading feedback" : "LOADING"}
-        fullScreen
-      />
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        Loading feedback...
+      </div>
     );
 
   if (error)
@@ -296,20 +289,33 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
-        {/* Header */}
-        <div className='flex items-center justify-between mb-8'>
-          <button
-            onClick={() => navigate("/history")}
-            className='inline-flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
-          >
-            <ArrowLeft
-              size={18}
-              className='group-hover:-translate-x-1 transition-transform'
-            />
-            Back to History
-          </button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Practice Modal */}
+      {showPracticeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl animate-fadeIn">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <RotateCcw className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Choose Practice Mode
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Select how you want to practice
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPracticeModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
 
             {/* Modal Body */}
             <div className="p-6 space-y-4">
@@ -394,6 +400,7 @@ export default function FeedbackPage() {
             </div>
           </div>
         </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -487,7 +494,7 @@ export default function FeedbackPage() {
                 )}
               </div>
 
-              {/* Right: Overall Score
+              {/* Right: Overall Score */}
               <div
                 className={`${overviewStyle.bg} rounded-xl p-6 border ${overviewStyle.border} text-center min-w-[160px]`}
               >
@@ -500,7 +507,7 @@ export default function FeedbackPage() {
                 <p className={`text-2xl font-bold ${overviewStyle.text}`}>
                   {overallFeedback?.overview || "AVERAGE"}
                 </p>
-              </div> */}
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -508,7 +515,7 @@ export default function FeedbackPage() {
               {data?.sessionInfo?.isPractice !== true && (
                 <button
                   onClick={handlePracticeAgain}
-                  className='inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
                 >
                   <RotateCcw size={18} />
                   Practice Again
@@ -532,8 +539,8 @@ export default function FeedbackPage() {
           </div>
 
           {/* Summary Section */}
-          <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
-            <h2 className='text-xl font-bold text-gray-900 mb-4'>Summary</h2>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Summary</h2>
 
             <p className="text-gray-700 mb-6 leading-relaxed">
               {overallFeedback?.assessment || "-"}
@@ -541,10 +548,10 @@ export default function FeedbackPage() {
 
             <div className="grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6">
               {/* Strengths */}
-              <div className='bg-green-100 rounded-lg p-3 border border-green-200'>
-                <div className='flex items-center gap-2 mb-3'>
-                  <ThumbsUp className='w-5 h-5 text-green-600' />
-                  <h3 className='font-semibold text-gray-900 text-lg'>
+              <div className="bg-green-100 rounded-lg p-3 border border-green-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <ThumbsUp className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-gray-900 text-lg">
                     Strengths
                   </h3>
                 </div>
@@ -562,10 +569,10 @@ export default function FeedbackPage() {
               </div>
 
               {/* Improvements */}
-              <div className='bg-red-100 rounded-lg p-3 border border-red-200'>
-                <div className='flex items-center gap-2 mb-3'>
-                  <TrendingUp className='w-5 h-5 text-red-600' />
-                  <h3 className='font-semibold text-gray-900 text-lg'>
+              <div className="bg-red-100 rounded-lg p-3 border border-red-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-5 h-5 text-red-600" />
+                  <h3 className="font-semibold text-gray-900 text-lg">
                     Improvements
                   </h3>
                 </div>
@@ -602,21 +609,21 @@ export default function FeedbackPage() {
 
           {/* Practice History Section - Collapsible - Only show if NOT a practice session */}
           {data?.sessionInfo && data.sessionInfo.isPractice !== true && (
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* Header - Clickable */}
               <button
                 onClick={() => setShowPracticeHistory(!showPracticeHistory)}
-                className='w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors'
+                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
               >
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center'>
-                    <BarChart3 className='w-6 h-6 text-green-600' />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className='text-left'>
-                    <h2 className='text-xl font-bold text-gray-900'>
+                  <div className="text-left">
+                    <h2 className="text-xl font-bold text-gray-900">
                       Practice History
                     </h2>
-                    <p className='text-sm text-gray-500'>
+                    <p className="text-sm text-gray-500">
                       {practiceSessions.length > 0
                         ? `${practiceSessions.length} practice attempt${
                             practiceSessions.length > 1 ? "s" : ""
@@ -625,7 +632,7 @@ export default function FeedbackPage() {
                     </p>
                   </div>
                 </div>
-                <div className='text-gray-400'>
+                <div className="text-gray-400">
                   {showPracticeHistory ? (
                     <ChevronUp size={24} />
                   ) : (
@@ -636,12 +643,14 @@ export default function FeedbackPage() {
 
               {/* Content - Collapsible */}
               {showPracticeHistory && (
-                <div className='px-6 pb-6 border-t border-gray-200'>
+                <div className="px-6 pb-6 border-t border-gray-200">
                   {loadingPractice ? (
-                    <CardLoading message='Loading practice history...' />
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
+                    </div>
                   ) : practiceSessions.length > 0 ? (
-                    <div className='overflow-x-auto pb-4 pt-6'>
-                      <div className='flex gap-4 min-w-max'>
+                    <div className="overflow-x-auto pb-4 pt-6">
+                      <div className="flex gap-4 min-w-max">
                         {practiceSessions.map((practice, idx) => {
                           const practiceStyle = getOverviewStyle(
                             practice.feedbackOverview || "AVERAGE"
@@ -659,27 +668,31 @@ export default function FeedbackPage() {
                           return (
                             <div
                               key={practice.id}
-                              className='group bg-gradient-to-br from-gray-50 to-white border-[1.2px] border-gray-200 hover:border-green-300 rounded-xl p-6 min-w-[280px] hover:shadow-lg transition-all cursor-pointer relative'
-                              onClick={() =>
-                                navigate(`/feedback/${practice.id}`)
-                              }
+                              className="group bg-gradient-to-br from-gray-50 to-white border-[1.2px] border-gray-200 hover:border-green-300 rounded-xl p-6 min-w-[280px] hover:shadow-lg transition-all cursor-pointer relative"
+                              onClick={() => {
+                                if (practice.status === "completed") {
+                                  navigate(`/feedback/${practice.id}`);
+                                } else {
+                                  navigate(`/interview/${practice.id}`);
+                                }
+                              }}
                             >
                               <button
                                 onClick={(e) =>
                                   handleDeletePracticeSession(practice.id, e)
                                 }
-                                className='absolute top-6 right-2 p-1.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors hover:border-red-300 opacity-0 opacity-100'
-                                title='Delete practice session'
+                                className="absolute top-6 right-2 p-1.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors hover:border-red-300 opacity-0 opacity-100"
+                                title="Delete practice session"
                               >
                                 <Trash2 size={16} />
                               </button>
-                              <div className='flex items-center justify-between mb-4'>
-                                <span className='inline-flex items-center gap-2 border border-green-200 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-bold'>
-                                  <RotateCcw className='w-4 h-4' />
+                              <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center gap-2 border border-green-200 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-bold">
+                                  <RotateCcw className="w-4 h-4" />
                                   Attempt {practiceSessions.length - idx}
                                 </span>
                                 {practice.status === "completed" && (
-                                  <CheckCircle className='w-5 h-5 text-green-500 mr-8' />
+                                  <CheckCircle className="w-5 h-5 text-green-500 mr-8" />
                                 )}
                               </div>
 
@@ -692,9 +705,9 @@ export default function FeedbackPage() {
                                     {practice.feedbackOverview}
                                   </div>
 
-                                  <div className='space-y-2 text-sm text-gray-600 mb-4'>
-                                    <div className='flex items-center gap-2'>
-                                      <CalendarDays className='w-4 h-4' />
+                                  <div className="space-y-2 text-sm text-gray-600 mb-4">
+                                    <div className="flex items-center gap-2">
+                                      <CalendarDays className="w-4 h-4" />
                                       <span>{practiceDate}</span>
                                     </div>
                                     {/* {practice.duration && (
@@ -712,12 +725,12 @@ export default function FeedbackPage() {
                                 </>
                               ) : (
                                 <>
-                                  <div className='inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold text-sm mb-4'>
+                                  <div className="inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold text-sm mb-4">
                                     In Progress
                                   </div>
-                                  <div className='space-y-2 text-sm text-gray-600 mb-4'>
-                                    <div className='flex items-center gap-2'>
-                                      <CalendarDays className='w-4 h-4' />
+                                  <div className="space-y-2 text-sm text-gray-600 mb-4">
+                                    <div className="flex items-center gap-2">
+                                      <CalendarDays className="w-4 h-4" />
                                       <span>{practiceDate}</span>
                                     </div>
                                   </div>
@@ -728,29 +741,24 @@ export default function FeedbackPage() {
                                   </button>
                                 </>
                               )}
-
-                              <button className='w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'>
-                                View Details
-                                <ChevronRight className='w-4 h-4 group-hover:translate-x-1 transition-transform' />
-                              </button>
                             </div>
                           );
                         })}
                       </div>
                     </div>
                   ) : (
-                    <div className='text-center py-12 mt-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300'>
-                      <RotateCcw className='w-12 h-12 text-gray-400 mx-auto mb-3' />
-                      <p className='text-gray-600 font-medium mb-2'>
+                    <div className="text-center py-12 mt-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                      <RotateCcw className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 font-medium mb-2">
                         No practice attempts yet
                       </p>
-                      <p className='text-sm text-gray-500 mb-6'>
+                      <p className="text-sm text-gray-500 mb-6">
                         Click "Practice Again" to start your first practice
                         session
                       </p>
                       <button
                         onClick={handlePracticeAgain}
-                        className='inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
+                        className="inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
                       >
                         <RotateCcw size={18} />
                         Practice Again
@@ -777,7 +785,7 @@ export default function FeedbackPage() {
                   <h2 className="text-xl font-bold text-gray-900">
                     Questions & Answers
                   </h2>
-                  <p className='text-sm text-gray-500'>
+                  <p className="text-sm text-gray-500">
                     {totalQuestions} question{totalQuestions > 1 ? "s" : ""}{" "}
                     with detailed feedback
                   </p>
@@ -794,12 +802,12 @@ export default function FeedbackPage() {
 
             {/* Content - Collapsible */}
             {showQuestions && (
-              <div className='px-6 pb-6 border-t border-gray-200'>
-                <div className='flex items-center justify-between mb-6 pt-6'>
-                  <h3 className='font-semibold text-gray-900'>
+              <div className="px-6 pb-6 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-6 pt-6">
+                  <h3 className="font-semibold text-gray-900">
                     Review Details
                   </h3>
-                  <span className='text-sm text-gray-500'>
+                  <span className="text-sm text-gray-500">
                     {indexOfFirstQuestion + 1}–
                     {Math.min(indexOfLastQuestion, totalQuestions)} of{" "}
                     {totalQuestions}
@@ -906,7 +914,7 @@ export default function FeedbackPage() {
                           return (
                             <span
                               key={pageNumber}
-                              className='text-gray-400 px-2'
+                              className="text-gray-400 px-2"
                             >
                               ...
                             </span>

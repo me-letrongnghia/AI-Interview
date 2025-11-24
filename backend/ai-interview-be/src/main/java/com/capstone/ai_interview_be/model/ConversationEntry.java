@@ -1,6 +1,9 @@
 package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,6 +18,7 @@ import lombok.Builder;
 @NoArgsConstructor
 @Entity
 @Table(name = "conversation_entry")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ConversationEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,14 +33,17 @@ public class ConversationEntry {
     @Column(name = "answer_id", nullable = true)
     private Long answerId;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", insertable = false, updatable = false)
     private InterviewSession session;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", insertable = false, updatable = false)
     private InterviewQuestion question;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "answer_id", insertable = false, updatable = false)
     private InterviewAnswer answer;

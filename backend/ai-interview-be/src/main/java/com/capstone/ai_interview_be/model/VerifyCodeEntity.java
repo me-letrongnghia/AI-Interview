@@ -2,6 +2,8 @@ package com.capstone.ai_interview_be.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,7 +15,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "verify_codes")   
+@Table(name = "verify_codes")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class VerifyCodeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +26,7 @@ public class VerifyCodeEntity {
     @Column(name = "code", nullable = false, unique = true, length = 64)
     private String code;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;

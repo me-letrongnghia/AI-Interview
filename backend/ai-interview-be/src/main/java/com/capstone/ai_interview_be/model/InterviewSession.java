@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonValue;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "interview_session")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class InterviewSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,16 +29,20 @@ public class InterviewSession {
     private Long userId;
     
     // Relationships
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private UserEntity user;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InterviewQuestion> questions;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ConversationEntry> conversationEntries;
     
+    @JsonIgnore
     @OneToOne(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private InterviewFeedback feedback;
 
@@ -43,7 +50,7 @@ public class InterviewSession {
 
     private String level;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "interview_session_skills", 
                  joinColumns = @JoinColumn(name = "session_id"))
     @Column(name = "skill") 
