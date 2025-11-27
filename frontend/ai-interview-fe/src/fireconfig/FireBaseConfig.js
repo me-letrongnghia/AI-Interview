@@ -1,5 +1,11 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnm78Wwlo_ou94xPgiwJLW8R4MUEVsejA",
@@ -20,15 +26,17 @@ export const auth = getAuth(app);
 // Set persistence to LOCAL - auth state persists even after browser is closed
 // Note: This creates 'firebase:authUser:...' keys in localStorage
 // These keys must be manually cleared on logout
-setPersistence(auth, browserLocalPersistence)
-  .catch((error) => {
-    console.error("Error setting auth persistence:", error);
-  });
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});
 
 // Cấu hình Google Provider
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
+googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
 googleProvider.setCustomParameters({
   prompt: "select_account",
+  access_type: "offline",
 });
 
 // Cấu hình GitHub Provider

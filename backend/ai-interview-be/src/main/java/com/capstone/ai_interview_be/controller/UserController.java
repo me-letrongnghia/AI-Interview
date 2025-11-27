@@ -23,7 +23,7 @@ public class UserController {
     private final InterviewSessionRepository interviewSessionRepository;
     @GetMapping
     public ResponseEntity<UserProfileResponse> getUserByEmail(Principal principal) {
-        UserEntity user = userRepository.findByEmail(principal.getName());
+        UserEntity user = userRepository.findByEmail(principal.getName()).orElse(null);
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
@@ -43,7 +43,7 @@ public class UserController {
     }
     @PutMapping("/update-picture")
     public ResponseEntity<UserProfileResponse> updateUserPicture(@RequestBody UserProfileRequest request, Principal principal) {
-        UserEntity user = userRepository.findByEmail(principal.getName());
+        UserEntity user = userRepository.findByEmail(principal.getName()).orElse(null);
         if (user == null) {
             return ResponseEntity.notFound().build();
         }

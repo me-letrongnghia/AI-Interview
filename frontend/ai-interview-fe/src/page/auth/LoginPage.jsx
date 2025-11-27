@@ -20,20 +20,23 @@ export default function LoginPage() {
 
   // Check for session expiration message
   useEffect(() => {
-    const reason = searchParams.get('reason');
-    
-    if (reason === 'session_expired') {
-      toast.warning('Your session has expired. Please login again.', {
+    const reason = searchParams.get("reason");
+
+    if (reason === "session_expired") {
+      toast.warning("Your session has expired. Please login again.", {
         position: "top-right",
         autoClose: 5000,
       });
       // Remove query parameter after showing message
       setSearchParams({});
-    } else if (reason === 'token_expired') {
-      toast.info('Your session has expired due to inactivity. Please login again.', {
-        position: "top-right",
-        autoClose: 5000,
-      });
+    } else if (reason === "token_expired") {
+      toast.info(
+        "Your session has expired due to inactivity. Please login again.",
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
       // Remove query parameter after showing message
       setSearchParams({});
     }
@@ -69,20 +72,44 @@ export default function LoginPage() {
   };
 
   const handleLoginSuccess = async (data) => {
-    const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
-    if (response.status === 200) {
-      const user = {
-        id: response.data.id,
-        email: response.data.email,
-        fullName: response.data.fullName,
-        picture: response.data.picture,
-      };
-      setUserProfile(user);
-      setIsLogin(true);
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("isLogin", JSON.stringify(true));
-      Navigate("/");
+    console.log("handleLoginSuccess - Received data:", data);
+    console.log("Email:", data.email, "TokenFirebase:", data.tokenFirebase);
+    try {
+      const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
+      console.log("Login Firebase response:", response);
+      if (response.status === 200) {
+        const user = {
+          id: response.data.id,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          picture: response.data.picture,
+        };
+        setUserProfile(user);
+        setIsLogin(true);
+        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("isLogin", JSON.stringify(true));
+        localStorage.setItem("role", response.data.role);
+        toast.success("Login successful!", {
+          position: "top-right",
+        });
+        if (response.data.role === "ADMIN") {
+          Navigate("/admin/dashboard");
+          return;
+        }
+        Navigate("/");
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error("Your account has been locked. Please contact support.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      } else {
+        toast.error("Login failed. Please try again.", {
+          position: "top-right",
+        });
+      }
     }
   };
   const handleLoginError = (data) => {
@@ -128,12 +155,24 @@ export default function LoginPage() {
         localStorage.setItem("access_token", response.data.access_token);
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("isLogin", JSON.stringify(true));
+        localStorage.setItem("role", response.data.role);
+        if (response.data.role === "ADMIN") {
+          Navigate("/admin/dashboard");
+          return;
+        }
         Navigate("/");
       }
-    } catch {
-      toast.error("Invalid email or password. Please try again.", {
-        position: "top-right",
-      });
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error("Your account has been locked. Please contact support.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      } else {
+        toast.error("Invalid email or password. Please try again.", {
+          position: "top-right",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

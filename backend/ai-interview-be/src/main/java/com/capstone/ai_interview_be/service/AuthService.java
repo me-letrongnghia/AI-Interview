@@ -58,10 +58,11 @@ public class AuthService {
         userProfileResponse.setEmail(email);
         userProfileResponse.setFullName(userEntity.getFullName());
         userProfileResponse.setPicture(userEntity.getPicture());
+        userProfileResponse.setRole(userEntity.getRole());
         return userProfileResponse;
     }
     public String register(RegisterRequest request) throws MessagingException {
-        UserEntity userEntity = userRepository.findByEmail(request.getEmail());
+        UserEntity userEntity = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (userEntity != null) {
             throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email already exists");
         }
@@ -77,6 +78,7 @@ public class AuthService {
     }
     public UserProfileResponse loginWithFirebase(FireRequest fireRequest) {
         String email = fireRequest.getEmail();
+        System.out.println("AuthService.loginWithFirebase - Email from request: " + email);
         String uId = null;
         String fullName = null;
         String picture = null;
@@ -85,10 +87,16 @@ public class AuthService {
             uId = firebaseToken.getUid();       // get uId to idToken
             fullName = firebaseToken.getName();
             picture = firebaseToken.getPicture();
+            
+            // If email is empty or null, try to get it from Firebase token
+            if (email == null || email.isEmpty()) {
+                email = firebaseToken.getEmail();
+                System.out.println("AuthService.loginWithFirebase - Email from Firebase token: " + email);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        UserEntity userEntity = userRepository.findByEmail(email);
+        UserEntity userEntity = userRepository.findByEmail(email).orElse(null);
         CustomUserDetails customUserDetails = null;
         // user is null save database
         if(userEntity == null) {
@@ -104,6 +112,10 @@ public class AuthService {
             customUserDetails = new CustomUserDetails(userEntity1);
 
         }else{
+            if(userEntity.isEnabled() == false) {
+            
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Account has been locked");
+        }
             customUserDetails = new CustomUserDetails(userEntity);
         }
 
@@ -122,8 +134,9 @@ public class AuthService {
         userProfileResponse.setAccess_token(accessToken);
         userProfileResponse.setRefresh_token(refreshToken);
         userProfileResponse.setEmail(email);
-        userProfileResponse.setFullName(userEntity.getFullName());
-        userProfileResponse.setPicture(userEntity.getPicture());
+        userProfileResponse.setFullName(customUserDetails.getFullName());
+        userProfileResponse.setPicture(customUserDetails.getPicture());
+        userProfileResponse.setRole(customUserDetails.getRole());
         return userProfileResponse;
     }
     public UserProfileResponse refreshToken(String refreshToken) {
@@ -147,7 +160,7 @@ public class AuthService {
         return userProfileResponse;
     }
     public String resetPassword(ResetPasswordRequest newPassword) {
-        UserEntity userEntity = userRepository.findByEmail(newPassword.getEmail());
+        UserEntity userEntity = userRepository.findByEmail(newPassword.getEmail()).orElse(null);
         if(userEntity == null) {
             throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Email does not exist");
         }
