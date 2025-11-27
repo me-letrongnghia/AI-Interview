@@ -1,9 +1,11 @@
 package com.capstone.ai_interview_be.config;
 
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -13,24 +15,30 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class WebSocketEventListener {
+public class WebSocketEventListener implements ApplicationListener<SessionDisconnectEvent> {
 
     /**
      * Sự kiện khi người dùng kết nối WebSocket
      */
     @EventListener
-    public void handleWebSocketConnectListener(SessionConnectedEvent event) {
-        log.info("Received a new web socket connection");
+    public void handleWebSocketConnectListener(SessionConnectEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        System.out.println("🟢 CONNECTED: " + accessor.getSessionId());
     }
 
-    /**
-     * Sự kiện khi người dùng ngắt kết nối WebSocket
-     */
+    @Override
+    public void onApplicationEvent(SessionDisconnectEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        System.out.println("🔴 DISCONNECTED: " + accessor.getSessionId());
+    }
+
     @EventListener
-    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
-        log.info("Web socket connection disconnected");
+    public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = accessor.getSessionId();
+        log.info("🔴 WebSocket disconnected, sessionId={}", sessionId);
+        // TODO: thêm logic cập nhật trạng thái user/room nếu cần
     }
-
     /**
      * Sự kiện khi người dùng subscribe vào một topic
      */
