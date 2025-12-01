@@ -19,6 +19,7 @@ import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +33,19 @@ public class AdminService {
         Long totalUsers = userRepository.count();
         Long totalInterviews = interviewSessionRepository.count();
         
-        // Calculate average score from completed sessions (using a simple metric)
-        // Since there's no overallScore in feedback, we can use a placeholder or calculate differently
-        Double avgScore = 75.0; // Placeholder - you might want to calculate this differently
+        // Calculate interviews this week
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDateTime startOfWeekDateTime = startOfWeek.atStartOfDay();
+        LocalDateTime endOfWeekDateTime = startOfWeekDateTime.plusWeeks(1);
+        
+        Long interviewsThisWeek = interviewSessionRepository.findAll().stream()
+                .filter(s -> s.getCreatedAt() != null 
+                        && s.getCreatedAt().isAfter(startOfWeekDateTime) 
+                        && s.getCreatedAt().isBefore(endOfWeekDateTime))
+                .count();
 
-        // Count active users today
+        // Count active users today (users who had interviews today)
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         Long activeToday = interviewSessionRepository.findAll().stream()
@@ -47,7 +56,7 @@ public class AdminService {
                 .distinct()
                 .count();
 
-        return new AdminDashboardStatsResponse(totalUsers, totalInterviews, avgScore, activeToday);
+        return new AdminDashboardStatsResponse(totalUsers, totalInterviews, interviewsThisWeek, activeToday);
     }
 
     public WeeklyActivityResponse getWeeklyActivity() {
@@ -106,6 +115,63 @@ public class AdminService {
                     
                     return response;
                 })
+                .collect(Collectors.toList());
+    }
+
+    public List<TopInterviewerResponse> getTopInterviewers(Integer limit) {
+        if (limit == null || limit <= 0) limit = 10;
+        
+        // Get all users and their interview statistics
+        Map<Long, List<InterviewSession>> userSessions = interviewSessionRepository.findAll().stream()
+                .collect(Collectors.groupingBy(InterviewSession::getUserId));
+        
+        return userSessions.entrySet().stream()
+                .map(entry -> {
+                    Long userId = entry.getKey();
+                    List<InterviewSession> sessions = entry.getValue();
+                    
+                    UserEntity user = userRepository.findById(userId).orElse(null);
+                    if (user == null || "ADMIN".equals(user.getRole())) {
+                        return null; // Skip admin users or deleted users
+                    }
+                    
+                    // Calculate statistics
+                    Long interviewCount = (long) sessions.size();
+                    Long totalDurationSeconds = sessions.stream()
+                            .mapToLong(s -> s.getDuration() != null ? s.getDuration() : 0L)
+                            .sum();
+                    
+                    // Get the most recent session
+                    InterviewSession latestSession = sessions.stream()
+                            .max(Comparator.comparing(InterviewSession::getCreatedAt))
+                            .orElse(null);
+                    
+                    // Get the most common position they interviewed for
+                    String mostCommonPosition = sessions.stream()
+                            .collect(Collectors.groupingBy(
+                                    s -> s.getRole() != null ? s.getRole() : "Unknown",
+                                    Collectors.counting()
+                            ))
+                            .entrySet().stream()
+                            .max(Map.Entry.comparingByValue())
+                            .map(Map.Entry::getKey)
+                            .orElse("Unknown");
+                    
+                    TopInterviewerResponse response = new TopInterviewerResponse();
+                    response.setUserId(userId);
+                    response.setUserName(user.getFullName());
+                    response.setUserEmail(user.getEmail());
+                    response.setPosition(mostCommonPosition);
+                    response.setInterviews(interviewCount);
+                    response.setTotalDuration(formatDuration(totalDurationSeconds));
+                    response.setStatus(user.isEnabled() ? "active" : "banned");
+                    response.setLastInterviewDate(latestSession != null ? latestSession.getCreatedAt() : null);
+                    
+                    return response;
+                })
+                .filter(Objects::nonNull)
+                .sorted((r1, r2) -> Long.compare(r2.getInterviews(), r1.getInterviews())) // Sort by interview count descending
+                .limit(limit)
                 .collect(Collectors.toList());
     }
 
@@ -208,6 +274,21 @@ public class AdminService {
             return minutes + " mins";
         }
         return "0 mins";
+    }
+
+    private String formatDuration(Long totalSeconds) {
+        if (totalSeconds == null || totalSeconds == 0) {
+            return "0 mins";
+        }
+        
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        
+        if (hours > 0) {
+            return hours + "h " + minutes + "m";
+        } else {
+            return minutes + " mins";
+        }
     }
 
     private Double calculateScore(Long sessionId) {

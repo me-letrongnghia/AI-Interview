@@ -16,7 +16,7 @@ import {
 import {
   getDashboardStats,
   getWeeklyActivity,
-  getRecentInterviews,
+  getTopInterviewers,
 } from "../../api/ApiAdmin";
 import { toast } from "react-toastify";
 
@@ -24,12 +24,12 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalInterviews: 0,
-    avgScore: 0,
+    interviewsThisWeek: 0,
     activeToday: 0,
   });
 
   const [chartData, setChartData] = useState([]);
-  const [recentInterviews, setRecentInterviews] = useState([]);
+  const [topInterviewers, setTopInterviewers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,10 +39,10 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsData, activityData, interviewsData] = await Promise.all([
+      const [statsData, activityData, interviewersData] = await Promise.all([
         getDashboardStats(),
         getWeeklyActivity(),
-        getRecentInterviews(5),
+        getTopInterviewers(5),
       ]);
 
       setStats(statsData);
@@ -51,10 +51,14 @@ const Dashboard = () => {
         setChartData(activityData.activities);
       }
 
-      setRecentInterviews(
-        interviewsData.map((interview) => ({
-          ...interview,
-          date: new Date(interview.date).toISOString().split("T")[0],
+      setTopInterviewers(
+        interviewersData.map((interviewer) => ({
+          ...interviewer,
+          lastInterviewDate: interviewer.lastInterviewDate
+            ? new Date(interviewer.lastInterviewDate)
+                .toISOString()
+                .split("T")[0]
+            : "Never",
         }))
       );
     } catch (error) {
@@ -87,7 +91,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Users"
-          value={stats.totalUsers?.toLocaleString() || "0"}
+          value={(stats.totalUsers ? (stats.totalUsers - 1).toLocaleString() : "0")}
           icon={Users}
           color="blue"
         />
@@ -98,8 +102,8 @@ const Dashboard = () => {
           color="green"
         />
         <StatsCard
-          title="Average Score"
-          value={`${stats.avgScore?.toFixed(1) || "0"}%`}
+          title="Interviews This Week"
+          value={stats.interviewsThisWeek?.toLocaleString() || "0"}
           icon={Award}
           color="purple"
         />
@@ -160,10 +164,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent Interviews Table */}
+      {/* Top Interviewers Table */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Recent Interviews
+          Top Interviewers
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -173,13 +177,16 @@ const Dashboard = () => {
                   User
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  Position
+                  Most Common Position
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  Score
+                  Interviews
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  Date
+                  Total Duration
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                  Last Interview
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
                   Status
@@ -187,42 +194,64 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentInterviews.map((interview) => (
+              {topInterviewers.map((interviewer, index) => (
                 <tr
-                  key={interview.id}
+                  key={interviewer.userId}
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
-                  <td className="py-3 px-4 text-sm text-gray-900">
-                    {interview.userName}
+                  <td className="py-3 px-4">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span className="text-sm font-medium text-blue-800">
+                            #{index + 1}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">
+                          {interviewer.userName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {interviewer.userEmail}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {interview.position}
+                    {interviewer.position}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      {interviewer.interviews} interviews
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">
+                    {interviewer.totalDuration}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">
+                    {interviewer.lastInterviewDate}
                   </td>
                   <td className="py-3 px-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        interview.score >= 80
+                        interviewer.status === "active"
                           ? "bg-green-100 text-green-800"
-                          : interview.score >= 60
-                          ? "bg-yellow-100 text-yellow-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {interview.score}%
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-600">
-                    {interview.date}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {interview.status}
+                      {interviewer.status}
                     </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {topInterviewers.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No interviewers found
+            </div>
+          )}
         </div>
       </div>
     </div>

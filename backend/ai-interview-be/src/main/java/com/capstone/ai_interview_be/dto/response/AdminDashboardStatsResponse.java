@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 public class AdminDashboardStatsResponse {
     private Long totalUsers;
     private Long totalInterviews;
-    private Double avgScore;
+    private Long interviewsThisWeek;
     private Long activeToday;
 }

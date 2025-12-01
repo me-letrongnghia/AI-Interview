@@ -42,6 +42,13 @@ export const getRecentInterviews = async (limit = 10) => {
   return response.data;
 };
 
+export const getTopInterviewers = async (limit = 10) => {
+  const response = await adminApi.get(
+    `/admin/dashboard/top-interviewers?limit=${limit}`
+  );
+  return response.data;
+};
+
 // User Management
 export const getAllUsers = async (params = {}) => {
   const response = await adminApi.get("/admin/users", { params });
@@ -154,6 +161,48 @@ export const getSystemSettings = async () => {
 export const updateSystemSettings = async (settings) => {
   const response = await adminApi.put("/admin/settings", settings);
   return response.data;
+};
+
+// Contact Messages (Admin)
+export const getAdminContactMessages = async (params = {}) => {
+  const response = await adminApi.get("/admin/contact-messages", { params });
+  return response.data;
+};
+
+export const getAdminContactMessageStats = async () => {
+  const response = await adminApi.get("/admin/contact-messages/stats");
+  return response.data;
+};
+
+export const updateAdminMessageStatus = async (
+  id,
+  status,
+  adminUserId = null
+) => {
+  const params = { status };
+  if (adminUserId) params.adminUserId = adminUserId;
+
+  const response = await adminApi.put(
+    `/admin/contact-messages/${id}/status`,
+    null,
+    {
+      params,
+    }
+  );
+  return response.data;
+};
+
+export const addAdminMessageResponse = async (id, response, adminUserId) => {
+  const responseData = await adminApi.put(
+    `/admin/contact-messages/${id}/response?adminUserId=${adminUserId}`,
+    response,
+    {
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    }
+  );
+  return responseData.data;
 };
 
 export default adminApi;

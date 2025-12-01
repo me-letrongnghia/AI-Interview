@@ -12,6 +12,11 @@ const menuItems = [
     icon: Users,
     path: "/admin/users",
   },
+  {
+    title: "Contact Messages",
+    icon: MessageSquare,
+    path: "/admin/contact-messages",
+  },
 ];
 
 const AdminSidebar = ({ isOpen }) => {
@@ -58,7 +63,7 @@ const AdminSidebar = ({ isOpen }) => {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="absolute bg-[#4ade80] bottom-6 left-0 right-0 mx-6 flex items-center justify-center px-4 py-3 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+        className="absolute bg-[#4ade80] bottom-6 left-0 right-0 mx-6 flex items-center justify-center px-4 py-3 rounded-lg transition-colors "
       >
         <LogOut className="w-5 h-5 " />
         {isOpen && <span className="ml-3 font-medium">Logout</span>}

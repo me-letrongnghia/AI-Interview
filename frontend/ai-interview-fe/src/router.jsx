@@ -19,6 +19,8 @@ import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/Admin/Dashboard";
 import UserManagement from "./pages/Admin/UserManagement";
 import InterviewManagement from "./pages/Admin/InterviewManagement";
+import ContactMessages from "./pages/Admin/ContactMessages";
+import { HelpCenter } from "./page/HelpCenter";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +38,10 @@ export const router = createBrowserRouter([
         <InterviewPage />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "/help",
+    element: <HelpCenter />,
   },
   {
     path: "/options",
@@ -116,6 +122,10 @@ export const router = createBrowserRouter([
       {
         path: "users",
         element: <UserManagement />,
+      },
+      {
+        path: "contact-messages",
+        element: <ContactMessages />,
       },
     ],
   },

@@ -33,16 +33,16 @@ const AdminHeader = ({ toggleSidebar }) => {
 
       {/* Right Side */}
       <div className="flex items-center gap-4">
-        {/* Notifications
-        <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        {/* Notifications */}
+        {/* <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
           <Bell className="w-6 h-6 text-gray-600" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button> */}
 
         {/* Admin Profile */}
         <div className="flex items-center gap-3 pl-4 border-l border-gray-300">
-          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 overflow-hidden rounded-full flex items-center justify-center">
+            <img src={userProfile?.picture} alt="User Avatar" className="w-full h-full text-white" />
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-800">{displayName}</p>

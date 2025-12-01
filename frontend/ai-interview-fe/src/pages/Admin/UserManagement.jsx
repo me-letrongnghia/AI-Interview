@@ -344,13 +344,13 @@ const UserManagement = () => {
                             <Edit className="w-4 h-4" />
                             Edit User
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => handleAction("email", user.id)}
                             className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
                             <Mail className="w-4 h-4" />
                             Send Email
-                          </button>
+                          </button> */}
                           <button
                             onClick={() =>
                               handleAction(
