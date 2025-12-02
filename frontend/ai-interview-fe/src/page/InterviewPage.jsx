@@ -650,11 +650,8 @@ export default function InterviewInterface() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [_isPracticeSession, setIsPracticeSession] = useState(false);
   const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
-<<<<<<< HEAD
   const [showInitialLoading, setShowInitialLoading] = useState(true); // Initial loading state
-=======
   const timerStartTimeRef = useRef(null); // Track timer start time for elapsed calculation
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
 
   // Interview config based on level - wait for API response before setting
   const [interviewConfig, setInterviewConfig] = useState(null);
@@ -719,8 +716,6 @@ export default function InterviewInterface() {
     const onBeforeUnload = () => {
       console.log("🚪 beforeunload event - stopping media");
       stopAllMedia();
-<<<<<<< HEAD
-=======
 
       // 🎯 Calculate and save elapsed time when user closes browser
       if (timerStartTimeRef.current && sessionId) {
@@ -741,7 +736,6 @@ export default function InterviewInterface() {
 
       // Some browsers require setting returnValue to show prompt
       // e.returnValue = '';
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
     };
 
     const onPageHide = () => {
@@ -1313,12 +1307,7 @@ export default function InterviewInterface() {
               apiData.success === true &&
               apiData.data.length > 0
             ) {
-<<<<<<< HEAD
-              // Has single first question - load it
-              console.log("📝 Loading first question from history");
-=======
               // ✅ HAS SINGLE QUESTION - Load immediately
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               const firstItem = apiData.data[0];
               const messageId = `history-${
                 firstItem.id || firstItem.questionId || 0
@@ -1336,10 +1325,6 @@ export default function InterviewInterface() {
 
               processedMessagesRef.current.add(messageId);
 
-<<<<<<< HEAD
-              // Set current question ID if it's an AI question
-=======
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               if (
                 (firstItem.type || "ai") === "ai" &&
                 !firstItem.isSystemMessage
@@ -1347,28 +1332,17 @@ export default function InterviewInterface() {
                 setCurrentQuestionId(firstItem.questionId || firstItem.id);
               }
 
-<<<<<<< HEAD
-              setChatHistory(chatHistory);
-              setTypingMessageId(messageId); // ADD THIS LINE
-              speak(chatHistory[0].text);
-=======
               // ✅ Set history IMMEDIATELY
               setChatHistory(chatHistory);
 
               // ✅ Speak asynchronously
               setTimeout(() => speak(chatHistory[0].text), 100);
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
             } else if (
               apiData &&
               apiData.success === false &&
               apiData.question
             ) {
-<<<<<<< HEAD
-              // No history - load first question - THIS ALREADY HAS setTypingMessageId
-              console.log("📝 Loading first question (no history)");
-=======
               // ✅ NO HISTORY - First question
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               const questionData = apiData.question;
 
               if (

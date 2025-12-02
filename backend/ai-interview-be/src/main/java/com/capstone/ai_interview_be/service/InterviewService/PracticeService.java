@@ -5,7 +5,6 @@ import com.capstone.ai_interview_be.model.ConversationEntry;
 //import com.capstone.ai_interview_be.dto.response.PracticeSessionDTO;
 import com.capstone.ai_interview_be.model.InterviewFeedback;
 import com.capstone.ai_interview_be.model.InterviewQuestion;
-import com.capstone.ai_interview_be.model.InterviewAnswer;
 import com.capstone.ai_interview_be.model.InterviewSession;
 import com.capstone.ai_interview_be.repository.ConversationEntryRepository;
 import com.capstone.ai_interview_be.repository.InterviewFeedbackRepository;

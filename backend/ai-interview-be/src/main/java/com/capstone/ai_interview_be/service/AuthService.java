@@ -134,14 +134,9 @@ public class AuthService {
         userProfileResponse.setAccess_token(accessToken);
         userProfileResponse.setRefresh_token(refreshToken);
         userProfileResponse.setEmail(email);
-<<<<<<< HEAD
-        userProfileResponse.setFullName(userEntity.getFullName());
-        userProfileResponse.setPicture(userEntity.getPicture());
-=======
         userProfileResponse.setFullName(customUserDetails.getFullName());
         userProfileResponse.setPicture(customUserDetails.getPicture());
         userProfileResponse.setRole(customUserDetails.getRole());
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
         return userProfileResponse;
     }
     public UserProfileResponse refreshToken(String refreshToken) {

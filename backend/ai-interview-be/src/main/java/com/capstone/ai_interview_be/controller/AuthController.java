@@ -35,22 +35,6 @@ public class AuthController {
 
     // Phương thức để đăng nhập người dùng và tạo JWT token
     @PostMapping("/login")
-<<<<<<< HEAD
-    public ResponseEntity<UserProfileResponse> authLogin(@RequestBody LoginRequest request,HttpServletResponse response) {
-        // Logic to authenticate user and generate JWT token
-        UserProfileResponse profileResponse = authService.authenticate(request);
-        String refreshToken = profileResponse.getRefresh_token();
-        // Set Cookie
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true)
-                .secure(isCookieSecure)
-                .path("/api/auth/refresh-token")
-                .sameSite("Lax")
-                .maxAge(7 * 24 * 60 * 60).build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        profileResponse.setRefresh_token(null);
-        return ResponseEntity.ok(profileResponse);
-=======
     public ResponseEntity<?> authLogin(@RequestBody LoginRequest request,HttpServletResponse response) {
         try {
             // Logic to authenticate user and generate JWT token
@@ -72,7 +56,6 @@ public class AuthController {
             }
             throw e;
         }
->>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
     }
     
     // Phương thức để đăng ký người dùng mới
