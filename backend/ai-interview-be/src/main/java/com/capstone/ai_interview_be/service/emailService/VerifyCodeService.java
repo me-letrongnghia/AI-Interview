@@ -24,7 +24,7 @@ public class VerifyCodeService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiry = now.plusMinutes(10);
 
-        UserEntity user = userRepository.findByEmail(email);
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
         
         // Kiểm tra user có tồn tại không
         if (user == null) {
@@ -61,7 +61,7 @@ public class VerifyCodeService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiry = now.plusMinutes(10);
 
-        UserEntity user = userRepository.findByEmail(email);
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
         
         // Kiểm tra user có tồn tại không
         if (user == null) {

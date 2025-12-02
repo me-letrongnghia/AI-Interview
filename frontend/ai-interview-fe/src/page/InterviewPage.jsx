@@ -21,8 +21,9 @@ import {
   connectSocket,
   disconnectSocket,
   sendAnswer,
-  ensureConnected,
+  notifyUserLeaving,
 } from "../socket/SocketService";
+import { confirmToast } from "../components/ConfirmToast/ConfirmToast";
 
 // Helper function to format time consistently
 const formatTime = (date) => {
@@ -649,7 +650,11 @@ export default function InterviewInterface() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [_isPracticeSession, setIsPracticeSession] = useState(false);
   const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
+<<<<<<< HEAD
   const [showInitialLoading, setShowInitialLoading] = useState(true); // Initial loading state
+=======
+  const timerStartTimeRef = useRef(null); // Track timer start time for elapsed calculation
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
 
   // Interview config based on level - wait for API response before setting
   const [interviewConfig, setInterviewConfig] = useState(null);
@@ -714,6 +719,29 @@ export default function InterviewInterface() {
     const onBeforeUnload = () => {
       console.log("🚪 beforeunload event - stopping media");
       stopAllMedia();
+<<<<<<< HEAD
+=======
+
+      // 🎯 Calculate and save elapsed time when user closes browser
+      if (timerStartTimeRef.current && sessionId) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor(
+          (now - timerStartTimeRef.current) / 1000
+        );
+
+        console.log(
+          `⏱️ Browser closing - Elapsed time: ${elapsedSeconds}s (${Math.floor(
+            elapsedSeconds / 60
+          )}m ${elapsedSeconds % 60}s)`
+        );
+
+        // Use notifyUserLeaving with sendBeacon for reliable delivery
+        notifyUserLeaving(sessionId, "User closed browser", elapsedSeconds);
+      }
+
+      // Some browsers require setting returnValue to show prompt
+      // e.returnValue = '';
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
     };
 
     const onPageHide = () => {
@@ -744,8 +772,25 @@ export default function InterviewInterface() {
 
       // Then stop all media tracks
       stopAllMedia();
+
+      // 🎯 Save elapsed time when navigating away (route change)
+      if (timerStartTimeRef.current && sessionId) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor(
+          (now - timerStartTimeRef.current) / 1000
+        );
+
+        console.log(
+          `🔄 Route change detected - Elapsed time: ${elapsedSeconds}s (${Math.floor(
+            elapsedSeconds / 60
+          )}m ${elapsedSeconds % 60}s)`
+        );
+
+        // Use notifyUserLeaving to save time before navigating away
+        notifyUserLeaving(sessionId, "User navigated away", elapsedSeconds);
+      }
     };
-  }, []);
+  }, [sessionId]);
 
   // Speech-to-Text
   const {
@@ -776,7 +821,7 @@ export default function InterviewInterface() {
   }, [chatHistory]);
 
   // Handle leave room - MUST be defined before useTimer
-  const handleLeaveRoom = useCallback(() => {
+  const handleLeaveRoom = useCallback(async () => {
     // Prevent multiple calls
     if (isLeavingRef.current) {
       console.log("⚠️ Already leaving, ignoring duplicate call");
@@ -786,7 +831,7 @@ export default function InterviewInterface() {
     isLeavingRef.current = true;
     console.log("🚪 Leaving room - setting flag");
 
-    const confirmLeave = window.confirm(
+    const confirmLeave = await confirmToast(
       "Are you sure you want to end the interview? Your progress will be saved and feedback will be generated automatically."
     );
 
@@ -1098,8 +1143,6 @@ export default function InterviewInterface() {
     // Try to get session info to determine duration and question count
     ApiInterviews.getSessionInfo(sessionId)
       .then((sessionResponse) => {
-        console.log("📊 Session response:", sessionResponse);
-
         if (sessionResponse && sessionResponse.data) {
           const sessionData = sessionResponse.data;
 
@@ -1132,34 +1175,37 @@ export default function InterviewInterface() {
             config = getInterviewConfig("intern");
           }
 
-          // Calculate remaining time from startedAt and elapsedSeconds
+          // ✅ FIX: Calculate remaining time with EXACT precision
           let remainingMinutes = config.minutes;
           let remainingSeconds = 0;
 
-          if (sessionData.startedAt && sessionData.elapsedSeconds > 0) {
-            // Timer already started (reload case)
-            const totalSeconds = config.minutes * 60;
+          if (
+            sessionData.status === "in_progress" &&
+            sessionData.elapsedMinues > 0
+          ) {
+            // ✅ FIX: Use exact decimal minutes from backend
+            const totalDurationSeconds = config.minutes * 60;
+            const elapsedSeconds = Math.floor(sessionData.elapsedMinues * 60);
+
             const remainingTotalSeconds = Math.max(
               0,
-              totalSeconds - sessionData.elapsedSeconds
+              totalDurationSeconds - elapsedSeconds
             );
             remainingMinutes = Math.floor(remainingTotalSeconds / 60);
             remainingSeconds = remainingTotalSeconds % 60;
 
             console.log(
-              `⏱️ Reload detected - Started at: ${sessionData.startedAt}, Elapsed: ${sessionData.elapsedSeconds}s, Remaining: ${remainingMinutes}m ${remainingSeconds}s`
+              `⏱️ RELOAD DETECTED - Elapsed: ${sessionData.elapsedMinues.toFixed(
+                2
+              )}min (${elapsedSeconds}s), Remaining: ${remainingMinutes}m ${remainingSeconds}s`
             );
-          } else {
-            // First time - start timer
-            console.log("🚀 First time - Starting timer now");
 
-            ApiInterviews.startTimer(sessionId)
-              .then(() => {
-                console.log("✅ Timer started on backend");
-              })
-              .catch((err) => {
-                console.warn("⚠️ Could not start timer:", err);
-              });
+            // ✅ Adjust timerStartTimeRef to account for EXACT elapsed time
+            timerStartTimeRef.current = Date.now() - elapsedSeconds * 1000;
+          } else {
+            // First time - start timer from full duration
+            console.log("🚀 New session - Starting timer from full duration");
+            timerStartTimeRef.current = Date.now();
           }
 
           // Set configs
@@ -1208,11 +1254,7 @@ export default function InterviewInterface() {
         // Then get the first question or load history
         ApiInterviews.Get_Interview(sessionId)
           .then((response) => {
-            console.log("📥 API response:", response);
-
-            // Extract the actual data from response
             const apiData = response?.data || response;
-            console.log("📥 Extracted API data:", apiData);
 
             if (
               apiData &&
@@ -1220,24 +1262,15 @@ export default function InterviewInterface() {
               Array.isArray(apiData.data) &&
               apiData.data.length > 1
             ) {
-              // Has history - load all previous messages
-              console.log(
-                "📚 Loading interview history with",
-                apiData.data.length,
-                "messages"
-              );
-
+              // ✅ HAS HISTORY - Load và hiển thị ngay lập tức
               const chatHistoryArray = [];
               let lastQuestionId = null;
 
-              // Process each message in the history
               apiData.data.forEach((item, index) => {
                 const messageId = `history-${
                   item.id || item.questionId || index
                 }`;
-
-                // Determine message type and content
-                const messageType = item.type || "ai"; // Default to 'ai' if not specified
+                const messageType = item.type || "ai";
                 const messageContent = item.content;
 
                 if (messageContent) {
@@ -1251,28 +1284,41 @@ export default function InterviewInterface() {
 
                   processedMessagesRef.current.add(messageId);
 
-                  // Track last question ID for continuing
                   if (messageType === "ai" && !item.isSystemMessage) {
                     lastQuestionId = item.questionId || item.id;
                   }
                 }
               });
 
-              // Set the chat history
+              // ✅ Set chat history IMMEDIATELY - no waiting for speech
               setChatHistory(chatHistoryArray);
 
-              // Set current question ID to the last AI question
               if (lastQuestionId) {
                 setCurrentQuestionId(lastQuestionId);
                 console.log("✅ Restored to question ID:", lastQuestionId);
+              }
+
+              // ✅ Speak the LAST message asynchronously (non-blocking)
+              if (chatHistoryArray.length > 0) {
+                const lastMessage =
+                  chatHistoryArray[chatHistoryArray.length - 1];
+                console.log(
+                  "🔊 Speaking last message (async):",
+                  lastMessage.text.substring(0, 50)
+                );
+                setTimeout(() => speak(lastMessage.text), 100);
               }
             } else if (
               apiData &&
               apiData.success === true &&
               apiData.data.length > 0
             ) {
+<<<<<<< HEAD
               // Has single first question - load it
               console.log("📝 Loading first question from history");
+=======
+              // ✅ HAS SINGLE QUESTION - Load immediately
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               const firstItem = apiData.data[0];
               const messageId = `history-${
                 firstItem.id || firstItem.questionId || 0
@@ -1290,7 +1336,10 @@ export default function InterviewInterface() {
 
               processedMessagesRef.current.add(messageId);
 
+<<<<<<< HEAD
               // Set current question ID if it's an AI question
+=======
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               if (
                 (firstItem.type || "ai") === "ai" &&
                 !firstItem.isSystemMessage
@@ -1298,16 +1347,28 @@ export default function InterviewInterface() {
                 setCurrentQuestionId(firstItem.questionId || firstItem.id);
               }
 
+<<<<<<< HEAD
               setChatHistory(chatHistory);
               setTypingMessageId(messageId); // ADD THIS LINE
               speak(chatHistory[0].text);
+=======
+              // ✅ Set history IMMEDIATELY
+              setChatHistory(chatHistory);
+
+              // ✅ Speak asynchronously
+              setTimeout(() => speak(chatHistory[0].text), 100);
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
             } else if (
               apiData &&
               apiData.success === false &&
               apiData.question
             ) {
+<<<<<<< HEAD
               // No history - load first question - THIS ALREADY HAS setTypingMessageId
               console.log("📝 Loading first question (no history)");
+=======
+              // ✅ NO HISTORY - First question
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
               const questionData = apiData.question;
 
               if (
@@ -1324,12 +1385,13 @@ export default function InterviewInterface() {
                   id: `initial-${qId}`,
                 };
 
+                // ✅ Set history IMMEDIATELY
                 setChatHistory([initialMessage]);
                 processedMessagesRef.current.add(`initial-${qId}`);
                 setTypingMessageId(`initial-${qId}`);
 
-                // Speak immediately, typing animation runs in parallel
-                speak(questionData.content);
+                // ✅ Speak asynchronously
+                setTimeout(() => speak(questionData.content), 100);
 
                 console.log("✅ First question loaded:", qId);
               } else {
@@ -1340,7 +1402,6 @@ export default function InterviewInterface() {
                 throw new Error("Invalid question data");
               }
             } else {
-              // Unexpected response format
               console.error("❌ Unexpected API response format:", apiData);
               throw new Error("Unexpected API response format");
             }
@@ -1364,18 +1425,11 @@ export default function InterviewInterface() {
             setCurrentQuestionId("default-question-id");
             setTypingMessageId("fallback-initial");
 
-            // Speak immediately, typing animation runs in parallel
-            speak("Hello! Let's start the interview.");
+            setTimeout(() => speak("Hello! Let's start the interview."), 100);
           });
       });
 
     const processedMessages = processedMessagesRef.current;
-    const redQuestion = chatHistory[0]?.text;
-    console.log("🚀 Interview session initialized:", {
-      sessionId,
-      redQuestion,
-      processedMessages: Array.from(processedMessages || []),
-    });
     return () => {
       disconnectSocket();
       if (processedMessages) {
@@ -1429,12 +1483,6 @@ export default function InterviewInterface() {
       ? currentAnsweredCount + 1 >= interviewConfig.maxQuestions
       : false;
 
-    console.log(
-      `📊 Answering question ${currentAnsweredCount + 1}/${
-        interviewConfig?.maxQuestions || 0
-      }`
-    );
-
     setChatHistory((prev) => {
       const newHistory = [...prev, userMessage];
 
@@ -1472,12 +1520,6 @@ export default function InterviewInterface() {
         const wordCount = congratsMessage.text.split(" ").length;
         const speakingTime = Math.max((wordCount / 2.5) * 1000, 5000); // At least 5 seconds
 
-        console.log(
-          `⏱️ Will wait ${Math.round(
-            speakingTime / 1000
-          )} seconds for speech to complete`
-        );
-
         // Leave room after speech completes
         setTimeout(() => {
           handleLeaveRoom();
@@ -1513,16 +1555,6 @@ export default function InterviewInterface() {
 
     if (!sent) {
       console.log("⚠️ Send failed, attempting to reconnect...");
-      ensureConnected(sessionId, handleSocketMessage)
-        .then(() => {
-          console.log("✅ Reconnected, retrying send...");
-          sendAnswer(sessionId, payload);
-        })
-        .catch((error) => {
-          console.error("❌ Reconnect failed:", error);
-          toast.error("Connection lost. Please refresh the page.");
-          setIsLoading(false);
-        });
     }
 
     // If this was the last answer, set loading to false immediately

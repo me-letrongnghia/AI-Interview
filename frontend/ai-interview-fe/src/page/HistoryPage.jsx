@@ -39,6 +39,7 @@ const HistoryPage = () => {
       setLoading(true);
       setError("");
       const data = await SessionApi.Get_Sessions_By_User(user.id, filters);
+<<<<<<< HEAD
       console.log("All sessions from API:", data);
 
       // Filter out practice sessions - only show original sessions
@@ -48,9 +49,16 @@ const HistoryPage = () => {
       });
 
       console.log("Filtered original sessions:", originalSessions);
+=======
+      
+      // Filter out practice sessions - only show original sessions
+      const originalSessions = data.filter(session => {
+        return session.isPractice !== true;
+      });
+      
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
       setSessions(originalSessions);
     } catch (err) {
-      console.error("Error fetching sessions:", err);
       setError(err.message || "Unable to load data. Please try again later.");
     } finally {
       // Show loading for 1 second before displaying content

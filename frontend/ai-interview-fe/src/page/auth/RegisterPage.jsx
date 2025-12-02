@@ -139,20 +139,37 @@ const RegisterPage = () => {
   };
 
   const handleSuccess = async (data) => {
-    const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
-    if (response.status === 200) {
-      const user = {
-        id: response.data.id,
-        email: response.data.email,
-        fullName: response.data.fullName,
-        picture: response.data.picture,
-      };
-      setUserProfile(user);
-      setIsLogin(true);
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("isLogin", JSON.stringify(true));
-      Navigate("/");
+    try {
+      const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
+      if (response.status === 200) {
+        const user = {
+          id: response.data.id,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          picture: response.data.picture,
+        };
+        setUserProfile(user);
+        setIsLogin(true);
+        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("isLogin", JSON.stringify(true));
+        localStorage.setItem("role", response.data.role);
+        toast.success("Registration successful!", {
+          position: "top-right",
+        });
+        Navigate("/");
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error("Your account has been locked. Please contact support.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      } else {
+        toast.error("Login failed. Please try again.", {
+          position: "top-right",
+        });
+      }
     }
   };
   const handleError = () => {

@@ -72,6 +72,10 @@ public class InterviewSession {
     @Column(name = "duration")
     private Integer duration; // in minutes
     
+    @Column(name = "elapsed_minutes")
+    private Double elapsedMinutes; // thời gian thực tế (phút, có phần lẻ)
+
+    
     @Column(name = "question_count")
     private Integer questionCount; // number of questions
 

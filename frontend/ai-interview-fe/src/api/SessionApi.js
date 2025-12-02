@@ -16,7 +16,6 @@ export const SessionApi = {
       const res = await Https.get(
         `/api/sessions/user/${userId}?${params.toString()}`
       );
-      console.log(res);
 
       return res.data || [];
     } catch (err) {

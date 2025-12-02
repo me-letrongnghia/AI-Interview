@@ -134,21 +134,6 @@ public class InterviewController {
             @PathVariable Long sessionId) {
 
         InterviewSession session = sessionService.getSessionById(sessionId);
-
-        // Calculate elapsed time from startedAt
-        Integer totalElapsedSeconds = 0;
-        if (session.getStartedAt() != null) {
-            long elapsedFromStart = java.time.Duration.between(
-                session.getStartedAt(),
-                java.time.LocalDateTime.now()
-            ).getSeconds();
-            
-            totalElapsedSeconds = (int) elapsedFromStart;
-            
-            log.info("Session {} started at {}, elapsed: {}s", 
-                sessionId, session.getStartedAt(), totalElapsedSeconds);
-        }
-
         // Map to DTO response
         InterviewSessionInfoResponse response =
                 InterviewSessionInfoResponse.builder()
@@ -167,9 +152,10 @@ public class InterviewController {
             .duration(session.getDuration())
             .questionCount(session.getQuestionCount())
             .startedAt(session.getStartedAt())
-            .elapsedSeconds(totalElapsedSeconds)
             .build();
-        
+        if(session.getStatus().equals("in_progress")){
+            response.setElapsedMinues(session.getElapsedMinutes() != null ? session.getElapsedMinutes() : 0.0);
+        }
         return ResponseEntity.ok(response);
     }
 
@@ -200,7 +186,38 @@ public class InterviewController {
                 .body(Map.of("error", e.getMessage()));
         }
     }
-
+    @PostMapping("/{sessionId}/leave")
+public ResponseEntity<Map<String, Object>> leaveInterview(
+    @PathVariable Long sessionId,
+    @RequestBody Map<String, Object> requestBody) {
+    try {
+        InterviewSession session = sessionService.getSessionById(sessionId);
+        
+        // Extract elapsed seconds from request
+        Integer elapsedSeconds = (Integer) requestBody.get("elapsedSeconds");
+        
+        // ✅ ĐÚNG: Lưu ELAPSED time, không phải remaining
+        double elapsedMinutes = elapsedSeconds / 60.0;
+        elapsedMinutes = Math.round(elapsedMinutes * 10.0) / 10.0;
+        
+        // ✅ LƯU elapsed time vào DB
+        session.setElapsedMinutes(elapsedMinutes);
+        sessionService.updateSession(session);
+        
+        log.info("Session {} updated - Elapsed: {}min", sessionId, elapsedMinutes);
+        
+        return ResponseEntity.ok(Map.of(
+            "message", "Interview session updated",
+            "sessionId", sessionId,
+            "elapsedMinutes", elapsedMinutes,
+            "remainingMinutes", session.getDuration() - elapsedMinutes
+        ));
+    } catch (Exception e) {
+        log.error("Error leaving interview session {}: {}", sessionId, e.getMessage());
+        return ResponseEntity.badRequest()
+            .body(Map.of("error", e.getMessage()));
+    }
+}
     private ChatMessageDTO createQuestionMessage(InterviewQuestion question, Long sessionId) {
         ChatMessageDTO message = new ChatMessageDTO();
         message.setId("q-" + question.getId());

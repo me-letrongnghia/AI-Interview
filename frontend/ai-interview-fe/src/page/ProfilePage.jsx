@@ -189,7 +189,11 @@ export default function ProfilePage() {
     return (
       <Loading
         message={
+<<<<<<< HEAD
           showInitialLoading ? "Loading profile" : " LOADING "
+=======
+          showInitialLoading ? "Loading profile..." : "Đang tải thông tin..."
+>>>>>>> d78d45d7baba5b81ad16b678940057be8f8fc1ba
         }
         fullScreen
       />

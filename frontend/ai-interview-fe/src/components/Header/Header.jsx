@@ -15,7 +15,7 @@ function Header() {
     { to: "/", label: "Home" },
     { to: "/options", label: "Services" },
     { to: "/interview", label: "Blog" },
-    { to: "#", label: "Help Center", external: true },
+    { to: "/help", label: "Help Center", external: true },
     { to: "/about", label: "About", external: true },
   ];
 

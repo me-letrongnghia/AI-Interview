@@ -125,7 +125,7 @@ public class JwtService {
             throw new RuntimeException("Invalid token: cannot extract email");
         }
 
-        UserEntity user = userRepository.findByEmail(email);
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
             throw new RuntimeException("Invalid token: cannot extract user");

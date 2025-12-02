@@ -31,5 +31,5 @@ public class InterviewSessionInfoResponse {
     private Long originalSessionId;
     private Long feedbackId;
     private LocalDateTime startedAt;
-    private Integer elapsedSeconds;
+    private double elapsedMinues;
 }

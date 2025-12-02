@@ -1,6 +1,6 @@
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
-
+// SocketService.js
 let stompClient = null;
 let isConnected = false;
 let isConnecting = false;
@@ -131,39 +131,52 @@ export const sendAnswer = (sessionId, answerMessage) => {
   }
 };
 
-/**
- * Ngắt kết nối WebSocket
- */
-export const disconnectSocket = () => {
-  console.log("🔌 Disconnecting socket...", {
-    hasClient: !!stompClient,
-    isConnected,
-    isConnecting,
-  });
+let isDisconnecting = false; // ⭐ Thêm flag này
 
-  // Always reset flags first
-  isConnected = false;
+export const disconnectSocket = () => {
+  // Nếu đang disconnect thì skip
+  if (isDisconnecting) {
+    console.log("⏳ Disconnect already in progress");
+    return;
+  }
+
+  // Nếu không có client VÀ đã disconnected thì skip
+  if (!stompClient && !isConnected) {
+    console.log("⚠️ Socket already disconnected");
+    return;
+  }
+
+  // Đánh dấu đang disconnect
+  isDisconnecting = true;
   isConnecting = false;
 
-  if (stompClient) {
-    try {
-      // Try to disconnect gracefully if connected
-      if (stompClient.connected) {
+  try {
+    if (stompClient) {
+      if (stompClient.active || stompClient.connected) {
+        console.log("📤 Sending disconnect to server...");
         stompClient.disconnect(() => {
           console.log("✅ Socket disconnected successfully");
           stompClient = null;
+          isConnected = false;
+          isDisconnecting = false;
         });
       } else {
-        // Just clean up if not connected
-        console.log("🧹 Cleaning up disconnected socket");
+        console.log("🧹 Cleaning up inactive socket");
         stompClient = null;
+        isConnected = false;
+        isDisconnecting = false;
       }
-    } catch (error) {
-      console.warn("⚠️ Error during socket disconnect:", error);
-      stompClient = null;
+    } else {
+      // Client đã null nhưng flag chưa reset
+      console.log("🔄 Resetting connection flags");
+      isConnected = false;
+      isDisconnecting = false;
     }
-  } else {
-    console.log("⚠️ No socket client to disconnect");
+  } catch (error) {
+    console.warn("⚠️ Error during disconnect:", error);
+    stompClient = null;
+    isConnected = false;
+    isDisconnecting = false;
   }
 };
 
@@ -198,4 +211,85 @@ export const ensureConnected = async (sessionId, onMessageReceived) => {
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   return connectSocket(sessionId, onMessageReceived);
+};
+/**
+ * Notify server that user is leaving via HTTP (more reliable than WebSocket)
+ * Uses sendBeacon API which works even during page unload
+ */
+export const notifyUserLeaving = (
+  sessionId,
+  reason = "User leaving",
+  elapsedSeconds = 0
+) => {
+  console.log("📤 Notifying server user is leaving via HTTP:", {
+    sessionId,
+    reason,
+    elapsedSeconds,
+  });
+
+  try {
+    const url = `http://localhost:8080/api/interviews/${sessionId}/leave`;
+
+    // 🔐 Get access token from localStorage
+    const token = localStorage.getItem("access_token");
+
+    const data = JSON.stringify({
+      sessionId,
+      reason,
+      elapsedSeconds,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Prepare headers with Authorization Bearer token
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    // 🔐 Add Authorization header if token exists
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      console.log("🔐 Including Authorization Bearer token");
+    }
+
+    // Use fetch with keepalive (works during page unload and supports headers)
+    fetch(url, {
+      method: "POST",
+      headers: headers,
+      body: data,
+      keepalive: true, // Important: allows request to continue after page unload
+    })
+      .then((response) => {
+        if (response.ok) {
+          console.log("✅ Leave notification sent successfully");
+          console.log(
+            `   Elapsed time: ${elapsedSeconds}s (${Math.floor(
+              elapsedSeconds / 60
+            )}m)`
+          );
+        } else {
+          console.warn(`⚠️ Server returned status: ${response.status}`);
+        }
+      })
+      .catch((err) => {
+        console.warn("⚠️ Fetch failed:", err);
+      });
+
+    return true;
+  } catch (error) {
+    console.error("❌ Error sending leave notification:", error);
+    return false;
+  }
+};
+
+export const notifyUserInactive = () => {
+  if (stompClient && stompClient.connected) {
+    stompClient.send(
+      "/app/user-inactive",
+      {},
+      JSON.stringify({
+        message: "User switched tab or route",
+        timestamp: Date.now(),
+      })
+    );
+  }
 };

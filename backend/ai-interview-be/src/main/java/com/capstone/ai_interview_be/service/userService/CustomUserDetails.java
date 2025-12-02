@@ -27,7 +27,9 @@ public class CustomUserDetails implements UserDetails {
         return user.getPicture();
     }
    
-    
+    public String getRole() {
+        return user.getRole();
+    }
     @Transactional
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
