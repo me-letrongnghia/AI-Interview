@@ -54,30 +54,39 @@ export const connectSocket = (sessionId, onMessageReceived) => {
     stompClient.connect(
       headers,
       () => {
-        isConnecting = false;
-        isConnected = true;
-
         console.log(
           "✅ WebSocket connected successfully for session:",
           sessionId
         );
 
-        // Subscribe kênh nhận message
-        stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
-          console.log("📥 Received WebSocket message:", message);
-          if (message.body) {
-            const body = JSON.parse(message.body);
-            console.log("📨 Parsed message body:", body);
-            onMessageReceived(body);
-          }
-        });
+        // ⭐ Cập nhật state NGAY khi connect thành công
+        isConnecting = false;
+        isConnected = true;
 
-        console.log("✅ Subscribed to /topic/interview/" + sessionId);
-        resolve();
+        // Subscribe kênh nhận message
+        try {
+          stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
+            console.log("📥 Received WebSocket message:", message);
+            if (message.body) {
+              const body = JSON.parse(message.body);
+              console.log("📨 Parsed message body:", body);
+              onMessageReceived(body);
+            }
+          });
+
+          console.log("✅ Subscribed to /topic/interview/" + sessionId);
+          resolve();
+        } catch (subError) {
+          console.error("❌ Subscription failed:", subError);
+          isConnected = false;
+          stompClient = null;
+          reject(subError);
+        }
       },
       (error) => {
         isConnecting = false;
         isConnected = false;
+        stompClient = null; // ⭐ Reset client khi lỗi
         console.error("❌ WebSocket connection failed:", error);
         reject(error);
       }
@@ -97,36 +106,34 @@ export const sendAnswer = (sessionId, answerMessage) => {
     message: answerMessage,
   });
 
-  // Check both our flag AND the actual stomp connection status
-  if (stompClient && stompClient.connected) {
-    console.log("✅ Sending message via WebSocket...");
-    try {
-      stompClient.send(
-        `/app/interview/${sessionId}/answer`, // map với @MessageMapping server
-        {},
-        JSON.stringify(answerMessage)
-      );
-      console.log("✅ Message sent successfully");
-      return true;
-    } catch (error) {
-      console.error("❌ Error sending message:", error);
-      // Reset connection state if send fails
-      isConnected = false;
-      return false;
-    }
-  } else {
-    console.error("❌ Cannot send, socket not connected!", {
-      hasClient: !!stompClient,
-      isConnected,
-      clientConnected: stompClient?.connected,
-    });
+  // ⭐ Validation nghiêm ngặt: phải có cả client VÀ connected
+  if (!stompClient) {
+    console.error("❌ stompClient is null!");
+    isConnected = false; // Reset state
+    return false;
+  }
 
-    // Fix state if out of sync
-    if (isConnected && (!stompClient || !stompClient.connected)) {
-      console.warn("🔧 Fixing out-of-sync connection state");
-      isConnected = false;
-    }
+  if (!stompClient.connected) {
+    console.error("❌ stompClient exists but not connected!");
+    isConnected = false; // Reset state
+    return false;
+  }
 
+  // Nếu đến đây thì client tồn tại VÀ connected
+  console.log("✅ Sending message via WebSocket...");
+  try {
+    stompClient.send(
+      `/app/interview/${sessionId}/answer`,
+      {},
+      JSON.stringify(answerMessage)
+    );
+    console.log("✅ Message sent successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Error sending message:", error);
+    // Reset connection state if send fails
+    isConnected = false;
+    stompClient = null;
     return false;
   }
 };
@@ -158,24 +165,28 @@ export const disconnectSocket = () => {
           console.log("✅ Socket disconnected successfully");
           stompClient = null;
           isConnected = false;
+          isConnecting = false; // ⭐ Reset cả isConnecting
           isDisconnecting = false;
         });
       } else {
         console.log("🧹 Cleaning up inactive socket");
         stompClient = null;
         isConnected = false;
+        isConnecting = false; // ⭐ Reset cả isConnecting
         isDisconnecting = false;
       }
     } else {
       // Client đã null nhưng flag chưa reset
       console.log("🔄 Resetting connection flags");
       isConnected = false;
+      isConnecting = false; // ⭐ Reset cả isConnecting
       isDisconnecting = false;
     }
   } catch (error) {
     console.warn("⚠️ Error during disconnect:", error);
     stompClient = null;
     isConnected = false;
+    isConnecting = false; // ⭐ Reset cả isConnecting
     isDisconnecting = false;
   }
 };

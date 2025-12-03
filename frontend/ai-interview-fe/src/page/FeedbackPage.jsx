@@ -30,6 +30,7 @@ import {
 import { FeedbackApi } from "../api/FeedbackAPI";
 import { ApiPractice } from "../api/ApiPractice";
 import { toast } from "react-toastify";
+import Loading from "../components/Loading";
 
 export default function FeedbackPage() {
   const { sessionId } = useParams();
@@ -229,20 +230,15 @@ export default function FeedbackPage() {
     fetchFeedback();
   }, [sessionId]);
 
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Loading feedback...
-      </div>
-    );
+  if (loading) return <Loading fullScreen />;
 
   if (error)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-red-600 mb-4">{error}</p>
+      <div className='min-h-screen flex flex-col items-center justify-center'>
+        <p className='text-red-600 mb-4'>{error}</p>
         <button
           onClick={() => navigate("/")}
-          className="px-4 py-2 bg-emerald-600 text-white rounded"
+          className='px-4 py-2 bg-emerald-600 text-white rounded'
         >
           Go Back
         </button>
@@ -251,7 +247,7 @@ export default function FeedbackPage() {
 
   if (!data)
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
+      <div className='min-h-screen flex items-center justify-center text-gray-600'>
         No feedback data
       </div>
     );
@@ -289,112 +285,112 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className='min-h-screen bg-gray-50'>
       {/* Practice Modal */}
       {showPracticeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl animate-fadeIn">
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-2xl max-w-2xl w-full shadow-2xl animate-fadeIn'>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <RotateCcw className="w-6 h-6 text-green-600" />
+            <div className='flex items-center justify-between p-6 border-b border-gray-200'>
+              <div className='flex items-center gap-3'>
+                <div className='w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center'>
+                  <RotateCcw className='w-6 h-6 text-green-600' />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className='text-xl font-bold text-gray-900'>
                     Choose Practice Mode
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className='text-sm text-gray-500'>
                     Select how you want to practice
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowPracticeModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
               >
-                <X size={20} className="text-gray-500" />
+                <X size={20} className='text-gray-500' />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className='p-6 space-y-4'>
               {/* Option 1: Practice with old questions */}
               <button
                 onClick={handlePracticeWithOldQuestions}
-                className="w-full group bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 hover:border-blue-400 rounded-xl p-6 text-left transition-all hover:shadow-lg"
+                className='w-full group bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 hover:border-blue-400 rounded-xl p-6 text-left transition-all hover:shadow-lg'
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <RefreshCw className="w-6 h-6 text-blue-600" />
+                <div className='flex items-start gap-4'>
+                  <div className='w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors'>
+                    <RefreshCw className='w-6 h-6 text-blue-600' />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  <div className='flex-1'>
+                    <h4 className='text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors'>
                       Practice with Same Questions
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className='text-sm text-gray-600 mb-3'>
                       Review and improve your answers to the same questions from
                       this interview session.
                     </p>
-                    <ul className="space-y-1 text-sm text-gray-500">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-blue-500" />
+                    <ul className='space-y-1 text-sm text-gray-500'>
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-blue-500' />
                         Same questions as before
                       </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-blue-500" />
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-blue-500' />
                         Compare your improvement
                       </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-blue-500" />
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-blue-500' />
                         Perfect your answers
                       </li>
                     </ul>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className='w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all' />
                 </div>
               </button>
 
               {/* Option 2: Practice with same context (new questions) */}
               <button
                 onClick={handlePracticeWithSameContext}
-                className="w-full group bg-gradient-to-br from-green-50 to-white border-2 border-green-200 hover:border-green-400 rounded-xl p-6 text-left transition-all hover:shadow-lg"
+                className='w-full group bg-gradient-to-br from-green-50 to-white border-2 border-green-200 hover:border-green-400 rounded-xl p-6 text-left transition-all hover:shadow-lg'
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
-                    <FileText className="w-6 h-6 text-green-600" />
+                <div className='flex items-start gap-4'>
+                  <div className='w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors'>
+                    <FileText className='w-6 h-6 text-green-600' />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
+                  <div className='flex-1'>
+                    <h4 className='text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors'>
                       Practice with New Questions
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className='text-sm text-gray-600 mb-3'>
                       Get fresh questions based on the same role, level, and
                       skills from your original interview.
                     </p>
-                    <ul className="space-y-1 text-sm text-gray-500">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                    <ul className='space-y-1 text-sm text-gray-500'>
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-green-500' />
                         New questions, same context
                       </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-green-500' />
                         Broaden your knowledge
                       </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      <li className='flex items-center gap-2'>
+                        <CheckCircle className='w-4 h-4 text-green-500' />
                         Test different scenarios
                       </li>
                     </ul>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className='w-5 h-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all' />
                 </div>
               </button>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 rounded-b-2xl">
-              <p className="text-xs text-gray-500 text-center">
+            <div className='px-6 py-4 bg-gray-50 rounded-b-2xl'>
+              <p className='text-xs text-gray-500 text-center'>
                 💡 Tip: Try both modes to maximize your preparation
               </p>
             </div>
@@ -402,75 +398,75 @@ export default function FeedbackPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className='flex items-center justify-between mb-8'>
           <button
             onClick={() => navigate("/history")}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
+            className='inline-flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
           >
             <ArrowLeft
               size={18}
-              className="group-hover:-translate-x-1 transition-transform"
+              className='group-hover:-translate-x-1 transition-transform'
             />
             Back to History
           </button>
 
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <CheckCircle className="w-5 h-5 text-green-600" />
+          <div className='flex items-center gap-2 text-sm text-gray-600'>
+            <CheckCircle className='w-5 h-5 text-green-600' />
             <span>Completed</span>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6">
+        <div className='space-y-6'>
           {/* Feedback Report + Interview Details - Combined */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
+          <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
+            <div className='flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6'>
               {/* Left: Title and Details */}
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <div className='flex-1'>
+                <h1 className='text-3xl font-bold text-gray-900 mb-2'>
                   Feedback Report
                 </h1>
-                <p className="text-gray-600 mb-6">
+                <p className='text-gray-600 mb-6'>
                   Review your interview performance
                 </p>
 
                 {/* Interview Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <User className="w-4 h-4" />
-                      <span className="text-xs">Role</span>
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                  <div className='flex flex-col gap-1'>
+                    <div className='flex items-center gap-2 text-gray-500'>
+                      <User className='w-4 h-4' />
+                      <span className='text-xs'>Role</span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className='font-semibold text-gray-900'>
                       {sessionInfo.role || "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Award className="w-4 h-4" />
-                      <span className="text-xs">Level</span>
+                  <div className='flex flex-col gap-1'>
+                    <div className='flex items-center gap-2 text-gray-500'>
+                      <Award className='w-4 h-4' />
+                      <span className='text-xs'>Level</span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className='font-semibold text-gray-900'>
                       {sessionInfo.level || "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-xs">Duration</span>
+                  <div className='flex flex-col gap-1'>
+                    <div className='flex items-center gap-2 text-gray-500'>
+                      <Clock className='w-4 h-4' />
+                      <span className='text-xs'>Duration</span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className='font-semibold text-gray-900'>
                       {sessionInfo.duration || "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <ClipboardList className="w-4 h-4" />
-                      <span className="text-xs">Questions</span>
+                  <div className='flex flex-col gap-1'>
+                    <div className='flex items-center gap-2 text-gray-500'>
+                      <ClipboardList className='w-4 h-4' />
+                      <span className='text-xs'>Questions</span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className='font-semibold text-gray-900'>
                       {sessionInfo.totalQuestions || "-"}
                     </span>
                   </div>
@@ -478,13 +474,13 @@ export default function FeedbackPage() {
 
                 {/* Skills */}
                 {sessionInfo.skills?.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-2">Skills Tested</p>
-                    <div className="flex flex-wrap gap-2">
+                  <div className='mt-4 pt-4 border-t border-gray-200'>
+                    <p className='text-xs text-gray-500 mb-2'>Skills Tested</p>
+                    <div className='flex flex-wrap gap-2'>
                       {sessionInfo.skills.map((skill, idx) => (
                         <span
                           key={idx}
-                          className="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
+                          className='px-2.5 py-1 bg-gray-100 text-gray-700 text-xs rounded-md'
                         >
                           {skill}
                         </span>
@@ -511,11 +507,11 @@ export default function FeedbackPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+            <div className='flex flex-wrap gap-3 pt-4 border-t border-gray-200'>
               {data?.sessionInfo?.isPractice !== true && (
                 <button
                   onClick={handlePracticeAgain}
-                  className="inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
+                  className='inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
                 >
                   <RotateCcw size={18} />
                   Practice Again
@@ -523,14 +519,14 @@ export default function FeedbackPage() {
               )}
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                className='flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors'
               >
                 <Download size={18} />
                 Download
               </button>
               <button
                 onClick={() => navigate("/options")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                className='flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors'
               >
                 <Home size={18} />
                 New Interview
@@ -539,29 +535,29 @@ export default function FeedbackPage() {
           </div>
 
           {/* Summary Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Summary</h2>
+          <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
+            <h2 className='text-xl font-bold text-gray-900 mb-4'>Summary</h2>
 
-            <p className="text-gray-700 mb-6 leading-relaxed">
+            <p className='text-gray-700 mb-6 leading-relaxed'>
               {overallFeedback?.assessment || "-"}
             </p>
 
-            <div className="grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6">
+            <div className='grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6'>
               {/* Strengths */}
-              <div className="bg-green-100 rounded-lg p-3 border border-green-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <ThumbsUp className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-gray-900 text-lg">
+              <div className='bg-green-100 rounded-lg p-3 border border-green-200'>
+                <div className='flex items-center gap-2 mb-3'>
+                  <ThumbsUp className='w-5 h-5 text-green-600' />
+                  <h3 className='font-semibold text-gray-900 text-lg'>
                     Strengths
                   </h3>
                 </div>
-                <ul className="space-y-2">
+                <ul className='space-y-2'>
                   {(overallFeedback?.strengths || []).map((s, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-sm text-gray-700"
+                      className='flex items-start gap-2 text-sm text-gray-700'
                     >
-                      <span className="text-green-600 mt-1">•</span>
+                      <span className='text-green-600 mt-1'>•</span>
                       <span>{s}</span>
                     </li>
                   ))}
@@ -569,20 +565,20 @@ export default function FeedbackPage() {
               </div>
 
               {/* Improvements */}
-              <div className="bg-red-100 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-5 h-5 text-red-600" />
-                  <h3 className="font-semibold text-gray-900 text-lg">
+              <div className='bg-red-100 rounded-lg p-3 border border-red-200'>
+                <div className='flex items-center gap-2 mb-3'>
+                  <TrendingUp className='w-5 h-5 text-red-600' />
+                  <h3 className='font-semibold text-gray-900 text-lg'>
                     Improvements
                   </h3>
                 </div>
-                <ul className="space-y-2">
+                <ul className='space-y-2'>
                   {(overallFeedback?.weaknesses || []).map((w, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-sm text-gray-700"
+                      className='flex items-start gap-2 text-sm text-gray-700'
                     >
-                      <span className="text-red-600 mt-1">•</span>
+                      <span className='text-red-600 mt-1'>•</span>
                       <span>{w}</span>
                     </li>
                   ))}
@@ -591,14 +587,14 @@ export default function FeedbackPage() {
             </div>
 
             {overallFeedback?.recommendations && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-start gap-3">
-                  <Star className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className='mt-6 pt-6 border-t border-gray-200'>
+                <div className='flex items-start gap-3'>
+                  <Star className='w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5' />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">
+                    <h3 className='font-semibold text-gray-900 mb-1'>
                       Recommendations
                     </h3>
-                    <p className="text-sm text-gray-700">
+                    <p className='text-sm text-gray-700'>
                       {overallFeedback.recommendations}
                     </p>
                   </div>
@@ -609,21 +605,21 @@ export default function FeedbackPage() {
 
           {/* Practice History Section - Collapsible - Only show if NOT a practice session */}
           {data?.sessionInfo && data.sessionInfo.isPractice !== true && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
               {/* Header - Clickable */}
               <button
                 onClick={() => setShowPracticeHistory(!showPracticeHistory)}
-                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+                className='w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors'
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-green-600" />
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center'>
+                    <BarChart3 className='w-6 h-6 text-green-600' />
                   </div>
-                  <div className="text-left">
-                    <h2 className="text-xl font-bold text-gray-900">
+                  <div className='text-left'>
+                    <h2 className='text-xl font-bold text-gray-900'>
                       Practice History
                     </h2>
-                    <p className="text-sm text-gray-500">
+                    <p className='text-sm text-gray-500'>
                       {practiceSessions.length > 0
                         ? `${practiceSessions.length} practice attempt${
                             practiceSessions.length > 1 ? "s" : ""
@@ -632,7 +628,7 @@ export default function FeedbackPage() {
                     </p>
                   </div>
                 </div>
-                <div className="text-gray-400">
+                <div className='text-gray-400'>
                   {showPracticeHistory ? (
                     <ChevronUp size={24} />
                   ) : (
@@ -643,14 +639,14 @@ export default function FeedbackPage() {
 
               {/* Content - Collapsible */}
               {showPracticeHistory && (
-                <div className="px-6 pb-6 border-t border-gray-200">
+                <div className='px-6 pb-6 border-t border-gray-200'>
                   {loadingPractice ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
+                    <div className='flex items-center justify-center py-12'>
+                      <div className='animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full'></div>
                     </div>
                   ) : practiceSessions.length > 0 ? (
-                    <div className="overflow-x-auto pb-4 pt-6">
-                      <div className="flex gap-4 min-w-max">
+                    <div className='overflow-x-auto pb-4 pt-6'>
+                      <div className='flex gap-4 min-w-max'>
                         {practiceSessions.map((practice, idx) => {
                           const practiceStyle = getOverviewStyle(
                             practice.feedbackOverview || "AVERAGE"
@@ -668,7 +664,7 @@ export default function FeedbackPage() {
                           return (
                             <div
                               key={practice.id}
-                              className="group bg-gradient-to-br from-gray-50 to-white border-[1.2px] border-gray-200 hover:border-green-300 rounded-xl p-6 min-w-[280px] hover:shadow-lg transition-all cursor-pointer relative"
+                              className='group bg-gradient-to-br from-gray-50 to-white border-[1.2px] border-gray-200 hover:border-green-300 rounded-xl p-6 min-w-[280px] hover:shadow-lg transition-all cursor-pointer relative'
                               onClick={() => {
                                 if (practice.status === "completed") {
                                   navigate(`/feedback/${practice.id}`);
@@ -681,18 +677,18 @@ export default function FeedbackPage() {
                                 onClick={(e) =>
                                   handleDeletePracticeSession(practice.id, e)
                                 }
-                                className="absolute top-6 right-2 p-1.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors hover:border-red-300 opacity-0 opacity-100"
-                                title="Delete practice session"
+                                className='absolute top-6 right-2 p-1.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors hover:border-red-300 opacity-0 opacity-100'
+                                title='Delete practice session'
                               >
                                 <Trash2 size={16} />
                               </button>
-                              <div className="flex items-center justify-between mb-4">
-                                <span className="inline-flex items-center gap-2 border border-green-200 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-bold">
-                                  <RotateCcw className="w-4 h-4" />
+                              <div className='flex items-center justify-between mb-4'>
+                                <span className='inline-flex items-center gap-2 border border-green-200 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-bold'>
+                                  <RotateCcw className='w-4 h-4' />
                                   Attempt {practiceSessions.length - idx}
                                 </span>
                                 {practice.status === "completed" && (
-                                  <CheckCircle className="w-5 h-5 text-green-500 mr-8" />
+                                  <CheckCircle className='w-5 h-5 text-green-500 mr-8' />
                                 )}
                               </div>
 
@@ -705,9 +701,9 @@ export default function FeedbackPage() {
                                     {practice.feedbackOverview}
                                   </div>
 
-                                  <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                    <div className="flex items-center gap-2">
-                                      <CalendarDays className="w-4 h-4" />
+                                  <div className='space-y-2 text-sm text-gray-600 mb-4'>
+                                    <div className='flex items-center gap-2'>
+                                      <CalendarDays className='w-4 h-4' />
                                       <span>{practiceDate}</span>
                                     </div>
                                     {/* {practice.duration && (
@@ -718,24 +714,24 @@ export default function FeedbackPage() {
                                     )} */}
                                   </div>
 
-                                  <button className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300">
+                                  <button className='w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'>
                                     View Details
-                                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    <ChevronRight className='w-4 h-4 group-hover:translate-x-1 transition-transform' />
                                   </button>
                                 </>
                               ) : (
                                 <>
-                                  <div className="inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold text-sm mb-4">
+                                  <div className='inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold text-sm mb-4'>
                                     In Progress
                                   </div>
-                                  <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                    <div className="flex items-center gap-2">
-                                      <CalendarDays className="w-4 h-4" />
+                                  <div className='space-y-2 text-sm text-gray-600 mb-4'>
+                                    <div className='flex items-center gap-2'>
+                                      <CalendarDays className='w-4 h-4' />
                                       <span>{practiceDate}</span>
                                     </div>
                                   </div>
 
-                                  <button className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:shadow-xl transition-all duration-300">
+                                  <button className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:shadow-xl transition-all duration-300'>
                                     <span>Continue Interview</span>
                                     <ChevronRight size={16} />
                                   </button>
@@ -747,18 +743,18 @@ export default function FeedbackPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-12 mt-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                      <RotateCcw className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600 font-medium mb-2">
+                    <div className='text-center py-12 mt-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300'>
+                      <RotateCcw className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+                      <p className='text-gray-600 font-medium mb-2'>
                         No practice attempts yet
                       </p>
-                      <p className="text-sm text-gray-500 mb-6">
+                      <p className='text-sm text-gray-500 mb-6'>
                         Click "Practice Again" to start your first practice
                         session
                       </p>
                       <button
                         onClick={handlePracticeAgain}
-                        className="inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300"
+                        className='inline-flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all duration-300'
                       >
                         <RotateCcw size={18} />
                         Practice Again
@@ -771,27 +767,27 @@ export default function FeedbackPage() {
           )}
 
           {/* Questions & Answers - Collapsible */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
             {/* Header - Clickable */}
             <button
               onClick={() => setShowQuestions(!showQuestions)}
-              className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+              className='w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors'
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <ClipboardList className="w-6 h-6 text-green-600" />
+              <div className='flex items-center gap-3'>
+                <div className='w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center'>
+                  <ClipboardList className='w-6 h-6 text-green-600' />
                 </div>
-                <div className="text-left">
-                  <h2 className="text-xl font-bold text-gray-900">
+                <div className='text-left'>
+                  <h2 className='text-xl font-bold text-gray-900'>
                     Questions & Answers
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className='text-sm text-gray-500'>
                     {totalQuestions} question{totalQuestions > 1 ? "s" : ""}{" "}
                     with detailed feedback
                   </p>
                 </div>
               </div>
-              <div className="text-gray-400">
+              <div className='text-gray-400'>
                 {showQuestions ? (
                   <ChevronUp size={24} />
                 ) : (
@@ -802,55 +798,55 @@ export default function FeedbackPage() {
 
             {/* Content - Collapsible */}
             {showQuestions && (
-              <div className="px-6 pb-6 border-t border-gray-200">
-                <div className="flex items-center justify-between mb-6 pt-6">
-                  <h3 className="font-semibold text-gray-900">
+              <div className='px-6 pb-6 border-t border-gray-200'>
+                <div className='flex items-center justify-between mb-6 pt-6'>
+                  <h3 className='font-semibold text-gray-900'>
                     Review Details
                   </h3>
-                  <span className="text-sm text-gray-500">
+                  <span className='text-sm text-gray-500'>
                     {indexOfFirstQuestion + 1}–
                     {Math.min(indexOfLastQuestion, totalQuestions)} of{" "}
                     {totalQuestions}
                   </span>
                 </div>
 
-                <div className="space-y-6">
+                <div className='space-y-6'>
                   {currentQuestions.map((item, idx) => {
                     const actualQuestionNumber = indexOfFirstQuestion + idx + 1;
                     return (
                       <div
                         key={idx}
-                        className="border-b border-gray-200 last:border-0 pb-6 last:pb-0"
+                        className='border-b border-gray-200 last:border-0 pb-6 last:pb-0'
                       >
                         {/* Question */}
-                        <div className="flex gap-3 mb-4">
-                          <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-lg flex items-center justify-center font-semibold text-sm">
+                        <div className='flex gap-3 mb-4'>
+                          <div className='flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-lg flex items-center justify-center font-semibold text-sm'>
                             {actualQuestionNumber}
                           </div>
-                          <p className="font-semibold text-gray-900 pt-1">
+                          <p className='font-semibold text-gray-900 pt-1'>
                             {item.question}
                           </p>
                         </div>
 
                         {/* Answer */}
-                        <div className="ml-11 space-y-4">
+                        <div className='ml-11 space-y-4'>
                           <div>
-                            <p className="text-xs font-medium text-gray-500 mb-2">
+                            <p className='text-xs font-medium text-gray-500 mb-2'>
                               Your Answer
                             </p>
-                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                              <p className="text-sm text-gray-800">
+                            <div className='bg-gray-50 rounded-lg p-3 border border-gray-200'>
+                              <p className='text-sm text-gray-800'>
                                 {item.userAnswer || "No answer"}
                               </p>
                             </div>
                           </div>
 
                           <div>
-                            <p className="text-xs font-medium text-green-700 mb-2">
+                            <p className='text-xs font-medium text-green-700 mb-2'>
                               Feedback
                             </p>
-                            <div className="bg-green-100 rounded-lg p-3 border border-green-200">
-                              <p className="text-sm text-gray-800">
+                            <div className='bg-green-100 rounded-lg p-3 border border-green-200'>
+                              <p className='text-sm text-gray-800'>
                                 {item.feedback || "-"}
                               </p>
                             </div>
@@ -858,11 +854,11 @@ export default function FeedbackPage() {
 
                           {item.sampleAnswer && (
                             <div>
-                              <p className="text-xs font-medium text-blue-700 mb-2">
+                              <p className='text-xs font-medium text-blue-700 mb-2'>
                                 Sample Answer
                               </p>
-                              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                                <p className="text-sm text-gray-800">
+                              <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
+                                <p className='text-sm text-gray-800 whitespace-pre-line '>
                                   {item.sampleAnswer}
                                 </p>
                               </div>
@@ -876,16 +872,16 @@ export default function FeedbackPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
+                  <div className='mt-6 pt-6 border-t border-gray-200 flex items-center justify-center gap-2'>
                     <button
                       onClick={goToPrevPage}
                       disabled={currentPage === 1}
-                      className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className='p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed'
                     >
-                      <ChevronLeft size={20} className="text-gray-600" />
+                      <ChevronLeft size={20} className='text-gray-600' />
                     </button>
 
-                    <div className="flex items-center gap-1">
+                    <div className='flex items-center gap-1'>
                       {[...Array(totalPages)].map((_, index) => {
                         const pageNumber = index + 1;
                         if (
@@ -914,7 +910,7 @@ export default function FeedbackPage() {
                           return (
                             <span
                               key={pageNumber}
-                              className="text-gray-400 px-2"
+                              className='text-gray-400 px-2'
                             >
                               ...
                             </span>
@@ -927,9 +923,9 @@ export default function FeedbackPage() {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className='p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed'
                     >
-                      <ChevronRight size={20} className="text-gray-600" />
+                      <ChevronRight size={20} className='text-gray-600' />
                     </button>
                   </div>
                 )}
