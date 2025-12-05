@@ -1,10 +1,13 @@
 ﻿import time
 import logging
 import torch
+import torch.nn as nn
+import math
 from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import sentencepiece as spm
 
-from src.core.config import MODEL_PATH, JUDGE_MODEL_PATH, MAX_TOKENS_DEFAULT, TEMPERATURE_DEFAULT
+from src.core.config import MODEL_PATH, JUDGE_MODEL_PATH, CUSTOM_JUDGE_MODEL_PATH, MAX_TOKENS_DEFAULT, TEMPERATURE_DEFAULT
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +332,154 @@ class JudgeModelManager:
         return self.device if self.device else "unknown"
 
 
+class CustomJudgeTransformer(nn.Module):
+    """Custom Transformer model cho Judge (trained from scratch)"""
+    def __init__(self, vocab_size=6209, d_model=512, nhead=8, num_layers=10, dropout=0.1):
+        super().__init__()
+        self.d_model = d_model
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.pos_encoder = nn.Parameter(torch.zeros(1, 2000, d_model))
+        
+        self.transformer = nn.Transformer(
+            d_model=d_model, nhead=nhead,
+            num_encoder_layers=num_layers, num_decoder_layers=num_layers,
+            dim_feedforward=d_model*4, dropout=dropout,
+            batch_first=True, norm_first=True
+        )
+        self.fc_out = nn.Linear(d_model, vocab_size)
+        
+    def forward(self, src, tgt):
+        src_mask = (src == 0)
+        tgt_mask = (tgt == 0)
+        tgt_causal_mask = self.transformer.generate_square_subsequent_mask(tgt.size(1)).to(src.device)
+        
+        src_emb = self.embedding(src) * math.sqrt(self.d_model) + self.pos_encoder[:, :src.size(1), :]
+        tgt_emb = self.embedding(tgt) * math.sqrt(self.d_model) + self.pos_encoder[:, :tgt.size(1), :]
+        
+        out = self.transformer(src_emb, tgt_emb, tgt_mask=tgt_causal_mask,
+                               src_key_padding_mask=src_mask, tgt_key_padding_mask=tgt_mask)
+        return self.fc_out(out)
+
+
+class CustomJudgeModelManager:
+    """Quản lý custom Judge model (trained from scratch)"""
+    
+    def __init__(self):
+        self.model = None
+        self.tokenizer = None
+        self.model_path = CUSTOM_JUDGE_MODEL_PATH
+        self.device = None
+        
+    def _detect_device(self):
+        """Tự động phát hiện thiết bị tốt nhất"""
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            logger.info(f"[CustomJudge] Phat hien GPU: {gpu_name}")
+            logger.info(f"[CustomJudge] VRAM: {gpu_memory:.2f} GB")
+            return DEVICE_CUDA
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            logger.info("[CustomJudge] Phat hien Apple Silicon GPU (MPS)")
+            return DEVICE_MPS
+        else:
+            logger.info("[CustomJudge] Khong phat hien GPU, su dung CPU")
+            return DEVICE_CPU
+    
+    def load(self):
+        """Tải custom Judge model và SentencePiece tokenizer"""
+        logger.info("Khoi dong Custom Judge Service...")
+        logger.info(f"[CustomJudge] Dang tai model tu: {self.model_path}")
+        
+        try:
+            start_time = time.time()
+            
+            # Detect device
+            self.device = self._detect_device()
+            
+            # Load SentencePiece tokenizer
+            tokenizer_path = self.model_path / "tokenizer.model"
+            if not tokenizer_path.exists():
+                raise FileNotFoundError(f"Tokenizer not found: {tokenizer_path}")
+            
+            self.tokenizer = spm.SentencePieceProcessor()
+            self.tokenizer.load(str(tokenizer_path))
+            logger.info(f"[CustomJudge] SentencePiece tokenizer da tai (vocab_size={self.tokenizer.vocab_size()})")
+            
+            # Initialize model architecture
+            self.model = CustomJudgeTransformer(
+                vocab_size=self.tokenizer.vocab_size(),
+                d_model=512,
+                nhead=8,
+                num_layers=10,
+                dropout=0.1
+            )
+            
+            # Load weights
+            weights_path = self.model_path / "judge_model_weights.pth"
+            if not weights_path.exists():
+                raise FileNotFoundError(f"Model weights not found: {weights_path}")
+            
+            state_dict = torch.load(weights_path, map_location=self.device)
+            # Remove 'module.' prefix if exists (from DataParallel)
+            state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+            self.model.load_state_dict(state_dict)
+            
+            # Move to device and set to eval mode
+            self.model = self.model.to(self.device)
+            self.model.eval()
+            
+            load_time = time.time() - start_time
+            logger.info(f"[CustomJudge] Model da tai xong trong {load_time:.2f}s")
+            logger.info(f"[CustomJudge] Thiet bi dang su dung: {self.device}")
+            
+            # Log GPU memory if applicable
+            if self.device == DEVICE_CUDA:
+                allocated = torch.cuda.memory_allocated(0) / (1024**3)
+                reserved = torch.cuda.memory_reserved(0) / (1024**3)
+                logger.info(f"[CustomJudge] VRAM su dung: {allocated:.2f} GB / Dat truoc: {reserved:.2f} GB")
+            
+        except Exception as e:
+            logger.error(f"[CustomJudge] Loi khi tai model: {e}")
+            raise
+    
+    def cleanup(self):
+        """Dọn dẹp tài nguyên"""
+        logger.info("[CustomJudge] Dang tat Custom Judge Service...")
+        if self.model:
+            del self.model
+        if self.tokenizer:
+            del self.tokenizer
+        
+        if self.device == DEVICE_CUDA and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.info("[CustomJudge] Da don dep VRAM cache")
+        elif self.device == DEVICE_MPS and hasattr(torch.backends, 'mps'):
+            if hasattr(torch.mps, 'empty_cache'):
+                torch.mps.empty_cache()
+                logger.info("[CustomJudge] Da don dep MPS cache")
+    
+    def is_loaded(self) -> bool:
+        """Kiểm tra xem model đã được tải chưa"""
+        return self.model is not None and self.tokenizer is not None
+    
+    def get_model(self):
+        """Lấy model đã tải"""
+        if not self.is_loaded():
+            raise RuntimeError("Custom Judge model chua duoc tai")
+        return self.model
+    
+    def get_tokenizer(self):
+        """Lấy SentencePiece tokenizer đã tải"""
+        if not self.is_loaded():
+            raise RuntimeError("Custom Judge tokenizer chua duoc tai")
+        return self.tokenizer
+    
+    def get_device(self):
+        """Lấy thông tin device đang sử dụng"""
+        return self.device if self.device else "unknown"
+
+
 # Instance global của model managers
 model_manager = ModelManager()
 judge_model_manager = JudgeModelManager()
+custom_judge_manager = CustomJudgeModelManager()  # NEW: Custom Judge model

@@ -12,6 +12,7 @@ firebase-service-account.json
 backend/ai-interview-be/src/main/resources/firebase-service-accoun.json
 
 # AI Model (large files)
+Ai-model/dataset/
 Ai-model/model/
 Ai-model/cache/
 Ai-model/temp/

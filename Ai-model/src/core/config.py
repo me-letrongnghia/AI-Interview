@@ -10,6 +10,9 @@ BASE_DIR = Path(__file__).parent.parent.parent
 MODEL_PATH = Path(os.getenv("MODEL_PATH", str(BASE_DIR / "model" / "Merge")))
 JUDGE_MODEL_PATH = Path(os.getenv("JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Judge_merge")))
 
+# Custom Judge Model (Trained from scratch with Transformer)
+CUSTOM_JUDGE_MODEL_PATH = Path(os.getenv("CUSTOM_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "New_Model_Judge")))
+
 # ==================== THIẾT LẬP MODEL ====================
 MAX_TOKENS_MIN = 16
 MAX_TOKENS_MAX = 150  # Tăng để chứa greeting + question

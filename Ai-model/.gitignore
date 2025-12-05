@@ -29,12 +29,6 @@ cache/
 hf_cache/
 offload_temp/
 
-# Model files (too large for git)
-model/
-*.safetensors
-*.bin
-*.pt
-*.pth
 
 # IDE
 .vscode/
@@ -87,11 +81,7 @@ hf_cache/
 offload_temp/
 
 # Model files (too large for git)
-model/
-*.safetensors
-*.bin
-*.pt
-*.pth
+
 
 # IDE
 .vscode/
