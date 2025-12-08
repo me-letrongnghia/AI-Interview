@@ -1,19 +1,14 @@
-# 🤖 AI Interview - GenQ Service
+# 🤖 AI Interview - Multitask Judge Service
 
-FastAPI service for generating technical interview questions using the GenQ model.
+FastAPI service for AI-powered technical interview using **Multitask Judge Transformer Model** (~71M parameters).
 
 ## 📋 Features
 
-- **Question Generation**: Generate tailored interview questions based on:
-  - Job Description (JD)
-  - Role/Position
-  - Experience Level (Junior/Mid-level/Senior)
-  - Required Skills
-  
-- **Fast Inference**: Optimized for CPU inference with PyTorch
-- **RESTful API**: Easy integration with backend services
-- **Health Checks**: Built-in health monitoring
-- **Docker Support**: Containerized deployment
+- **Question Generation**: Generate interview questions based on role, skills, CV/JD context
+- **Answer Evaluation**: Evaluate candidate answers with detailed scores (0-10)
+- **Report Generation**: Create comprehensive interview assessment reports
+- **Unified Model**: Single custom Transformer handles all 3 tasks
+- **Fast Inference**: ~0.75s model loading, optimized for CPU
 
 ## 🚀 Quick Start
 
@@ -27,47 +22,44 @@ pip install -r requirements.txt
 
 2. **Run the Service**
 ```powershell
-python app.py
+python main.py
 ```
 
 The service will start at `http://localhost:8000`
 
 3. **Test the API**
 ```powershell
-curl http://localhost:8000/health
+curl http://localhost:8000/
+curl http://localhost:8000/api/v2/multitask/health
 ```
 
 ### Docker Deployment
-
-1. **Build the Image**
-```powershell
-docker build -t ai-genq-service .
-```
-
-2. **Run the Container**
-```powershell
-docker run -p 8000:8000 ai-genq-service
-```
-
-### Full Stack Deployment (with docker-compose)
 
 ```powershell
 cd ..
 docker-compose up -d
 ```
 
-This will start:
-- MySQL database (port 3307)
-- Backend Spring Boot (port 8080)
-- Frontend React (port 5000)
-- **AI GenQ Service (port 8000)**
+## 📖 API Endpoints
 
-## 📖 API Documentation
+### Base URL: `http://localhost:8000`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Service info |
+| GET | `/api/v2/multitask/health` | Health check |
+| POST | `/api/v2/multitask/load` | Load model |
+| POST | `/api/v2/multitask/generate-first` | Generate first question |
+| POST | `/api/v2/multitask/evaluate` | Evaluate answer |
+| POST | `/api/v2/multitask/generate` | Generate follow-up question |
+| POST | `/api/v2/multitask/report` | Generate interview report |
+
+---
 
 ### Health Check
 
 ```http
-GET /health
+GET /api/v2/multitask/health
 ```
 
 **Response:**
@@ -75,24 +67,30 @@ GET /health
 {
   "status": "healthy",
   "model_loaded": true,
-  "model_path": "./model/Merge"
+  "device": "cpu",
+  "model_path": "model/Multi_model/",
+  "tasks_supported": ["GENERATE", "EVALUATE", "REPORT"]
 }
 ```
 
-### Generate Question
+---
+
+### Generate First Question
 
 ```http
-POST /api/v1/generate-question
+POST /api/v2/multitask/generate-first
 ```
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "jd_text": "Building microservices with Spring Boot and PostgreSQL",
-  "role": "Java Backend Developer",
-  "level": "Mid-level",
-  "skills": ["Spring Boot", "Microservices", "PostgreSQL", "REST API"],
-  "max_tokens": 48,
+  "role": "Backend Developer",
+  "skills": ["Java", "Spring Boot", "PostgreSQL"],
+  "level": "mid-level",
+  "cv_context": "3 years experience with Java backend",
+  "jd_context": "Building microservices with Spring Boot",
+  "language": "English",
+  "max_tokens": 128,
   "temperature": 0.7
 }
 ```
@@ -100,42 +98,106 @@ POST /api/v1/generate-question
 **Response:**
 ```json
 {
-  "question": "Can you explain the differences between monolithic architecture and microservices architecture, and when would you choose one over the other?",
-  "generation_time": 3.45,
-  "model_info": {
-    "model_path": "./model/Merge",
-    "max_tokens": 48,
-    "temperature": 0.7
-  }
+  "question": "Can you explain the key differences between Spring MVC and Spring WebFlux?",
+  "question_type": "initial",
+  "difficulty": "medium"
 }
 ```
 
-### API Parameters
+---
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `jd_text` | string | ✅ Yes | - | Job description or context |
-| `role` | string | No | "Developer" | Job role/position |
-| `level` | string | No | "Mid-level" | Experience level |
-| `skills` | array | No | [] | List of required skills |
-| `max_tokens` | integer | No | 32 | Max tokens to generate (16-128) |
-| `temperature` | float | No | 0.7 | Sampling temperature (0.1-2.0) |
+### Evaluate Answer
 
-## 🔧 Configuration
-
-### Environment Variables
-
-```env
-PYTHONUNBUFFERED=1
+```http
+POST /api/v2/multitask/evaluate
 ```
 
-### Model Configuration
+**Request:**
+```json
+{
+  "question": "What is dependency injection?",
+  "answer": "Dependency injection is a design pattern where objects receive their dependencies from external sources rather than creating them internally.",
+  "job_domain": "Java Developer",
+  "context": "Backend interview",
+  "max_tokens": 400,
+  "temperature": 0.3
+}
+```
 
-Edit `app.py` to change model settings:
+**Response:**
+```json
+{
+  "relevance": 8,
+  "completeness": 6,
+  "accuracy": 8,
+  "clarity": 7,
+  "overall": 7,
+  "feedback": "Good understanding of the concept | Could elaborate on different types of DI",
+  "improved_answer": "A more comprehensive answer would include..."
+}
+```
 
-```python
-MODEL_PATH = "./model/Merge"  # Path to GenQ model
-FAST_MODE = True              # Enable fast inference
+---
+
+### Generate Follow-up Question
+
+```http
+POST /api/v2/multitask/generate
+```
+
+**Request:**
+```json
+{
+  "question": "What is REST API?",
+  "answer": "REST is an architectural style for building web services...",
+  "interview_history": [],
+  "job_domain": "Backend Developer",
+  "difficulty": "medium",
+  "max_tokens": 128,
+  "temperature": 0.7
+}
+```
+
+**Response:**
+```json
+{
+  "question": "Can you explain the difference between PUT and PATCH methods?",
+  "question_type": "follow_up",
+  "difficulty": "medium"
+}
+```
+
+---
+
+### Generate Report
+
+```http
+POST /api/v2/multitask/report
+```
+
+**Request:**
+```json
+{
+  "interview_history": [
+    {"question": "What is OOP?", "answer": "...", "score": 0.7},
+    {"question": "Explain SOLID principles", "answer": "...", "score": 0.6}
+  ],
+  "job_domain": "Java Developer",
+  "candidate_info": "3 years experience",
+  "max_tokens": 512,
+  "temperature": 0.5
+}
+```
+
+**Response:**
+```json
+{
+  "overall_assessment": "Candidate demonstrates solid understanding of core concepts...",
+  "strengths": ["Good OOP knowledge", "Clear communication"],
+  "weaknesses": ["Could improve on design patterns"],
+  "recommendations": ["Consider for mid-level position"],
+  "score": 65
+}
 ```
 
 ## 🏗️ Architecture
@@ -152,110 +214,108 @@ FAST_MODE = True              # Enable fast inference
 │   (Spring Boot) │
 └────────┬────────┘
          │
-         ├──────────────────┐
-         ▼                  ▼
-┌─────────────────┐  ┌─────────────────┐
-│  GenQ Service   │  │  OpenRouter AI  │
-│  (Local Model)  │  │   (Fallback)    │
-└─────────────────┘  └─────────────────┘
+         ▼
+┌─────────────────────────────────────┐
+│   Multitask Judge Service           │
+│   (Custom Transformer - 71M params) │
+│                                     │
+│   Tasks:                            │
+│   - GENERATE: Create questions      │
+│   - EVALUATE: Score answers         │
+│   - REPORT: Generate feedback       │
+└─────────────────────────────────────┘
 ```
 
-## 🧪 Testing
+## 🧠 Model Details
 
-### Test with cURL
+| Property | Value |
+|----------|-------|
+| Architecture | Custom Transformer (Encoder-Decoder) |
+| Parameters | ~71M |
+| d_model | 512 |
+| Heads | 8 |
+| Layers | 8 (encoder) + 8 (decoder) |
+| Vocab Size | 11,555 |
+| Tokenizer | SentencePiece |
+| Training Data | 400K samples |
 
-```powershell
-# Health check
-curl http://localhost:8000/health
+### Task Prefixes
 
-# Generate question
-curl -X POST http://localhost:8000/api/v1/generate-question `
-  -H "Content-Type: application/json" `
-  -d '{
-    \"jd_text\": \"Building RESTful APIs with Spring Boot\",
-    \"role\": \"Java Developer\",
-    \"level\": \"Mid-level\",
-    \"skills\": [\"Spring Boot\", \"REST API\", \"JPA\"]
-  }'
-```
+- `[TASK:GENERATE]` - Generate interview questions
+- `[TASK:EVALUATE]` - Evaluate answers with JSON scores  
+- `[TASK:REPORT]` - Create interview reports
 
-### Test with Python
+### Decoding Strategy
 
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/api/v1/generate-question",
-    json={
-        "jd_text": "Building microservices with Spring Boot",
-        "role": "Java Backend Developer",
-        "level": "Mid-level",
-        "skills": ["Spring Boot", "Microservices"]
-    }
-)
-
-print(response.json())
-```
-
-## 🔍 Integration with Backend
-
-The Java backend automatically calls GenQ service through `GenQService`:
-
-```java
-@Service
-public class AIService {
-    private final GenQService genQService;
-    
-    public String generateFirstQuestion(String domain, String level) {
-        // Try GenQ service first (local model)
-        if (genQService.isServiceHealthy()) {
-            return genQService.generateFirstQuestion(domain, level);
-        }
-        // Fallback to OpenRouter if GenQ is unavailable
-        return openRouterService.generateFirstQuestion(domain, level);
-    }
-}
-```
+- **EVALUATE/REPORT**: Greedy decoding (deterministic)
+- **GENERATE**: Top-k/p sampling with temperature
 
 ## 📊 Performance
 
-- **Model Loading**: ~5-10s on startup
-- **Question Generation**: ~2-5s per question (CPU)
-- **Memory Usage**: ~2-4 GB RAM
+| Metric | Value |
+|--------|-------|
+| Model Loading | ~0.75s |
+| Question Generation | ~0.5-2s |
+| Answer Evaluation | ~1-3s |
+| Report Generation | ~2-5s |
+| Memory Usage | ~300-500 MB |
 
-### Optimization Tips
+## 📁 Project Structure
 
-1. **Use GPU** if available (edit Dockerfile to add CUDA support)
-2. **Reduce max_tokens** for faster generation
-3. **Adjust temperature** (lower = faster, more deterministic)
+```
+Ai-model/
+├── main.py                 # FastAPI entry point
+├── requirements.txt        # Python dependencies
+├── set_temp_env.py         # Temp directory config
+├── README.md              
+├── model/
+│   └── Multi_model/        # Multitask Judge model files
+│       ├── model.pt
+│       └── tokenizer.model
+└── src/
+    ├── __init__.py         # v2.0.0
+    ├── core/
+    │   └── config.py       # Configuration
+    ├── middleware/
+    │   └── metrics.py      # Request logging
+    ├── models/
+    │   └── schemas.py      # Pydantic models
+    └── services/
+        ├── model_loader.py        # Model loading & inference
+        └── multitask_evaluator.py # Core evaluation logic
+```
+
+## 🧪 Testing with Postman
+
+Import `TEST_Multitask_Judge_API_v2.postman_collection.json` into Postman for ready-to-use test requests.
 
 ## 🐛 Troubleshooting
 
 ### Model not loading
 ```
-Error: Failed to load model
+Model path not found: model/Multi_model/
 ```
-**Solution**: Ensure `model/Merge` directory contains all model files
+**Solution**: Ensure `model/Multi_model/` contains `model.pt` and `tokenizer.model`
 
-### Out of Memory
+### Import errors
 ```
-RuntimeError: Out of memory
+ModuleNotFoundError: No module named 'sentencepiece'
 ```
-**Solution**: Reduce `max_tokens` or increase Docker memory limit
+**Solution**: `pip install sentencepiece`
 
-### Connection refused
-```
-Failed to connect to AI service
-```
-**Solution**: Check if service is running: `docker ps` or `curl http://localhost:8000/health`
+### Low quality output
+**Solution**: 
+- For EVALUATE: Lower temperature (0.1-0.3) for consistent scores
+- For GENERATE: Higher temperature (0.6-0.8) for diverse questions
 
-## 📝 License
+## 📝 Version History
 
-This project is part of the AI Interview System.
+- **v2.0.0**: Multitask Judge model only (removed GenQ and old Judge models)
+- **v1.x**: Legacy GenQ + Judge Qwen models
 
 ## 👥 Contributors
 
-- Your Team
+- AI Interview Team
 
 ## 📞 Support
 

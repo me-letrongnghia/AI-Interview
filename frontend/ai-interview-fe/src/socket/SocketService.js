@@ -51,10 +51,28 @@ export const connectSocket = (sessionId, onMessageReceived) => {
       headers.token = token; // Fallback for SockJS
     }
 
-    stompClient.connect(
+    // Store reference to current client for callback validation
+    const currentClient = stompClient;
+
+    currentClient.connect(
       headers,
       () => {
         isConnecting = false;
+
+        // ⭐ CRITICAL: Check if stompClient is still the same (not cleaned up by unmount)
+        if (!stompClient || stompClient !== currentClient) {
+          console.warn(
+            "⚠️ Socket was cleaned up during connection, aborting subscription"
+          );
+          // Try to disconnect this orphaned connection
+          try {
+            currentClient.disconnect();
+          } catch (e) {
+            // Ignore disconnect errors
+          }
+          return;
+        }
+
         isConnected = true;
 
         console.log(
@@ -63,17 +81,23 @@ export const connectSocket = (sessionId, onMessageReceived) => {
         );
 
         // Subscribe kênh nhận message
-        stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
-          console.log("📥 Received WebSocket message:", message);
-          if (message.body) {
-            const body = JSON.parse(message.body);
-            console.log("📨 Parsed message body:", body);
-            onMessageReceived(body);
-          }
-        });
+        try {
+          stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
+            console.log("📥 Received WebSocket message:", message);
+            if (message.body) {
+              const body = JSON.parse(message.body);
+              console.log("📨 Parsed message body:", body);
+              onMessageReceived(body);
+            }
+          });
 
-        console.log("✅ Subscribed to /topic/interview/" + sessionId);
-        resolve();
+          console.log("✅ Subscribed to /topic/interview/" + sessionId);
+          resolve();
+        } catch (subscribeError) {
+          console.error("❌ Failed to subscribe:", subscribeError);
+          isConnected = false;
+          reject(subscribeError);
+        }
       },
       (error) => {
         isConnecting = false;
@@ -131,7 +155,7 @@ export const sendAnswer = (sessionId, answerMessage) => {
   }
 };
 
-let isDisconnecting = false; // ⭐ Thêm flag này
+let isDisconnecting = false; // ⭐ Flag để tránh disconnect nhiều lần
 
 export const disconnectSocket = () => {
   // Nếu đang disconnect thì skip
@@ -141,29 +165,39 @@ export const disconnectSocket = () => {
   }
 
   // Nếu không có client VÀ đã disconnected thì skip
-  if (!stompClient && !isConnected) {
+  if (!stompClient && !isConnected && !isConnecting) {
     console.log("⚠️ Socket already disconnected");
     return;
   }
 
   // Đánh dấu đang disconnect
   isDisconnecting = true;
-  isConnecting = false;
+
+  // ⭐ IMPORTANT: Cancel any pending connection immediately
+  if (isConnecting) {
+    console.log("🛑 Cancelling pending connection");
+    isConnecting = false;
+  }
 
   try {
     if (stompClient) {
-      if (stompClient.active || stompClient.connected) {
+      const clientToDisconnect = stompClient;
+      stompClient = null; // ⭐ Set null FIRST to prevent callbacks from using it
+      isConnected = false;
+
+      if (clientToDisconnect.connected) {
         console.log("📤 Sending disconnect to server...");
-        stompClient.disconnect(() => {
-          console.log("✅ Socket disconnected successfully");
-          stompClient = null;
-          isConnected = false;
+        try {
+          clientToDisconnect.disconnect(() => {
+            console.log("✅ Socket disconnected successfully");
+            isDisconnecting = false;
+          });
+        } catch (disconnectError) {
+          console.warn("⚠️ Error during disconnect:", disconnectError);
           isDisconnecting = false;
-        });
+        }
       } else {
         console.log("🧹 Cleaning up inactive socket");
-        stompClient = null;
-        isConnected = false;
         isDisconnecting = false;
       }
     } else {

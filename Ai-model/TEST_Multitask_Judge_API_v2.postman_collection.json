@@ -1,0 +1,299 @@
+{
+	"info": {
+		"_postman_id": "multitask-judge-v2-collection",
+		"name": "TEST_Multitask_Judge_API_v2",
+		"description": "Collection để test Multitask Judge Model API v2\n\n**Model Info:**\n- Custom Transformer: d_model=512, nhead=8, layers=8\n- Vocab size: 11,555\n- Training: 400K samples, 4 epochs\n- Tasks: GENERATE_FIRST, GENERATE, EVALUATE, REPORT\n\n**Workflow:**\n1. Health Check\n2. Load Model\n3. Generate First Question\n4. Evaluate Answer\n5. Generate Follow-up\n6. Generate Report",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/health",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "health"]
+				},
+				"description": "Kiểm tra trạng thái Multitask Judge model"
+			},
+			"response": []
+		},
+		{
+			"name": "2. Load Model",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/load",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "load"]
+				},
+				"description": "Load Multitask Judge model vào memory (~1-3s trên CPU)"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Generate First Question - Java Backend",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"role\": \"Java Backend Developer\",\n    \"skills\": [\"Java\", \"Spring Boot\", \"REST API\", \"Microservices\"],\n    \"level\": \"mid-level\",\n    \"language\": \"English\",\n    \"cv_context\": \"3 years experience with Java and Spring Boot. Worked on e-commerce microservices.\",\n    \"jd_context\": \"Looking for a backend developer with Spring Boot experience to build scalable APIs.\",\n    \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/generate-first",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "generate-first"]
+				},
+				"description": "Sinh câu hỏi phỏng vấn đầu tiên dựa trên role/skills"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Generate First Question - Frontend",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"role\": \"Frontend Developer\",\n    \"skills\": [\"React\", \"TypeScript\", \"CSS\", \"Redux\"],\n    \"level\": \"junior\",\n    \"language\": \"English\",\n    \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/generate-first",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "generate-first"]
+				},
+				"description": "Sinh câu hỏi đầu tiên cho Frontend Developer"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Generate First Question - Fullstack",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"role\": \"Fullstack Developer\",\n    \"skills\": [\"Node.js\", \"React\", \"MongoDB\", \"GraphQL\"],\n    \"level\": \"senior\",\n    \"language\": \"English\",\n    \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/generate-first",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "generate-first"]
+				},
+				"description": "Sinh câu hỏi đầu tiên cho Senior Fullstack"
+			},
+			"response": []
+		},
+		{
+			"name": "4. Evaluate Answer - Good Answer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"question\": \"What is dependency injection in Spring Boot?\",\n    \"answer\": \"Dependency injection is a design pattern and core principle of Spring Framework where objects receive their dependencies from external sources rather than creating them internally. In Spring Boot, we use annotations like @Autowired for field injection, constructor injection (recommended), or setter injection. The IoC container manages the lifecycle of beans and injects them where needed. This promotes loose coupling, easier testing with mock objects, and better maintainability. For example, instead of creating a UserRepository inside UserService, we inject it through the constructor.\",\n    \"job_domain\": \"Java Backend Developer\",\n    \"temperature\": 0.3\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/evaluate",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "evaluate"]
+				},
+				"description": "Đánh giá câu trả lời tốt - expect high scores"
+			},
+			"response": []
+		},
+		{
+			"name": "4. Evaluate Answer - Poor Answer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"question\": \"What is dependency injection in Spring Boot?\",\n    \"answer\": \"I think it's something about injecting stuff. Maybe related to @Autowired? I'm not really sure.\",\n    \"job_domain\": \"Java Backend Developer\",\n    \"temperature\": 0.3\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/evaluate",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "evaluate"]
+				},
+				"description": "Đánh giá câu trả lời yếu - expect low scores"
+			},
+			"response": []
+		},
+		{
+			"name": "4. Evaluate Answer - Average Answer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"question\": \"Explain RESTful API design principles\",\n    \"answer\": \"REST APIs use HTTP methods like GET, POST, PUT, DELETE. They should be stateless and use proper status codes. Resources are identified by URLs.\",\n    \"job_domain\": \"Backend Developer\",\n    \"temperature\": 0.3\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/evaluate",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "evaluate"]
+				},
+				"description": "Đánh giá câu trả lời trung bình"
+			},
+			"response": []
+		},
+		{
+			"name": "5. Generate Follow-up Question",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"question\": \"Tell me about your experience with Java\",\n    \"answer\": \"I have 3 years of experience with Java. I worked on microservices using Spring Boot and developed REST APIs for an e-commerce platform. I'm familiar with JPA, Hibernate, and have used both MySQL and PostgreSQL.\",\n    \"interview_history\": null,\n    \"job_domain\": \"Java Backend Developer\",\n    \"difficulty\": \"medium\",\n    \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/generate",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "generate"]
+				},
+				"description": "Sinh câu hỏi follow-up dựa trên câu trả lời trước"
+			},
+			"response": []
+		},
+		{
+			"name": "5. Generate Follow-up - With History",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"question\": \"How do you handle database transactions in Spring Boot?\",\n    \"answer\": \"I use @Transactional annotation. It ensures ACID properties and automatic rollback on exceptions.\",\n    \"interview_history\": [\n        {\n            \"question\": \"Tell me about yourself\",\n            \"answer\": \"I'm a Java developer with 3 years experience in Spring Boot\"\n        },\n        {\n            \"question\": \"What is dependency injection?\",\n            \"answer\": \"It's a pattern where dependencies are provided externally rather than created internally\"\n        }\n    ],\n    \"job_domain\": \"Java Backend Developer\",\n    \"difficulty\": \"hard\",\n    \"temperature\": 0.7\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/generate",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "generate"]
+				},
+				"description": "Sinh câu hỏi follow-up với interview history"
+			},
+			"response": []
+		},
+		{
+			"name": "6. Generate Report - Full Interview",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"interview_history\": [\n        {\n            \"question\": \"Tell me about your experience with Java\",\n            \"answer\": \"I have 3 years of experience with Java and Spring Boot. I've built microservices and REST APIs.\",\n            \"score\": 0.75\n        },\n        {\n            \"question\": \"What is dependency injection?\",\n            \"answer\": \"Dependency injection is a design pattern where objects receive dependencies from external sources. Spring uses @Autowired annotation.\",\n            \"score\": 0.80\n        },\n        {\n            \"question\": \"How do you handle exceptions in Spring Boot?\",\n            \"answer\": \"I use @ControllerAdvice with @ExceptionHandler for global exception handling. I also create custom exceptions.\",\n            \"score\": 0.70\n        },\n        {\n            \"question\": \"Explain database optimization techniques\",\n            \"answer\": \"I use indexing, query optimization, and connection pooling. Also lazy loading with Hibernate.\",\n            \"score\": 0.65\n        }\n    ],\n    \"job_domain\": \"Java Backend Developer\",\n    \"candidate_info\": \"John Doe, Mid-level, 3 years experience\",\n    \"temperature\": 0.5\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/report",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "report"]
+				},
+				"description": "Tạo báo cáo tổng quan cho toàn bộ buổi phỏng vấn"
+			},
+			"response": []
+		},
+		{
+			"name": "6. Generate Report - Poor Performance",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"interview_history\": [\n        {\n            \"question\": \"What is REST API?\",\n            \"answer\": \"It's an API... I think it uses HTTP.\",\n            \"score\": 0.25\n        },\n        {\n            \"question\": \"Explain MVC pattern\",\n            \"answer\": \"Model View Controller? I've heard of it but not sure how it works exactly.\",\n            \"score\": 0.20\n        },\n        {\n            \"question\": \"How do you handle errors?\",\n            \"answer\": \"Try catch I guess?\",\n            \"score\": 0.15\n        }\n    ],\n    \"job_domain\": \"Backend Developer\",\n    \"candidate_info\": \"Intern level candidate\",\n    \"temperature\": 0.5\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v2/multitask/report",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v2", "multitask", "report"]
+				},
+				"description": "Tạo báo cáo cho ứng viên yếu - expect POOR rating"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [""]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"pm.test(\"Response time is acceptable\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(60000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

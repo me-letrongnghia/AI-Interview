@@ -22,6 +22,7 @@ import {
   disconnectSocket,
   sendAnswer,
   notifyUserLeaving,
+  ensureConnected,
 } from "../socket/SocketService";
 import { confirmToast } from "../components/ConfirmToast/ConfirmToast";
 
@@ -1414,7 +1415,7 @@ export default function InterviewInterface() {
   }, [sessionId, handleSocketMessage, speak, stopSpeaking]);
 
   // Send message
-  const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(async () => {
     if (!chatInput.trim()) return;
 
     // Don't allow sending if config not loaded yet
@@ -1525,10 +1526,27 @@ export default function InterviewInterface() {
     });
 
     // Send answer to backend (even if it's the last one, to save it)
-    const sent = sendAnswer(sessionId, payload);
+    let sent = sendAnswer(sessionId, payload);
 
     if (!sent) {
       console.log("⚠️ Send failed, attempting to reconnect...");
+      // Try to reconnect and resend
+      try {
+        await ensureConnected(sessionId, handleSocketMessage);
+        console.log("🔄 Reconnected, retrying send...");
+        sent = sendAnswer(sessionId, payload);
+        if (sent) {
+          console.log("✅ Retry send successful");
+        } else {
+          console.error("❌ Retry send also failed");
+          toast.error("Failed to send answer. Please try again.");
+          setIsLoading(false);
+        }
+      } catch (reconnectError) {
+        console.error("❌ Reconnect failed:", reconnectError);
+        toast.error("Connection lost. Please refresh the page.");
+        setIsLoading(false);
+      }
     }
 
     // If this was the last answer, set loading to false immediately

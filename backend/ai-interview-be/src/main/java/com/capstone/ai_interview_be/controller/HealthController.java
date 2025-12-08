@@ -1,6 +1,6 @@
 package com.capstone.ai_interview_be.controller;
 
-import com.capstone.ai_interview_be.service.AIService.GenQService;
+import com.capstone.ai_interview_be.service.AIService.MultitaskJudgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/health")
 @RequiredArgsConstructor
 public class HealthController {
-    private final GenQService genQService;
+    private final MultitaskJudgeService multitaskJudgeService;
     
     // Kiểm tra trạng thái hệ thống backend
     @GetMapping
@@ -28,20 +28,15 @@ public class HealthController {
         return ResponseEntity.ok(health);
     }
 
-    // Kiểm tra trạng thái dịch vụ GenQ AI
-    @GetMapping("/genq")
-    public ResponseEntity<Map<String, Object>> genqHealthCheck() {
+    // Kiểm tra trạng thái dịch vụ Multitask Judge AI
+    @GetMapping("/ai")
+    public ResponseEntity<Map<String, Object>> aiHealthCheck() {
         Map<String, Object> health = new HashMap<>();
         
-        boolean isHealthy = genQService.isServiceHealthy();
+        boolean isHealthy = multitaskJudgeService.isServiceHealthy();
         health.put("status", isHealthy ? "UP" : "DOWN");
-        health.put("service", "GenQ AI Service");
+        health.put("service", "Multitask Judge AI Service");
         health.put("timestamp", System.currentTimeMillis());
-        
-        if (isHealthy) {
-            Map<String, Object> serviceInfo = genQService.getServiceInfo();
-            health.put("details", serviceInfo);
-        }
         
         return ResponseEntity.ok(health);
     }

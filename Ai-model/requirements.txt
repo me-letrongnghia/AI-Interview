@@ -3,14 +3,9 @@ fastapi==0.115.0
 uvicorn[standard]==0.32.0
 pydantic==2.9.2
 
-# ML/AI - PyTorch với CUDA 11.8
-# --extra-index-url https://download.pytorch.org/whl/cu118
+# ML/AI - PyTorch
 torch>=2.0.0
-torchvision
-torchaudio
-transformers>=4.35.0
-accelerate>=0.20.0
-safetensors>=0.4.0
+sentencepiece>=0.1.99  # Tokenizer for Multitask model
 
 # Utilities
 python-multipart>=0.0.6

@@ -859,7 +859,7 @@ export default function FeedbackPage() {
                           {item.sampleAnswer && (
                             <div>
                               <p className="text-xs font-medium text-blue-700 mb-2">
-                                Sample Answer
+                                Improved Answer
                               </p>
                               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                                 <p className="text-sm text-gray-800">

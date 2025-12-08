@@ -1,4 +1,5 @@
 """
-GenQ Service - AI Interview Question Generator
+Multitask Judge Service - AI Interview Evaluation
+Custom Transformer for: Generate Questions, Evaluate Answers, Generate Reports
 """
-__version__ = "1.0.0"
+__version__ = "2.0.0"

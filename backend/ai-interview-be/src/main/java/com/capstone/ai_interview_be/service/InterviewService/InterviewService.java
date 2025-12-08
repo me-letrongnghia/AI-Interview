@@ -70,38 +70,15 @@ public class InterviewService {
         String questionContent = question.getContent();
         String answerContent = answerMessage.getContent();
         
-        // Chạy async để không block việc tạo câu hỏi tiếp theo
-        CompletableFuture.runAsync(() -> {
-            try {
-                log.info("Generating feedback for answer {} in background", savedAnswer.getId());
-
-                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
-                AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
-                        savedAnswer.getId(),
-                        questionContent,
-                        answerContent,
-                        role,
-                        level,
-                        extractMainCompetency(skills),
-                        skills);
-
-                answerFeedback.setCreatedAt(LocalDateTime.now());
-                answerFeedbackRepository.save(answerFeedback);
-
-                log.info("Feedback generated and saved for answer {} with final score: {}", 
-                        savedAnswer.getId(), answerFeedback.getScoreFinal());
-
-            } catch (Exception e) {
-                log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
-            }
-        });
-
-        // Cập nhật conversation entry với answer và feedback
+        // OPTIMIZATION: Generate question FIRST (sync), then evaluate answer (async)
+        // This ensures user gets next question immediately while evaluation runs in background
+        // The AI model processes requests sequentially, so we prioritize question generation
+        
+        // Cập nhật conversation entry với answer (nhưng chưa có feedback)
         conversationService.updateConversationEntry(
                 answerMessage.getQuestionId(),
                 savedAnswer.getId(),
                 answerMessage.getContent()
-                // feedback
         );
 
         // For PRACTICE sessions with OLD QUESTIONS: Return pre-generated question instead of calling AI
@@ -154,6 +131,9 @@ public class InterviewService {
 
                     log.info("Returned pre-generated question {} of {}", currentIndex + 2, allQuestions.size());
 
+                    // Start async evaluation for practice mode too
+                    startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
+
                     return new ProcessAnswerResponse(
                             savedAnswer.getId(),
                             savedAnswer.getFeedback(),
@@ -161,6 +141,10 @@ public class InterviewService {
                 } else {
                     // No more questions - practice session ends
                     log.info("Practice session completed - no more questions");
+                    
+                    // Start async evaluation for last answer
+                    startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
+                    
                     return new ProcessAnswerResponse(
                             savedAnswer.getId(),
                             savedAnswer.getFeedback(),
@@ -180,6 +164,10 @@ public class InterviewService {
         if (session.getQuestionCount() != null && currentQuestionCount >= session.getQuestionCount()) {
             log.info("Session {} has reached question limit ({}/{}), ending interview",
                     sessionId, currentQuestionCount, session.getQuestionCount());
+            
+            // Start async evaluation even when session ends
+            startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
+            
             return new ProcessAnswerResponse(
                     savedAnswer.getId(),
                     savedAnswer.getFeedback(),
@@ -227,10 +215,52 @@ public class InterviewService {
         log.info("Generated question {} of {} for session {}",
                 currentQuestionCount + 1, session.getQuestionCount(), sessionId);
 
+        // NOW start async evaluation AFTER question is generated
+        // This ensures user gets next question immediately while evaluation runs in background
+        startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
+
         return new ProcessAnswerResponse(
                 savedAnswer.getId(),
                 savedAnswer.getFeedback(),
                 nextQuestionDto);
+    }
+    
+    /**
+     * Start async evaluation in background thread
+     * This method is called AFTER question generation to prioritize user experience
+     */
+    private void startAsyncEvaluation(
+            InterviewAnswer savedAnswer,
+            String questionContent,
+            String answerContent,
+            String role,
+            String level,
+            List<String> skills) {
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.info("Generating feedback for answer {} in background (after question generated)", savedAnswer.getId());
+
+                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
+                AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
+                        savedAnswer.getId(),
+                        questionContent,
+                        answerContent,
+                        role,
+                        level,
+                        extractMainCompetency(skills),
+                        skills);
+
+                answerFeedback.setCreatedAt(LocalDateTime.now());
+                answerFeedbackRepository.save(answerFeedback);
+
+                log.info("Feedback generated and saved for answer {} with final score: {}", 
+                        savedAnswer.getId(), answerFeedback.getScoreFinal());
+
+            } catch (Exception e) {
+                log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
+            }
+        });
     }
 
     // Phương thức để xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
@@ -263,30 +293,8 @@ public class InterviewService {
         String questionContent = question.getContent();
         String answerContent = answerMessage.getContent();
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                log.info("Generating feedback for last answer {} in background", savedAnswer.getId());
-
-                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
-                AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
-                        savedAnswer.getId(),
-                        questionContent,
-                        answerContent,
-                        role,
-                        level,
-                        extractMainCompetency(skills),
-                        skills);
-
-                answerFeedback.setCreatedAt(LocalDateTime.now());
-                answerFeedbackRepository.save(answerFeedback);
-
-                log.info("Feedback generated and saved for last answer {} with final score: {}", 
-                        savedAnswer.getId(), answerFeedback.getScoreFinal());
-
-            } catch (Exception e) {
-                log.error("Error generating feedback for last answer {}", savedAnswer.getId(), e);
-            }
-        });
+        // Start async evaluation using helper method
+        startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
 
         conversationService.updateConversationEntry(
                 answerMessage.getQuestionId(),

@@ -1,37 +1,29 @@
 package com.capstone.ai_interview_be.service.InterviewService;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
-import com.capstone.ai_interview_be.dto.response.EvaluateAnswerResponse;
 import com.capstone.ai_interview_be.model.AnswerFeedback;
 import com.capstone.ai_interview_be.service.AIService.AIService;
-import com.capstone.ai_interview_be.service.AIService.JudgeService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * Service to evaluate interview answers using both Judge AI and Gemini
- * Combines detailed scoring from Judge with qualitative feedback from Gemini
+ * Service to evaluate interview answers using Multitask Judge AI (via AIService)
+ * Provides detailed scoring and qualitative feedback
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AnswerEvaluationService {
     
-    private final JudgeService judgeService;
     private final AIService aiService;
-    private final ObjectMapper objectMapper;
-    
-    @Value("${judge.service.enabled:true}")
-    private boolean judgeEnabled;
     
     /**
-     * Evaluate an interview answer with Judge AI and Gemini feedback
+     * Evaluate an interview answer with Multitask Judge AI
      * 
+     * @param answerId The answer ID
      * @param question The interview question
      * @param answer The candidate's answer
      * @param role Job role (e.g., "Java Backend Developer")
@@ -55,45 +47,25 @@ public class AnswerEvaluationService {
         AnswerFeedback answerFeedback = new AnswerFeedback();
         answerFeedback.setAnswerId(answerId);
         
-        // Try Judge AI evaluation first (if enabled and service healthy)
-        if (judgeEnabled && judgeService.isServiceHealthy()) {
-            try {
-                log.info("Using Judge AI for answer evaluation");
-                EvaluateAnswerResponse judgeResponse = judgeService.evaluateAnswer(
-                        question, answer, role, level, competency, skills);
-                
-                // Store Judge evaluation data
-                populateJudgeData(answerFeedback, judgeResponse);
-                
-                log.info("Judge AI evaluation completed - Final score: {}", 
-                        judgeResponse.getScores().get("final"));
-                
-            } catch (Exception e) {
-                log.error("Error getting Judge AI evaluation, will use Gemini only", e);
-            }
-        } else {
-            log.info("Judge AI service not enabled or unavailable, using Gemini only");
-        }
-        
-        // Get Gemini feedback (qualitative assessment)
         try {
-            log.info("Getting Gemini feedback");
-            AnswerFeedbackData geminiData = aiService.generateAnswerFeedback(
+            log.info("Using Multitask Judge AI for answer evaluation");
+            
+            // Get evaluation from AIService (which uses MultitaskJudgeService)
+            AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
                     question, answer, role, level);
             
-            // Store Gemini feedback
-            answerFeedback.setFeedbackText(geminiData.getFeedback());
-            answerFeedback.setSampleAnswer(geminiData.getSampleAnswer());
+            // Parse scores from feedback text if available
+            parseAndSetScores(answerFeedback, feedbackData.getFeedback());
             
-            // If Judge didn't provide improved answer, use Gemini's sample answer
-            if (answerFeedback.getImprovedAnswer() == null) {
-                answerFeedback.setImprovedAnswer(geminiData.getSampleAnswer());
-            }
+            // Store feedback and sample answer
+            answerFeedback.setFeedbackText(feedbackData.getFeedback());
+            answerFeedback.setSampleAnswer(feedbackData.getSampleAnswer());
+            answerFeedback.setImprovedAnswer(feedbackData.getSampleAnswer());
             
-            log.info("Gemini feedback generated successfully");
+            log.info("Multitask Judge evaluation completed for answer {}", answerId);
             
         } catch (Exception e) {
-            log.error("Error getting Gemini feedback", e);
+            log.error("Error evaluating answer {}: {}", answerId, e.getMessage());
             answerFeedback.setFeedbackText("Error generating feedback: " + e.getMessage());
         }
         
@@ -101,69 +73,75 @@ public class AnswerEvaluationService {
     }
     
     /**
-     * Populate AnswerFeedback entity with Judge AI evaluation data
+     * Parse scores from feedback text and set them on AnswerFeedback
+     * Expected format: "Overall Score: X.X/10\n...• Relevance: X/10\n..."
      */
-    private void populateJudgeData(AnswerFeedback feedback, EvaluateAnswerResponse judgeResponse) {
+    private void parseAndSetScores(AnswerFeedback feedback, String feedbackText) {
+        if (feedbackText == null || feedbackText.isEmpty()) {
+            setDefaultScores(feedback);
+            return;
+        }
+        
         try {
-            // Store scores as JSON
-            String scoresJson = objectMapper.writeValueAsString(judgeResponse.getScores());
-            feedback.setScoresJson(scoresJson);
+            // Parse Overall Score
+            if (feedbackText.contains("Overall Score:")) {
+                String overallStr = extractScore(feedbackText, "Overall Score:");
+                if (overallStr != null) {
+                    double overall = Double.parseDouble(overallStr) / 10.0; // Convert to 0-1 scale
+                    feedback.setScoreFinal(overall);
+                }
+            }
             
-            // Store individual scores for easy querying
-            feedback.setScoreCorrectness(judgeResponse.getScores().get("correctness"));
-            feedback.setScoreCoverage(judgeResponse.getScores().get("coverage"));
-            feedback.setScoreDepth(judgeResponse.getScores().get("depth"));
-            feedback.setScoreClarity(judgeResponse.getScores().get("clarity"));
-            feedback.setScorePracticality(judgeResponse.getScores().get("practicality"));
-            feedback.setScoreFinal(judgeResponse.getScores().get("final"));
+            // Parse individual scores (convert from 0-10 to 0-1)
+            feedback.setScoreCorrectness(parseScoreFromText(feedbackText, "Accuracy:") / 10.0);
+            feedback.setScoreCoverage(parseScoreFromText(feedbackText, "Completeness:") / 10.0);
+            feedback.setScoreDepth(parseScoreFromText(feedbackText, "Relevance:") / 10.0);
+            feedback.setScoreClarity(parseScoreFromText(feedbackText, "Clarity:") / 10.0);
+            feedback.setScorePracticality(0.7); // Default value
             
-            // Store improved answer from Judge
-            feedback.setImprovedAnswer(judgeResponse.getImprovedAnswer());
-            
-            // Store generation time
-            feedback.setGenerationTime(judgeResponse.getGenerationTime());
-            
-            // Format Judge feedback as bullet points
-            if (judgeResponse.getFeedback() != null && !judgeResponse.getFeedback().isEmpty()) {
-                String feedbackText = formatJudgeFeedback(judgeResponse);
-                feedback.setFeedbackText(feedbackText);
+            // If final score not set, calculate from individual scores
+            if (feedback.getScoreFinal() == null || feedback.getScoreFinal() == 0.0) {
+                double avg = (feedback.getScoreCorrectness() + feedback.getScoreCoverage() + 
+                             feedback.getScoreDepth() + feedback.getScoreClarity()) / 4.0;
+                feedback.setScoreFinal(avg);
             }
             
         } catch (Exception e) {
-            log.error("Error populating Judge data", e);
+            log.warn("Error parsing scores from feedback, using defaults: {}", e.getMessage());
+            setDefaultScores(feedback);
         }
     }
     
-    /**
-     * Format Judge feedback into readable text with scores
-     */
-    private String formatJudgeFeedback(EvaluateAnswerResponse judgeResponse) {
-        StringBuilder sb = new StringBuilder();
+    private String extractScore(String text, String label) {
+        int idx = text.indexOf(label);
+        if (idx == -1) return null;
         
-        // Overall score
-        sb.append("Overall Score: ")
-          .append(String.format("%.2f", judgeResponse.getScores().get("final") * 100))
-          .append("%\n\n");
+        int start = idx + label.length();
+        int end = text.indexOf("/", start);
+        if (end == -1) end = text.indexOf("\n", start);
+        if (end == -1) return null;
         
-        // Detailed scores
-        sb.append("Detailed Scores:\n");
-        sb.append(String.format("• Correctness: %.2f%%\n", 
-                judgeResponse.getScores().get("correctness") * 100));
-        sb.append(String.format("• Coverage: %.2f%%\n", 
-                judgeResponse.getScores().get("coverage") * 100));
-        sb.append(String.format("• Depth: %.2f%%\n", 
-                judgeResponse.getScores().get("depth") * 100));
-        sb.append(String.format("• Clarity: %.2f%%\n", 
-                judgeResponse.getScores().get("clarity") * 100));
-        sb.append(String.format("• Practicality: %.2f%%\n\n", 
-                judgeResponse.getScores().get("practicality") * 100));
-        
-        // Feedback points
-        sb.append("Feedback:\n");
-        for (String point : judgeResponse.getFeedback()) {
-            sb.append("• ").append(point).append("\n");
+        return text.substring(start, end).trim();
+    }
+    
+    private double parseScoreFromText(String text, String label) {
+        try {
+            String scoreStr = extractScore(text, label);
+            if (scoreStr != null) {
+                return Double.parseDouble(scoreStr);
+            }
+        } catch (Exception e) {
+            // Ignore parsing errors
         }
-        
-        return sb.toString();
+        return 7.0; // Default score
+    }
+    
+    private void setDefaultScores(AnswerFeedback feedback) {
+        feedback.setScoreCorrectness(0.7);
+        feedback.setScoreCoverage(0.7);
+        feedback.setScoreDepth(0.7);
+        feedback.setScoreClarity(0.7);
+        feedback.setScorePracticality(0.7);
+        feedback.setScoreFinal(0.7);
     }
 }

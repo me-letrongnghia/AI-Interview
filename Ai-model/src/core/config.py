@@ -1,5 +1,5 @@
 """
-Cấu hình cho dịch vụ GenQ
+Cấu hình cho Multitask Judge Service
 """
 import logging
 import os
@@ -7,35 +7,19 @@ from pathlib import Path
 
 # ==================== ĐƯỜNG DẪN ====================
 BASE_DIR = Path(__file__).parent.parent.parent
-MODEL_PATH = Path(os.getenv("MODEL_PATH", str(BASE_DIR / "model" / "Merge")))
-JUDGE_MODEL_PATH = Path(os.getenv("JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Judge_merge")))
 
-# Custom Judge Model (Trained from scratch with Transformer)
-CUSTOM_JUDGE_MODEL_PATH = Path(os.getenv("CUSTOM_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "New_Model_Judge")))
-
-# ==================== THIẾT LẬP MODEL ====================
-MAX_TOKENS_MIN = 16
-MAX_TOKENS_MAX = 150  # Tăng để chứa greeting + question
-MAX_TOKENS_DEFAULT = 100  # Đủ cho greeting (20-30 tokens) + question (60-80 tokens)
-
-TEMPERATURE_MIN = 0.1
-TEMPERATURE_MAX = 2.0
-TEMPERATURE_DEFAULT = 0.70  # Balanced for quality and speed
-
-TOP_P = 0.92  # Tăng lên để lựa chọn từ đa dạng hơn
-REPETITION_PENALTY = 1.1  # Tránh lặp lại nhưng vẫn đủ linh hoạt
-NUM_BEAMS = 1  # Sampling nhanh hơn (không dùng beam search)
+# Multitask Judge Model (GENERATE, EVALUATE, REPORT) - Custom Transformer 400K samples
+MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Multi_model")))
 
 # ==================== THIẾT LẬP API ====================
-API_TITLE = "AI Interview - GenQ Service"
-API_DESCRIPTION = "Generate technical interview questions using GenQ model"
-API_VERSION = "1.0.0"
+API_TITLE = "AI Interview - Multitask Judge"
+API_DESCRIPTION = "Custom Transformer for interview: Generate questions, Evaluate answers, Generate reports"
+API_VERSION = "2.0.0"
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
 # ==================== THIẾT LẬP CORS ====================
-# Trong production, set CORS_ORIGINS env variable
 cors_origins_env = os.getenv("CORS_ORIGINS", "*")
 CORS_ORIGINS = cors_origins_env.split(",") if cors_origins_env != "*" else ["*"]
 CORS_ALLOW_CREDENTIALS = True
