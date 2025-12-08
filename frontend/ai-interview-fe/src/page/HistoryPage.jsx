@@ -39,15 +39,12 @@ const HistoryPage = () => {
       setLoading(true);
       setError("");
       const data = await SessionApi.Get_Sessions_By_User(user.id, filters);
-      console.log("All sessions from API:", data);
-
+      
       // Filter out practice sessions - only show original sessions
-      const originalSessions = data.filter((session) => {
-        console.log(`Session ${session.id}: isPractice =`, session.isPractice);
+      const originalSessions = data.filter(session => {
         return session.isPractice !== true;
       });
-
-      console.log("Filtered original sessions:", originalSessions);
+      
       setSessions(originalSessions);
     } catch (err) {
       setError(err.message || "Unable to load data. Please try again later.");

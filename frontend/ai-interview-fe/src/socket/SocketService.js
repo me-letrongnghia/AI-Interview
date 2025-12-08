@@ -90,15 +90,6 @@ export const connectSocket = (sessionId, onMessageReceived) => {
               onMessageReceived(body);
             }
           });
-        try {
-          stompClient.subscribe(`/topic/interview/${sessionId}`, (message) => {
-            console.log("📥 Received WebSocket message:", message);
-            if (message.body) {
-              const body = JSON.parse(message.body);
-              console.log("📨 Parsed message body:", body);
-              onMessageReceived(body);
-            }
-          });
 
           console.log("✅ Subscribed to /topic/interview/" + sessionId);
           resolve();
