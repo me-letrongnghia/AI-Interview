@@ -203,7 +203,8 @@ export default function OptionPage() {
     { value: "20", label: "20 minutes" },
     { value: "30", label: "30 minutes" },
     { value: "45", label: "45 minutes" },
-    { value: "60", label: "60 minutes" }
+    { value: "60", label: "60 minutes" },
+    { value: "90", label: "90 minutes" },
   ];
 
   // Question count options
@@ -211,7 +212,11 @@ export default function OptionPage() {
     { value: "5", label: "5 questions" },
     { value: "10", label: "10 questions" },
     { value: "15", label: "15 questions" },
-    { value: "20", label: "20 questions" }
+    { value: "20", label: "20 questions" },
+    { value: "25", label: "25 questions" },
+    { value: "30", label: "30 questions" },
+    { value: "40", label: "40 questions" },
+    { value: "50", label: "50 questions" },
   ];
 
   const positions = [

@@ -113,6 +113,50 @@ export default function FeedbackPage() {
     }
   };
 
+  // Helper: Parse assessment - handle JSON string or plain text
+  const parseAssessment = (assessment) => {
+    if (!assessment || assessment === "-") return null;
+    
+    // Try to parse as JSON if it looks like JSON
+    if (typeof assessment === 'string' && assessment.trim().startsWith('{')) {
+      try {
+        return JSON.parse(assessment);
+      } catch {
+        return { text: assessment };
+      }
+    }
+    return { text: assessment };
+  };
+
+  // Helper: Render markdown bold (**text**) as actual bold - each point on new line
+  const renderMarkdownText = (text) => {
+    if (!text) return "-";
+    
+    // Split by | for multiple feedback points
+    const parts = text.split(' | ').filter(p => p.trim());
+    
+    return (
+      <ul className="space-y-2">
+        {parts.map((part, idx) => {
+          // Replace **text** with <strong>text</strong>
+          const formatted = part.split(/\*\*(.+?)\*\*/g).map((segment, i) => {
+            if (i % 2 === 1) {
+              return <strong key={i} className="font-semibold text-gray-900">{segment}</strong>;
+            }
+            return segment;
+          });
+          
+          return (
+            <li key={idx} className="flex items-start gap-2">
+              <span className="text-green-600 mt-0.5">•</span>
+              <span>{formatted}</span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
   // Add handler function for practicing again
   const handlePracticeAgain = async () => {
     setShowPracticeModal(true);
@@ -538,9 +582,32 @@ export default function FeedbackPage() {
           <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
             <h2 className='text-xl font-bold text-gray-900 mb-4'>Summary</h2>
 
-            <p className='text-gray-700 mb-6 leading-relaxed'>
-              {overallFeedback?.assessment || "-"}
-            </p>
+            {/* Display overview badge and assessment text */}
+            {(() => {
+              const parsed = parseAssessment(overallFeedback?.assessment);
+              if (parsed && parsed.overview) {
+                // It's a JSON object with structured data
+                const style = getOverviewStyle(parsed.overview);
+                return (
+                  <div className='mb-6'>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${style.badge}`}>
+                      {parsed.overview}
+                    </span>
+                    {parsed.assessment && parsed.assessment !== "null" && (
+                      <p className='text-gray-700 leading-relaxed'>{parsed.assessment}</p>
+                    )}
+                  </div>
+                );
+              } else if (parsed && parsed.text) {
+                // It's plain text
+                return (
+                  <p className='text-gray-700 mb-6 leading-relaxed'>
+                    {parsed.text}
+                  </p>
+                );
+              }
+              return <p className='text-gray-700 mb-6 leading-relaxed'>-</p>;
+            })()}
 
             <div className='grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6'>
               {/* Strengths */}
@@ -845,16 +912,14 @@ export default function FeedbackPage() {
                             <p className='text-xs font-medium text-green-700 mb-2'>
                               Feedback
                             </p>
-                            <div className='bg-green-100 rounded-lg p-3 border border-green-200'>
-                              <p className='text-sm text-gray-800'>
-                                {item.feedback || "-"}
-                              </p>
+                            <div className='bg-green-100 rounded-lg p-3 border border-green-200 text-sm text-gray-800'>
+                              {renderMarkdownText(item.feedback)}
                             </div>
                           </div>
 
                           {item.sampleAnswer && (
                             <div>
-                              <p className="text-xs font-medium text-blue-700 mb-2">
+                              <p className='text-xs font-medium text-blue-700 mb-2'>
                                 Improved Answer
                               </p>
                               <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>

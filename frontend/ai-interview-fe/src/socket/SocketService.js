@@ -51,34 +51,17 @@ export const connectSocket = (sessionId, onMessageReceived) => {
       headers.token = token; // Fallback for SockJS
     }
 
-    // Store reference to current client for callback validation
-    const currentClient = stompClient;
-
-    currentClient.connect(
+    stompClient.connect(
       headers,
       () => {
-        isConnecting = false;
-
-        // ⭐ CRITICAL: Check if stompClient is still the same (not cleaned up by unmount)
-        if (!stompClient || stompClient !== currentClient) {
-          console.warn(
-            "⚠️ Socket was cleaned up during connection, aborting subscription"
-          );
-          // Try to disconnect this orphaned connection
-          try {
-            currentClient.disconnect();
-          } catch (e) {
-            // Ignore disconnect errors
-          }
-          return;
-        }
-
-        isConnected = true;
-
         console.log(
           "✅ WebSocket connected successfully for session:",
           sessionId
         );
+
+        // ⭐ Cập nhật state NGAY khi connect thành công
+        isConnecting = false;
+        isConnected = true;
 
         // Subscribe kênh nhận message
         try {
@@ -93,10 +76,11 @@ export const connectSocket = (sessionId, onMessageReceived) => {
 
           console.log("✅ Subscribed to /topic/interview/" + sessionId);
           resolve();
-        } catch (subscribeError) {
-          console.error("❌ Failed to subscribe:", subscribeError);
+        } catch (subError) {
+          console.error("❌ Subscription failed:", subError);
           isConnected = false;
-          reject(subscribeError);
+          stompClient = null;
+          reject(subError);
         }
       },
       (error) => {
@@ -154,7 +138,7 @@ export const sendAnswer = (sessionId, answerMessage) => {
   }
 };
 
-let isDisconnecting = false; // ⭐ Flag để tránh disconnect nhiều lần
+let isDisconnecting = false; // ⭐ Thêm flag này
 
 export const disconnectSocket = () => {
   // Nếu đang disconnect thì skip
@@ -164,39 +148,31 @@ export const disconnectSocket = () => {
   }
 
   // Nếu không có client VÀ đã disconnected thì skip
-  if (!stompClient && !isConnected && !isConnecting) {
+  if (!stompClient && !isConnected) {
     console.log("⚠️ Socket already disconnected");
     return;
   }
 
   // Đánh dấu đang disconnect
   isDisconnecting = true;
-
-  // ⭐ IMPORTANT: Cancel any pending connection immediately
-  if (isConnecting) {
-    console.log("🛑 Cancelling pending connection");
-    isConnecting = false;
-  }
+  isConnecting = false;
 
   try {
     if (stompClient) {
-      const clientToDisconnect = stompClient;
-      stompClient = null; // ⭐ Set null FIRST to prevent callbacks from using it
-      isConnected = false;
-
-      if (clientToDisconnect.connected) {
+      if (stompClient.active || stompClient.connected) {
         console.log("📤 Sending disconnect to server...");
-        try {
-          clientToDisconnect.disconnect(() => {
-            console.log("✅ Socket disconnected successfully");
-            isDisconnecting = false;
-          });
-        } catch (disconnectError) {
-          console.warn("⚠️ Error during disconnect:", disconnectError);
+        stompClient.disconnect(() => {
+          console.log("✅ Socket disconnected successfully");
+          stompClient = null;
+          isConnected = false;
+          isConnecting = false; // ⭐ Reset cả isConnecting
           isDisconnecting = false;
-        }
+        });
       } else {
         console.log("🧹 Cleaning up inactive socket");
+        stompClient = null;
+        isConnected = false;
+        isConnecting = false; // ⭐ Reset cả isConnecting
         isDisconnecting = false;
       }
     } else {

@@ -1693,6 +1693,27 @@ class MultitaskEvaluator:
             improved_answer=None
         )
     
+    def _generate_assessment_text(self, overview: str, strengths: list, weaknesses: list) -> str:
+        """Auto-generate assessment text from overview, strengths and weaknesses"""
+        overview_descriptions = {
+            "EXCELLENT": "The candidate demonstrated exceptional technical knowledge and communication skills.",
+            "GOOD": "The candidate showed solid understanding of core concepts with room for growth.",
+            "AVERAGE": "The candidate displayed basic competency but needs further development in key areas.",
+            "BELOW AVERAGE": "The candidate struggled with fundamental concepts and requires significant improvement.",
+            "POOR": "The candidate did not meet the minimum requirements for this position."
+        }
+        
+        base = overview_descriptions.get(overview.upper(), "The candidate's performance was evaluated.")
+        
+        # Add summary of strengths and weaknesses
+        parts = [base]
+        if strengths:
+            parts.append(f"Key strengths include: {strengths[0]}.")
+        if weaknesses:
+            parts.append(f"Areas for improvement: {weaknesses[0]}.")
+        
+        return " ".join(parts)
+
     def _parse_report_output(self, output: str) -> ReportResult:
         """Parse output thành ReportResult
         
@@ -1725,6 +1746,12 @@ class MultitaskEvaluator:
             # Training format uses "overview" for rating, "assessment" for detailed text
             overview = data.get("overview", "AVERAGE")
             assessment = data.get("assessment", "")
+            
+            # Auto-generate assessment if null/empty
+            if not assessment or assessment == "null":
+                strengths = data.get("strengths", [])
+                weaknesses = data.get("weaknesses", [])
+                assessment = self._generate_assessment_text(overview, strengths, weaknesses)
             
             # Recommendations can be string or list
             recommendations_raw = data.get("recommendations", [])

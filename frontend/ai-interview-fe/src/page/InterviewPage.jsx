@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo, useCallback } from "react";
+﻿import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mic,
@@ -24,7 +24,7 @@ import {
   notifyUserLeaving,
   ensureConnected,
 } from "../socket/SocketService";
-import { confirmToast } from "../components/ConfirmToast/ConfirmToast";
+import { confirmToastWithOptions } from "../components/ConfirmToast/ConfirmToast";
 
 // Helper function to format time consistently
 const formatTime = (date) => {
@@ -39,13 +39,26 @@ const VideoStream = memo(({ streamRef, muted }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    } else if (videoRef.current && !streamRef.current) {
+    const videoElement = videoRef.current;
+
+    if (videoElement && streamRef.current) {
+      videoElement.srcObject = streamRef.current;
+    } else if (videoElement && !streamRef.current) {
       // Clear video element when stream is stopped
-      videoRef.current.srcObject = null;
-      videoRef.current.pause();
+      videoElement.srcObject = null;
+      videoElement.pause();
+      videoElement.load();
     }
+
+    // Cleanup function - clear video element on unmount
+    return () => {
+      if (videoElement) {
+        console.log("🎥 Clearing VideoStream on unmount");
+        videoElement.pause();
+        videoElement.srcObject = null;
+        videoElement.load();
+      }
+    };
   }, [streamRef]);
 
   return (
@@ -659,6 +672,61 @@ export default function InterviewInterface() {
   const [configLoaded, setConfigLoaded] = useState(false);
   const [timerConfig, setTimerConfig] = useState({ minutes: 0, seconds: 0 });
 
+  // CRITICAL: Centralized media cleanup function - SYNCHRONOUS
+  const stopAllMediaTracks = useCallback(() => {
+    console.log("🛑 [CLEANUP] Starting media cleanup...");
+
+    // Step 1: Clear video element FIRST (most important!)
+    const videoElement = document.getElementById("user-camera-video");
+    if (videoElement) {
+      console.log("🎥 [CLEANUP] Clearing video element");
+      try {
+        videoElement.pause();
+        videoElement.srcObject = null;
+        videoElement.load(); // Force clear
+        console.log("✅ [CLEANUP] Video element cleared");
+      } catch (err) {
+        console.warn("⚠️ [CLEANUP] Error clearing video element:", err);
+      }
+    }
+
+    // Step 2: Stop all media tracks
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
+      console.log(`🔴 [CLEANUP] Stopping ${tracks.length} media tracks...`);
+
+      tracks.forEach((track) => {
+        try {
+          const kind = track.kind;
+          const label = track.label;
+          const readyState = track.readyState;
+
+          console.log(
+            `   → Stopping ${kind} track: ${label} (state: ${readyState})`
+          );
+
+          track.enabled = false;
+          track.stop();
+
+          console.log(`   ✅ ${kind} track stopped`);
+        } catch (err) {
+          console.warn(`   ⚠️ Error stopping ${track.kind}:`, err);
+        }
+      });
+
+      streamRef.current = null;
+      console.log("✅ [CLEANUP] All media tracks stopped, streamRef cleared");
+    } else {
+      console.log("ℹ️ [CLEANUP] No stream to clean up");
+    }
+
+    // Step 3: Update UI state
+    setIsCameraOn(false);
+    setIsMicOn(false);
+
+    console.log("✅ [CLEANUP] Media cleanup completed");
+  }, []);
+
   const handleToggleCamera = useCallback(() => {
     if (!streamRef.current) {
       toast.error("Camera is not available. Please refresh the page.");
@@ -698,25 +766,9 @@ export default function InterviewInterface() {
 
   // ensure media tracks are stopped on unload (close/refresh) - ONLY when leaving permanently
   useEffect(() => {
-    const stopAllMedia = () => {
-      console.log("🔴 Stopping all media tracks...");
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          try {
-            console.log(`🔴 Stopping ${track.kind} track: ${track.label}`);
-            track.stop();
-          } catch (err) {
-            console.warn(`⚠️ Error stopping ${track.kind} track:`, err);
-          }
-        });
-        streamRef.current = null;
-        console.log("✅ All media tracks stopped");
-      }
-    };
-
     const onBeforeUnload = () => {
-      console.log("🚪 beforeunload event - stopping media");
-      stopAllMedia();
+      console.log("🚪 [EVENT] beforeunload - stopping media");
+      stopAllMediaTracks();
 
       // 🎯 Calculate and save elapsed time when user closes browser
       if (timerStartTimeRef.current && sessionId) {
@@ -740,8 +792,8 @@ export default function InterviewInterface() {
     };
 
     const onPageHide = () => {
-      console.log("🚪 pagehide event - stopping media");
-      stopAllMedia();
+      console.log("🚪 [EVENT] pagehide - stopping media");
+      stopAllMediaTracks();
     };
 
     // Register event listeners - REMOVED visibilitychange to allow tab switching
@@ -752,21 +804,12 @@ export default function InterviewInterface() {
 
     // cleanup on unmount (covers react-router navigation)
     return () => {
-      console.log("🔄 Component unmounting - cleaning up");
+      console.log("🔄 [UNMOUNT] Component unmounting - cleaning up");
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("pagehide", onPageHide);
 
-      // Clear video element FIRST before stopping tracks
-      const videoElement = document.getElementById("user-camera-video");
-      if (videoElement) {
-        console.log("🎥 Clearing video element on unmount");
-        videoElement.pause();
-        videoElement.srcObject = null;
-        videoElement.load();
-      }
-
-      // Then stop all media tracks
-      stopAllMedia();
+      // CRITICAL: Stop media immediately on unmount
+      stopAllMediaTracks();
 
       // 🎯 Save elapsed time when navigating away (route change)
       if (timerStartTimeRef.current && sessionId) {
@@ -785,7 +828,7 @@ export default function InterviewInterface() {
         notifyUserLeaving(sessionId, "User navigated away", elapsedSeconds);
       }
     };
-  }, [sessionId]);
+  }, [sessionId, stopAllMediaTracks]);
 
   // Speech-to-Text
   const {
@@ -826,12 +869,44 @@ export default function InterviewInterface() {
     isLeavingRef.current = true;
     console.log("🚪 Leaving room - setting flag");
 
-    const confirmLeave = await confirmToast(
-      "Are you sure you want to end the interview? Your progress will be saved and feedback will be generated automatically."
+    const userChoice = await confirmToastWithOptions(
+      "What would you like to do?"
     );
 
-    if (!confirmLeave) {
-      // User cancelled, reset flag
+    // Reset flag for stop option
+    if (userChoice === "stop") {
+      isLeavingRef.current = false;
+      toast.info("Interview paused. You can continue when ready.");
+      return;
+    }
+
+    // Handle home option
+    if (userChoice === "home") {
+      console.log("🏠 [LEAVE] Going home - cleaning up");
+
+      // Stop speech
+      stopSpeaking();
+
+      // Stop recording
+      if (isRecording) {
+        setIsRecording(false);
+        stopListening();
+      }
+
+      // Stop media stream using centralized function
+      stopAllMediaTracks();
+      disconnectSocket();
+
+      toast.info("Returning to home...", { autoClose: 1000 });
+      setTimeout(() => {
+        navigate("/");
+      }, 500);
+      return;
+    }
+
+    // Handle feedback option (default behavior)
+    if (userChoice !== "feedback") {
+      // User closed dialog without choosing
       isLeavingRef.current = false;
       return;
     }
@@ -845,67 +920,13 @@ export default function InterviewInterface() {
       stopListening();
     }
 
-    // Stop media stream - IMPROVED with Promise and video element cleanup
-    console.log("🔴 Stopping camera and microphone...");
-    const stopMediaTracks = () => {
-      return new Promise((resolve) => {
-        // First, clear video element BEFORE stopping tracks
-        const videoElement = document.getElementById("user-camera-video");
-        if (videoElement) {
-          console.log("🎥 Clearing video element FIRST");
-          videoElement.pause();
-          videoElement.srcObject = null;
-          videoElement.load();
-          console.log("✅ Video element cleared");
-        }
-
-        if (streamRef.current) {
-          const tracks = streamRef.current.getTracks();
-          let stoppedCount = 0;
-
-          if (tracks.length === 0) {
-            streamRef.current = null;
-            resolve();
-            return;
-          }
-
-          tracks.forEach((track) => {
-            try {
-              console.log(
-                `🔴 Stopping ${track.kind} track: ${track.label} (readyState: ${track.readyState})`
-              );
-              track.stop();
-              track.enabled = false;
-              stoppedCount++;
-              console.log(
-                `   ✅ Track stopped (new readyState: ${track.readyState})`
-              );
-            } catch (err) {
-              console.warn(`⚠️ Error stopping ${track.kind} track:`, err);
-            }
-          });
-
-          streamRef.current = null;
-          console.log(
-            `✅ Stopped ${stoppedCount}/${tracks.length} media tracks`
-          );
-
-          // Longer delay to ensure browser fully releases camera
-          setTimeout(resolve, 300);
-        } else {
-          resolve();
-        }
-      });
-    };
+    // Stop media stream using centralized function
+    console.log("📝 [LEAVE] Going to feedback - cleaning up");
 
     // Execute cleanup and navigation
     (async () => {
-      // Stop all media tracks first
-      await stopMediaTracks();
-
-      // Update UI states
-      setIsCameraOn(false);
-      setIsMicOn(false);
+      // Stop all media tracks using centralized function
+      stopAllMediaTracks();
 
       // Disconnect socket
       disconnectSocket();
@@ -919,7 +940,14 @@ export default function InterviewInterface() {
         navigate(`/feedback/${sessionId}`);
       }, 500);
     })();
-  }, [navigate, stopSpeaking, isRecording, stopListening, sessionId]);
+  }, [
+    navigate,
+    stopSpeaking,
+    isRecording,
+    stopListening,
+    sessionId,
+    stopAllMediaTracks,
+  ]);
 
   // Timer with dynamic initial values from timerConfig
   const timerDisplay = useTimer(
@@ -928,12 +956,35 @@ export default function InterviewInterface() {
     isRunning,
     useCallback(() => {
       setIsRunning(false);
-      // Auto leave when time is up
-      toast.warning("Time is up! Ending interview...");
+      // Auto navigate to feedback when time is up - NO dialog
+      toast.warning("Time is up! Generating your feedback...", {
+        autoClose: 2000,
+      });
+      stopSpeaking();
+
+      // Stop recording if active
+      if (isRecording) {
+        setIsRecording(false);
+        stopListening();
+      }
+
+      // Stop media tracks using centralized function
+      stopAllMediaTracks();
+
+      disconnectSocket();
+
       setTimeout(() => {
-        handleLeaveRoom();
+        console.log("🚀 Auto-navigating to feedback page (time's up)");
+        navigate(`/feedback/${sessionId}`);
       }, 2000);
-    }, [handleLeaveRoom])
+    }, [
+      navigate,
+      sessionId,
+      stopSpeaking,
+      isRecording,
+      stopListening,
+      stopAllMediaTracks,
+    ])
   );
 
   // Auto disable mic when AI is generating a question
@@ -1054,9 +1105,25 @@ export default function InterviewInterface() {
           speak(endMessage);
           setIsLoading(false);
 
-          // Auto leave after end message
+          // Auto navigate to feedback after end message - NO dialog
           setTimeout(() => {
-            handleLeaveRoom();
+            console.log(
+              "🚀 Auto-navigating to feedback page (interview ended by system)"
+            );
+            stopSpeaking();
+            setIsRunning(false);
+
+            // Stop recording if active
+            if (isRecording) {
+              setIsRecording(false);
+              stopListening();
+            }
+
+            // Stop media tracks using centralized function
+            stopAllMediaTracks();
+
+            disconnectSocket();
+            navigate(`/feedback/${sessionId}`);
           }, 3000);
           break;
         }
@@ -1121,7 +1188,19 @@ export default function InterviewInterface() {
           break;
       }
     },
-    [speak, setIsLoading, interviewConfig, handleLeaveRoom]
+    [
+      speak,
+      setIsLoading,
+      interviewConfig,
+      handleLeaveRoom,
+      stopSpeaking,
+      setIsRunning,
+      isRecording,
+      stopListening,
+      stopAllMediaTracks,
+      navigate,
+      sessionId,
+    ]
   );
 
   // Initialize interview session
@@ -1415,7 +1494,7 @@ export default function InterviewInterface() {
   }, [sessionId, handleSocketMessage, speak, stopSpeaking]);
 
   // Send message
-  const sendMessage = useCallback(async () => {
+  const sendMessage = useCallback(() => {
     if (!chatInput.trim()) return;
 
     // Don't allow sending if config not loaded yet
@@ -1471,7 +1550,7 @@ export default function InterviewInterface() {
           type: "ai",
           text: `🎉 Congratulations! You've successfully completed all ${
             interviewConfig?.maxQuestions || 0
-          } questions. Thank you for your participation. The interview will end shortly...`,
+          } questions. Thank you for your participation. Generating your feedback now...`,
           time: formatTime(new Date()),
           id: `congrats-${Date.now()}`,
           isSystemMessage: true, // NEW: Mark as system message to exclude from count
@@ -1479,7 +1558,7 @@ export default function InterviewInterface() {
 
         const finalHistory = [...newHistory, congratsMessage];
 
-        // Speak the congratulations message and wait for it to finish
+        // Speak the congratulations message
         setTimeout(() => {
           speak(congratsMessage.text);
         }, 500);
@@ -1488,17 +1567,30 @@ export default function InterviewInterface() {
         toast.success(
           `You've completed all ${
             interviewConfig?.maxQuestions || 0
-          } questions! Great job!`
+          } questions! Generating feedback...`,
+          { autoClose: 3000 }
         );
 
-        // Calculate speaking time (roughly 150 words per minute = 2.5 words per second)
-        const wordCount = congratsMessage.text.split(" ").length;
-        const speakingTime = Math.max((wordCount / 2.5) * 1000, 5000); // At least 5 seconds
-
-        // Leave room after speech completes
+        // Auto navigate to feedback after 3 seconds - NO dialog
         setTimeout(() => {
-          handleLeaveRoom();
-        }, speakingTime + 2000); // Add 2 extra seconds buffer
+          console.log(
+            "🚀 Auto-navigating to feedback page (completed all questions)"
+          );
+          stopSpeaking();
+          setIsRunning(false);
+
+          // Stop recording if active
+          if (isRecording) {
+            setIsRecording(false);
+            stopListening();
+          }
+
+          // Stop media tracks using centralized function
+          stopAllMediaTracks();
+
+          disconnectSocket();
+          navigate(`/feedback/${sessionId}`);
+        }, 3000);
 
         return finalHistory;
       }
@@ -1526,27 +1618,30 @@ export default function InterviewInterface() {
     });
 
     // Send answer to backend (even if it's the last one, to save it)
-    let sent = sendAnswer(sessionId, payload);
+    const sent = sendAnswer(sessionId, payload);
 
     if (!sent) {
       console.log("⚠️ Send failed, attempting to reconnect...");
+
       // Try to reconnect and resend
-      try {
-        await ensureConnected(sessionId, handleSocketMessage);
-        console.log("🔄 Reconnected, retrying send...");
-        sent = sendAnswer(sessionId, payload);
-        if (sent) {
-          console.log("✅ Retry send successful");
-        } else {
-          console.error("❌ Retry send also failed");
-          toast.error("Failed to send answer. Please try again.");
+      ensureConnected(sessionId, handleSocketMessage)
+        .then(() => {
+          console.log("✅ Reconnected! Retrying send...");
+          const retrySent = sendAnswer(sessionId, payload);
+
+          if (retrySent) {
+            console.log("✅ Message sent successfully after reconnect");
+          } else {
+            console.error("❌ Failed to send even after reconnect");
+            toast.error("Failed to send your answer. Please try again.");
+            setIsLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Reconnect failed:", err);
+          toast.error("Connection lost. Please refresh the page.");
           setIsLoading(false);
-        }
-      } catch (reconnectError) {
-        console.error("❌ Reconnect failed:", reconnectError);
-        toast.error("Connection lost. Please refresh the page.");
-        setIsLoading(false);
-      }
+        });
     }
 
     // If this was the last answer, set loading to false immediately
@@ -1565,9 +1660,13 @@ export default function InterviewInterface() {
     isLoading,
     handleSocketMessage,
     interviewConfig,
-    handleLeaveRoom,
     speak,
     chatHistory,
+    stopSpeaking,
+    isRecording,
+    stopListening,
+    stopAllMediaTracks,
+    navigate,
   ]);
 
   // Init camera + mic - IMPROVED WITH BETTER ERROR HANDLING
@@ -1592,7 +1691,13 @@ export default function InterviewInterface() {
 
         if (!mounted) {
           // Component unmounted before we got the stream
-          stream.getTracks().forEach((track) => track.stop());
+          console.log(
+            "⚠️ Component unmounted during media init, stopping tracks"
+          );
+          stream.getTracks().forEach((track) => {
+            track.stop();
+            track.enabled = false;
+          });
           return;
         }
 
@@ -1643,6 +1748,8 @@ export default function InterviewInterface() {
     return () => {
       mounted = false;
 
+      console.log("🔄 [INIT-CLEANUP] Cleaning up media initialization");
+
       // Cleanup audio context
       if (microphone) {
         try {
@@ -1660,16 +1767,10 @@ export default function InterviewInterface() {
         }
       }
 
-      // Cleanup media stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          track.onended = null; // Remove event listener
-          track.stop();
-        });
-        streamRef.current = null;
-      }
+      // Use centralized cleanup for media stream
+      stopAllMediaTracks();
     };
-  }, []); // Empty dependency - only runs on mount/unmount
+  }, [stopAllMediaTracks]); // Add dependency
 
   // Show loading screen until config is loaded OR during initial 2s loading
   if (!configLoaded || !interviewConfig || showInitialLoading) {
