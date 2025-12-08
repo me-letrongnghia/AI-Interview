@@ -64,31 +64,31 @@ export const HelpCenter = () => {
   }, []); // Run only once when component mounts
 
   const categories = [
-    { id: "all", name: "All Topics", icon: <BookOpen className="w-5 h-5" /> },
+    { id: "all", name: "All Topics", icon: <BookOpen className='w-5 h-5' /> },
     {
       id: "getting-started",
       name: "Getting Started",
-      icon: <Users className="w-5 h-5" />,
+      icon: <Users className='w-5 h-5' />,
     },
     {
       id: "account",
       name: "Account & Profile",
-      icon: <Settings className="w-5 h-5" />,
+      icon: <Settings className='w-5 h-5' />,
     },
     {
       id: "interviews",
       name: "AI Interviews",
-      icon: <MessageCircle className="w-5 h-5" />,
+      icon: <MessageCircle className='w-5 h-5' />,
     },
     {
       id: "billing",
       name: "Billing & Plans",
-      icon: <CreditCard className="w-5 h-5" />,
+      icon: <CreditCard className='w-5 h-5' />,
     },
     {
       id: "security",
       name: "Security & Privacy",
-      icon: <Shield className="w-5 h-5" />,
+      icon: <Shield className='w-5 h-5' />,
     },
   ];
 
@@ -101,7 +101,7 @@ export const HelpCenter = () => {
       value: "technical-issue",
       label: "Technical Problems & Bugs",
     },
-    { value: "interview-help", label: "AI Interview Support"},
+    { value: "interview-help", label: "AI Interview Support" },
     { value: "general", label: "General Questions & Feedback" },
   ];
 
@@ -169,24 +169,24 @@ export const HelpCenter = () => {
       title: "User Guide",
       description:
         "Complete guide to using AI Interview platform with step-by-step instructions",
-      icon: <BookOpen className="w-8 h-8 text-green-600" />,
+      icon: <BookOpen className='w-8 h-8 text-green-600' />,
     },
     {
       title: "Video Tutorials",
       description:
         "Watch comprehensive video tutorials to master every feature",
-      icon: <MessageCircle className="w-8 h-8 text-green-600" />,
+      icon: <MessageCircle className='w-8 h-8 text-green-600' />,
     },
     {
       title: "Best Practices",
       description: "Expert tips and strategies for successful AI interviews",
-      icon: <HelpCircle className="w-8 h-8 text-green-600" />,
+      icon: <HelpCircle className='w-8 h-8 text-green-600' />,
     },
     {
       title: "Technical Setup",
       description:
         "System requirements, browser compatibility, and setup guides",
-      icon: <Settings className="w-8 h-8 text-green-600" />,
+      icon: <Settings className='w-8 h-8 text-green-600' />,
     },
   ];
 
@@ -237,96 +237,96 @@ export const HelpCenter = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className='min-h-screen bg-white'>
       <Header />
 
       {/* Hero Section - Matching HomePage style */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-emerald-50 pt-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(34,197,94,0.1)_0%,_transparent_50%)]"></div>
+      <section className='relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-emerald-50 pt-20'>
+        <div className='absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(34,197,94,0.1)_0%,_transparent_50%)]'></div>
         <img
           src={LinhVat}
-          alt="Panda Mascot"
-          className="absolute top-10 right-10 w-64 h-64 object-contain opacity-10 pointer-events-none"
+          alt='Panda Mascot'
+          className='absolute top-10 right-10 w-64 h-64 object-contain opacity-10 pointer-events-none'
         />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-          <div className="text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-green-100">
-              <Sparkles className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium text-green-600">
+        <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28'>
+          <div className='text-center space-y-8'>
+            <div className='inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-green-100'>
+              <Sparkles className='w-4 h-4 text-green-500' />
+              <span className='text-sm font-medium text-green-600'>
                 24/7 Support Available
               </span>
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-              <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <h1 className='text-5xl lg:text-6xl font-bold leading-tight'>
+              <span className='bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent'>
                 Help
               </span>
-              <span className="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
+              <span className='bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent'>
                 {" "}
                 Center
               </span>
             </h1>
 
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className='text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed'>
               Find answers, get support, and connect with our team. Browse our
               FAQ section below or send us a message directly for personalized
               assistance.
             </p>
 
             {/* Contact Form */}
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            <div className='max-w-4xl mx-auto'>
+              <div className='bg-white rounded-2xl shadow-xl border border-gray-200 p-8'>
+                <div className='text-center mb-8'>
+                  <h3 className='text-2xl font-bold text-gray-900 mb-2'>
                     Need Help? Contact Us
                   </h3>
-                  <p className="text-gray-600">
+                  <p className='text-gray-600'>
                     Send us a message and we'll get back to you within 24 hours
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
+                <form onSubmit={handleSubmit} className='space-y-6'>
+                  <div className='grid md:grid-cols-2 gap-6'>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Full Name *
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                        Full Name <span className='text-red-500'>*</span>
                       </label>
                       <input
-                        type="text"
-                        name="name"
+                        type='text'
+                        name='name'
                         required
                         value={contactForm.name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200"
-                        placeholder="Enter your full name"
+                        className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200'
+                        placeholder='Enter your full name'
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Email Address *
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                        Email Address <span className='text-red-500'>*</span>
                       </label>
                       <input
-                        type="email"
-                        name="email"
+                        type='email'
+                        name='email'
                         required
                         value={contactForm.email}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200"
-                        placeholder="Enter your email address"
+                        className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200'
+                        placeholder='Enter your email address'
                       />
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className='grid md:grid-cols-2 gap-6'>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Issue Type *
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                        Issue Type <span className='text-red-500'>*</span>
                       </label>
                       <select
-                        name="issueType"
+                        name='issueType'
                         value={contactForm.issueType}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200"
+                        className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200'
                       >
                         {issueTypes.map((type) => (
                           <option key={type.value} value={type.value}>
@@ -336,41 +336,41 @@ export const HelpCenter = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Subject *
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                        Subject <span className='text-red-500'>*</span>
                       </label>
                       <input
-                        type="text"
-                        name="subject"
+                        type='text'
+                        name='subject'
                         required
                         value={contactForm.subject}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200"
-                        placeholder="Brief description of your issue"
+                        className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200'
+                        placeholder='Brief description of your issue'
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Message *
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                      Message <span className='text-red-500'>*</span>
                     </label>
                     <textarea
-                      name="message"
+                      name='message'
                       required
-                      rows="5"
+                      rows='5'
                       value={contactForm.message}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200 resize-none"
-                      placeholder="Please describe your issue in detail. If your account is banned, include your username and any relevant information..."
+                      className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/20 transition-all duration-200 resize-none'
+                      placeholder='Please describe your issue in detail. If your account is banned, include your username and any relevant information...'
                     />
                   </div>
 
                   {submitStatus === "success" && (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                      <div className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                        <p className="text-green-800 font-medium">
+                    <div className='bg-green-50 border border-green-200 rounded-xl p-4'>
+                      <div className='flex items-center'>
+                        <CheckCircle className='w-5 h-5 text-green-600 mr-2' />
+                        <p className='text-green-800 font-medium'>
                           Message sent successfully! We'll get back to you
                           within 24 hours.
                         </p>
@@ -379,23 +379,23 @@ export const HelpCenter = () => {
                   )}
 
                   {submitStatus === "error" && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                      <p className="text-red-800 font-medium">
+                    <div className='bg-red-50 border border-red-200 rounded-xl p-4'>
+                      <p className='text-red-800 font-medium'>
                         Sorry, there was an error sending your message. Please
                         try again or contact us directly.
                       </p>
                     </div>
                   )}
 
-                  <div className="text-center">
+                  <div className='text-center'>
                     <button
-                      type="submit"
+                      type='submit'
                       disabled={isSubmitting}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
+                      className='bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-400/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100'
                     >
                       {isSubmitting ? (
-                        <div className="flex items-center gap-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        <div className='flex items-center gap-3'>
+                          <div className='animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent'></div>
                           Sending Message...
                         </div>
                       ) : (
@@ -411,30 +411,30 @@ export const HelpCenter = () => {
       </section>
 
       {/* Quick Links - Enhanced with modern cards */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+      <section className='py-20 bg-white'>
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+          <div className='text-center mb-16'>
+            <h2 className='text-3xl lg:text-4xl font-bold text-gray-900 mb-4'>
               Quick Help
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className='text-lg text-gray-600'>
               Get instant access to the most popular help resources
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className='grid md:grid-cols-2 lg:grid-cols-4 gap-8'>
             {quickLinks.map((link, index) => (
               <div
                 key={index}
-                className="group bg-white rounded-2xl p-8 hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 transition-all duration-300 cursor-pointer border border-gray-100 hover:border-green-200 hover:shadow-xl hover:-translate-y-1"
+                className='group bg-white rounded-2xl p-8 hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 transition-all duration-300 cursor-pointer border border-gray-100 hover:border-green-200 hover:shadow-xl hover:-translate-y-1'
               >
-                <div className="mb-6 transform group-hover:scale-110 transition-transform duration-300">
+                <div className='mb-6 transform group-hover:scale-110 transition-transform duration-300'>
                   {link.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-green-600 transition-colors">
+                <h3 className='text-xl font-bold text-gray-900 mb-3 group-hover:text-green-600 transition-colors'>
                   {link.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className='text-gray-600 leading-relaxed'>
                   {link.description}
                 </p>
               </div>
@@ -444,19 +444,19 @@ export const HelpCenter = () => {
       </section>
 
       {/* FAQ Section - Enhanced design */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+      <section className='py-20 bg-gradient-to-br from-gray-50 to-white'>
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+          <div className='text-center mb-16'>
+            <h2 className='text-3xl lg:text-4xl font-bold text-gray-900 mb-4'>
               Frequently Asked Questions
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className='text-lg text-gray-600'>
               Everything you need to know about AI Interview
             </p>
           </div>
 
           {/* Category Filter - Enhanced */}
-          <div className="flex flex-wrap gap-3 mb-12 justify-center">
+          <div className='flex flex-wrap gap-3 mb-12 justify-center'>
             {categories.map((category) => (
               <button
                 key={category.id}
@@ -482,36 +482,36 @@ export const HelpCenter = () => {
           </div>
 
           {/* FAQ List - Modern accordion style */}
-          <div className="space-y-6">
+          <div className='space-y-6'>
             {filteredFaqs.map((faq, index) => (
               <div
                 key={faq.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300"
+                className='bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300'
               >
                 <button
                   onClick={() => toggleFaq(faq.id)}
-                  className="w-full px-8 py-6 text-left flex justify-between items-center hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all duration-200"
+                  className='w-full px-8 py-6 text-left flex justify-between items-center hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all duration-200'
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1">
-                      <span className="text-green-600 font-bold text-sm">
+                  <div className='flex items-start gap-4'>
+                    <div className='flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1'>
+                      <span className='text-green-600 font-bold text-sm'>
                         Q{index + 1}
                       </span>
                     </div>
-                    <h3 className="text-lg lg:text-xl font-bold text-gray-900 leading-relaxed pr-4">
+                    <h3 className='text-lg lg:text-xl font-bold text-gray-900 leading-relaxed pr-4'>
                       {faq.question}
                     </h3>
                   </div>
                   {openFaq === faq.id ? (
-                    <ChevronUp className="w-6 h-6 text-green-600 flex-shrink-0" />
+                    <ChevronUp className='w-6 h-6 text-green-600 flex-shrink-0' />
                   ) : (
-                    <ChevronDown className="w-6 h-6 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className='w-6 h-6 text-gray-400 flex-shrink-0' />
                   )}
                 </button>
                 {openFaq === faq.id && (
-                  <div className="px-8 pb-6">
-                    <div className="pl-12">
-                      <p className="text-gray-600 leading-relaxed text-lg">
+                  <div className='px-8 pb-6'>
+                    <div className='pl-12'>
+                      <p className='text-gray-600 leading-relaxed text-lg'>
                         {faq.answer}
                       </p>
                     </div>
@@ -522,17 +522,17 @@ export const HelpCenter = () => {
           </div>
 
           {filteredFaqs.length === 0 && (
-            <div className="text-center py-16">
-              <div className="bg-white rounded-2xl p-12 shadow-sm border border-gray-200 max-w-md mx-auto">
+            <div className='text-center py-16'>
+              <div className='bg-white rounded-2xl p-12 shadow-sm border border-gray-200 max-w-md mx-auto'>
                 <img
                   src={LinhVat}
-                  alt="No results"
-                  className="w-24 h-24 mx-auto mb-6 opacity-60"
+                  alt='No results'
+                  className='w-24 h-24 mx-auto mb-6 opacity-60'
                 />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className='text-xl font-bold text-gray-900 mb-2'>
                   No Results Found
                 </h3>
-                <p className="text-gray-500">
+                <p className='text-gray-500'>
                   Try adjusting your search or browse different categories.
                 </p>
               </div>
@@ -542,68 +542,68 @@ export const HelpCenter = () => {
       </section>
 
       {/* Contact Support - Enhanced with modern gradient and cards */}
-      <section className="py-20 bg-gradient-to-br from-green-600 via-green-500 to-emerald-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.1)_0%,_transparent_50%)]"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+      <section className='py-20 bg-gradient-to-br from-green-600 via-green-500 to-emerald-600 relative overflow-hidden'>
+        <div className='absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_rgba(255,255,255,0.1)_0%,_transparent_50%)]'></div>
+        <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
+          <div className='mb-16'>
+            <h2 className='text-3xl lg:text-4xl font-bold text-white mb-6'>
               Still Need Help?
             </h2>
-            <p className="text-green-100 text-xl leading-relaxed max-w-3xl mx-auto">
+            <p className='text-green-100 text-xl leading-relaxed max-w-3xl mx-auto'>
               Can't find what you're looking for? Our dedicated support team is
               available 24/7 to help you succeed with AI Interview platform.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
-              <div className="bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <MessageCircle className="w-12 h-12 mx-auto" />
+          <div className='grid md:grid-cols-3 gap-8'>
+            <div className='group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl'>
+              <div className='bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300'>
+                <MessageCircle className='w-12 h-12 mx-auto' />
               </div>
-              <h3 className="text-xl font-bold mb-3">Live Chat</h3>
-              <p className="text-green-100 mb-6 leading-relaxed">
+              <h3 className='text-xl font-bold mb-3'>Live Chat</h3>
+              <p className='text-green-100 mb-6 leading-relaxed'>
                 Get instant help from our support team. Average response time
                 under 2 minutes.
               </p>
-              <button className="bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+              <button className='bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200'>
                 Start Chat
               </button>
             </div>
 
-            <div className="group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
-              <div className="bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Mail className="w-12 h-12 mx-auto" />
+            <div className='group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl'>
+              <div className='bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300'>
+                <Mail className='w-12 h-12 mx-auto' />
               </div>
-              <h3 className="text-xl font-bold mb-3">Email Support</h3>
-              <p className="text-green-100 mb-6 leading-relaxed">
+              <h3 className='text-xl font-bold mb-3'>Email Support</h3>
+              <p className='text-green-100 mb-6 leading-relaxed'>
                 Send us a detailed message and get comprehensive answers within
                 24 hours.
               </p>
-              <button className="bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+              <button className='bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200'>
                 Send Email
               </button>
             </div>
 
-            <div className="group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
-              <div className="bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Phone className="w-12 h-12 mx-auto" />
+            <div className='group bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-white border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl'>
+              <div className='bg-white/20 rounded-full p-4 w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300'>
+                <Phone className='w-12 h-12 mx-auto' />
               </div>
-              <h3 className="text-xl font-bold mb-3">Phone Support</h3>
-              <p className="text-green-100 mb-6 leading-relaxed">
+              <h3 className='text-xl font-bold mb-3'>Phone Support</h3>
+              <p className='text-green-100 mb-6 leading-relaxed'>
                 Talk to our experts directly for personalized assistance and
                 guidance.
               </p>
-              <button className="bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+              <button className='bg-white text-green-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 hover:shadow-lg transform hover:scale-105 transition-all duration-200'>
                 Call Now
               </button>
             </div>
           </div>
 
           {/* Additional Contact Info */}
-          <div className="mt-16 pt-8 border-t border-white/20">
-            <p className="text-green-100 text-lg">
+          <div className='mt-16 pt-8 border-t border-white/20'>
+            <p className='text-green-100 text-lg'>
               Operating Hours: Monday - Friday, 9:00 AM - 6:00 PM (GMT+7) •
-              <span className="font-semibold">
+              <span className='font-semibold'>
                 {" "}
                 Emergency Support Available 24/7
               </span>

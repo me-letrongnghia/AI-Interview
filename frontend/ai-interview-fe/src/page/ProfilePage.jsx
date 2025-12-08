@@ -52,7 +52,7 @@ export default function ProfilePage() {
       setProfile(profileData);
       setEditedProfile(profileData);
     } catch (error) {
-      toast.error("Không thể tải thông tin người dùng");
+      toast.error("Error fetching user profile");
       console.error("Error fetching profile:", error);
     } finally {
       // Show loading for 1 second before displaying content
@@ -73,12 +73,12 @@ export default function ProfilePage() {
       // Validate fullName
       const trimmedFullName = editedProfile.fullName.trim();
       if (!trimmedFullName) {
-        toast.error("Họ và tên không được để trống!");
+        toast.error("Full name cannot be empty!");
         return;
       }
 
       if (trimmedFullName.length < 2) {
-        toast.error("Họ và tên phải có ít nhất 2 ký tự!");
+        toast.error("Full name must be at least 2 characters!");
         return;
       }
 
@@ -114,9 +114,9 @@ export default function ProfilePage() {
       setImageFile(null);
       setUserProfile(updatedProfileData);
       localStorage.setItem("user", JSON.stringify(updatedProfileData));
-      toast.success("Cập nhật thông tin thành công!");
+      toast.success("Update successful!");
     } catch (error) {
-      toast.error("Không thể cập nhật thông tin");
+      toast.error("Error updating profile. Please try again.");
       console.error("Error updating profile:", error);
     }
   };
@@ -157,7 +157,7 @@ export default function ProfilePage() {
       // Kiểm tra kích thước file (tùy chọn, ví dụ: giới hạn 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        toast.error("Kích thước ảnh không được vượt quá 5MB!");
+        toast.error("Image size must not exceed 5MB!");
         e.target.value = null; // Reset input
         return;
       }

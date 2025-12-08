@@ -91,18 +91,6 @@ public class JDScraperService {
             sb.append("- COMPANY: \n").append(company).append("\n\n");
         }
         
-        // 3. Tìm địa điểm
-        String[] locationSelectors = {
-            ".location", "[class*='location']", "[data-automation='job-detail-location']",
-            ".topcard__flavor--bullet", ".job-location",
-            "span[itemprop='addressLocality']", ".jobsearch-JobInfoHeader-subtitle"
-        };
-        
-        String location = extractFirstMatch(doc, locationSelectors);
-        if (!location.isEmpty()) {
-            sb.append("- LOCATION: \n").append(location).append("\n\n");
-        }
-        
         // 4. Tìm mức lương
         String[] salarySelectors = {
             ".salary", "[class*='salary']", "[data-automation='job-detail-salary']",

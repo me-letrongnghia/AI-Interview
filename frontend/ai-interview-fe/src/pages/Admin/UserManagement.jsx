@@ -80,7 +80,13 @@ const UserManagement = () => {
     try {
       if (action === "ban") {
         const confirmed = await confirmToast(
-          "Are you sure you want to ban this user?"
+          "This user will be unable to access the system.",
+          {
+            type: "warning",
+            title: "Ban User",
+            confirmText: "Ban User",
+            cancelText: "Cancel",
+          }
         );
         if (confirmed) {
           await banUser(userId);
@@ -89,7 +95,13 @@ const UserManagement = () => {
         }
       } else if (action === "unban") {
         const confirmed = await confirmToast(
-          "Are you sure you want to unban this user?"
+          "This user will be able to access the system again.",
+          {
+            type: "default",
+            title: "Unban User",
+            confirmText: "Unban User",
+            cancelText: "Cancel",
+          }
         );
         if (confirmed) {
           await unbanUser(userId);
@@ -98,7 +110,13 @@ const UserManagement = () => {
         }
       } else if (action === "delete") {
         const confirmed = await confirmToast(
-          "Are you sure you want to delete this user? This action cannot be undone."
+          "This action cannot be undone. All user data will be permanently removed.",
+          {
+            type: "danger",
+            title: "Delete User",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+          }
         );
         if (confirmed) {
           await deleteUser(userId);
@@ -176,19 +194,19 @@ const UserManagement = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-lg text-gray-600">Loading...</div>
+      <div className='flex items-center justify-center h-full'>
+        <div className='text-lg text-gray-600'>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6 h-full flex flex-col'>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className='flex items-center justify-between'>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className='text-3xl font-bold text-gray-900'>User Management</h1>
+          <p className='text-gray-600 mt-1'>
             Manage all users and their permissions
           </p>
         </div>
@@ -199,23 +217,23 @@ const UserManagement = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className='bg-white rounded-lg shadow-sm p-4'>
+        <div className='flex flex-col md:flex-row gap-4'>
           {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className='flex-1 relative'>
+            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400' />
             <input
-              type="text"
-              placeholder="Search users by name or email..."
+              type='text'
+              placeholder='Search users by name or email...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
             />
           </div>
 
           {/* Role Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-500" />
+          <div className='flex items-center gap-2'>
+            <Filter className='w-5 h-5 text-gray-500' />
             {/* <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
@@ -231,59 +249,59 @@ const UserManagement = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="banned">Banned</option>
+            <option value='all'>All Status</option>
+            <option value='active'>Active</option>
+            <option value='banned'>Banned</option>
           </select>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+      <div className='bg-white rounded-lg shadow-sm overflow-hidden flex-1 flex flex-col'>
+        <div className='overflow-x-auto flex-1'>
+          <table className='w-full'>
+            <thead className='bg-gray-50 border-b border-gray-200'>
               <tr>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-left py-4 px-6 text-sm font-semibold text-gray-700'>
                   User
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-left py-4 px-6 text-sm font-semibold text-gray-700'>
                   Role
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-left py-4 px-6 text-sm font-semibold text-gray-700'>
                   Status
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-left py-4 px-6 text-sm font-semibold text-gray-700'>
                   Interviews
                 </th>
                 {/* <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   Avg Score
                 </th> */}
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-left py-4 px-6 text-sm font-semibold text-gray-700'>
                   Join Date
                 </th>
-                <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className='text-right py-4 px-6 text-sm font-semibold text-gray-700'>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className='divide-y divide-gray-100'>
               {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className='hover:bg-gray-50 transition-colors'
                 >
-                  <td className="py-4 px-6">
+                  <td className='py-4 px-6'>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className='text-sm font-medium text-gray-900'>
                         {user.name}
                       </p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p className='text-sm text-gray-500'>{user.email}</p>
                     </div>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className='py-4 px-6'>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.role === "ADMIN"
@@ -294,7 +312,7 @@ const UserManagement = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className='py-4 px-6'>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.status === "active"
@@ -305,7 +323,7 @@ const UserManagement = () => {
                       {user.status}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-sm text-gray-900">
+                  <td className='py-4 px-6 text-sm text-gray-900'>
                     {user.interviews}
                   </td>
                   {/* <td className="py-4 px-6">
@@ -321,27 +339,27 @@ const UserManagement = () => {
                       {user.avgScore}%
                     </span>
                   </td> */}
-                  <td className="py-4 px-6 text-sm text-gray-600">
+                  <td className='py-4 px-6 text-sm text-gray-600'>
                     {user.joinDate}
                   </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="relative inline-block">
+                  <td className='py-4 px-6 text-right'>
+                    <div className='relative inline-block'>
                       <button
                         onClick={() =>
                           setActiveMenu(activeMenu === user.id ? null : user.id)
                         }
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
                       >
-                        <MoreVertical className="w-5 h-5 text-gray-600" />
+                        <MoreVertical className='w-5 h-5 text-gray-600' />
                       </button>
 
                       {activeMenu === user.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                        <div className='absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 bottom-auto top-full'>
                           <button
                             onClick={() => handleAction("edit", user.id)}
-                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            className='flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50'
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className='w-4 h-4' />
                             Edit User
                           </button>
                           {/* <button
@@ -358,18 +376,18 @@ const UserManagement = () => {
                                 user.id
                               )
                             }
-                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
+                            className='flex items-center gap-2 w-full px-4 py-2 text-sm text-orange-600 hover:bg-orange-50'
                           >
-                            <Ban className="w-4 h-4" />
+                            <Ban className='w-4 h-4' />
                             {user.status === "active"
                               ? "Ban User"
                               : "Unban User"}
                           </button>
                           <button
                             onClick={() => handleAction("delete", user.id)}
-                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                            className='flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg'
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className='w-4 h-4' />
                             Delete User
                           </button>
                         </div>
@@ -383,16 +401,16 @@ const UserManagement = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            Showing <span className="font-medium">{filteredUsers.length}</span>{" "}
-            of <span className="font-medium">{users.length}</span> users
+        <div className='flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white'>
+          <p className='text-sm text-gray-600'>
+            Showing <span className='font-medium'>{filteredUsers.length}</span>{" "}
+            of <span className='font-medium'>{users.length}</span> users
           </p>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+          <div className='flex gap-2'>
+            <button className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium'>
               Previous
             </button>
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+            <button className='px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium'>
               Next
             </button>
           </div>
@@ -401,15 +419,15 @@ const UserManagement = () => {
 
       {/* Email Modal */}
       {showEmailModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4'>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className='flex items-center justify-between p-6 border-b border-gray-200'>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className='text-xl font-semibold text-gray-900'>
                   Send Email
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className='text-sm text-gray-500 mt-1'>
                   To: {selectedUser.email}
                 </p>
               </div>
@@ -420,45 +438,45 @@ const UserManagement = () => {
                   setEmailBody("");
                   setSelectedUser(null);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X className='w-5 h-5 text-gray-600' />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className='p-6 space-y-4'>
               {/* Subject */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Subject
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Enter email subject..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder='Enter email subject...'
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
                 />
               </div>
 
               {/* Message */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Message
                 </label>
                 <textarea
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
-                  placeholder="Enter your message..."
+                  placeholder='Enter your message...'
                   rows={8}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none'
                 />
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className='flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50'>
               <button
                 onClick={() => {
                   setShowEmailModal(false);
@@ -466,23 +484,23 @@ const UserManagement = () => {
                   setEmailBody("");
                   setSelectedUser(null);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium'
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendEmail}
                 disabled={sendingEmail}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className='flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {sendingEmail ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
                     Sending...
                   </>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
+                    <Send className='w-4 h-4' />
                     Send Email
                   </>
                 )}
@@ -494,15 +512,15 @@ const UserManagement = () => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-w-md mx-4'>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className='flex items-center justify-between p-6 border-b border-gray-200'>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className='text-xl font-semibold text-gray-900'>
                   Edit User
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className='text-sm text-gray-500 mt-1'>
                   Update user information
                 </p>
               </div>
@@ -512,50 +530,50 @@ const UserManagement = () => {
                   setEditForm({ name: "", email: "", role: "USER" });
                   setSelectedUser(null);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X className='w-5 h-5 text-gray-600' />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className='p-6 space-y-4'>
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Full Name
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   value={editForm.name}
                   onChange={(e) =>
                     setEditForm({ ...editForm, name: e.target.value })
                   }
-                  placeholder="Enter full name..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder='Enter full name...'
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Email
                 </label>
                 <input
-                  type="email"
+                  type='email'
                   disabled
                   value={editForm.email}
                   onChange={(e) =>
                     setEditForm({ ...editForm, email: e.target.value })
                   }
-                  placeholder="Enter email..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder='Enter email...'
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
                 />
               </div>
 
               {/* Role */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Role
                 </label>
                 <select
@@ -563,34 +581,34 @@ const UserManagement = () => {
                   onChange={(e) =>
                     setEditForm({ ...editForm, role: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
                 >
-                  <option value="USER">User</option>
-                  <option value="ADMIN">Admin</option>
+                  <option value='USER'>User</option>
+                  <option value='ADMIN'>Admin</option>
                 </select>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className='flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50'>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditForm({ name: "", email: "", role: "USER" });
                   setSelectedUser(null);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium'
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className='flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {savingEdit ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
                     Saving...
                   </>
                 ) : (

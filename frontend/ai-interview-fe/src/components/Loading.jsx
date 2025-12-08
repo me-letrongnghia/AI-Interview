@@ -1,55 +1,39 @@
 import React from "react";
 import loadingGif from "../assets/loading.gif";
 
-/**
- * Loading Component - Simple minimal loading indicator
- */
-export default function Loading({
-  message = "LOADING...",
-  fullScreen = false,
-  className = "",
-}) {
-  // Full screen loading - simple and clean
+// Full Screen or Inline Loading Component
+export default function Loading({ fullScreen = false, className = "" }) {
+  const Spinner = (
+    <div className='relative flex items-center justify-center'>
+      {/* Vòng tròn border xoay */}
+      <div className='w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-t-green-500 border-r-transparent border-b-transparent border-l-transparent animate-spin' />
+      {/* GIF ở giữa */}
+      <img
+        src={loadingGif}
+        alt='Loading...'
+        className='absolute w-20 h-20 md:w-24 md:h-24 object-contain'
+      />
+    </div>
+  );
+
+  // Full screen loading
   if (fullScreen) {
     return (
       <div className='fixed inset-0 bg-white flex items-center justify-center z-50'>
-        <div className='text-center flex flex-col items-center -mt-10'>
-          {/* GIF Spinner */}
-          <img
-            src={loadingGif}
-            alt="Loading..."
-            className="w-32 h-32 object-contain mb-2"
-          />
-
-          {/* Message */}
-          <p className='text-xl font-bold tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 animate-shimmer'>
-            {message}
-          </p>
-        </div>
+        {Spinner}
       </div>
     );
   }
 
-  // Inline loading - simple spinner
+  // Inline loading
   return (
-    <div className={`flex flex-col items-center justify-center ${className}`}>
-      <img
-        src={loadingGif}
-        alt="Loading..."
-        className="w-20 h-20 object-contain"
-      />
-      {message && (
-        <p className='text-sm font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 animate-shimmer mt-1'>
-          {message}
-        </p>
-      )}
+    <div className={`flex items-center justify-center ${className}`}>
+      {Spinner}
     </div>
   );
 }
 
-/**
- * Button Loading Spinner - Simple dots for buttons
- */
+// Button Loading - Dots loading for buttons
 export function ButtonLoading({ className = "" }) {
   return (
     <div className={`inline-flex items-center gap-1 ${className}`}>
@@ -66,18 +50,18 @@ export function ButtonLoading({ className = "" }) {
   );
 }
 
-/**
- * Card Loading - Simple loading for cards
- */
-export function CardLoading({ message = "Loading" }) {
+// Card Loading - For loading states inside cards or smaller sections
+export function CardLoading() {
   return (
     <div className='flex flex-col items-center justify-center py-10'>
-      <img
-        src={loadingGif}
-        alt="Loading"
-        className="w-24 h-24 object-contain mb-2"
-      />
-      <p className='text-sm font-semibold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-400 via-gray-600 to-gray-400 animate-shimmer'>{message}</p>
+      <div className='relative flex items-center justify-center'>
+        <div className='w-20 h-20 rounded-full border-4 border-t-gray-400 border-r-transparent border-b-transparent border-l-transparent animate-spin' />
+        <img
+          src={loadingGif}
+          alt='Loading'
+          className='absolute w-16 h-16 object-contain'
+        />
+      </div>
     </div>
   );
 }
