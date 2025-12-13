@@ -611,12 +611,6 @@ class MultitaskEvaluator:
                     primary_skill, difficulty, question, answer, all_history, job_domain
                 )
             
-            # Check if answer was "I don't know" type and clean inappropriate encouragement
-            was_dont_know = self._is_dont_know_answer(answer)
-            if was_dont_know:
-                logger.info(f"[MultitaskEvaluator] Detected 'don't know' answer, cleaning encouragement")
-                parsed_question = self._remove_inappropriate_encouragement(parsed_question, was_dont_know)
-            
             # Register this question as asked in session
             _register_asked_question(job_domain, parsed_question)
             
@@ -629,10 +623,6 @@ class MultitaskEvaluator:
         except Exception as e:
             logger.error(f"[MultitaskEvaluator] Error during generation: {e}")
             fallback = self._get_unique_fallback_question(primary_skill, difficulty, question, answer, all_history, job_domain)
-            # Clean encouragement if it was a "don't know" answer
-            was_dont_know = self._is_dont_know_answer(answer)
-            if was_dont_know:
-                fallback = self._remove_inappropriate_encouragement(fallback, was_dont_know)
             _register_asked_question(job_domain, fallback)
             return GenerateResult(
                 question=fallback,
@@ -844,102 +834,6 @@ class MultitaskEvaluator:
             formatted.append(f"Q{i+1}: {q[:200]} A{i+1}: {a[:200]}")
         return " | ".join(formatted)
     
-    def _is_dont_know_answer(self, answer: str, scores: dict = None) -> bool:
-        """Detect if the answer indicates candidate doesn't know
-        
-        Uses multiple signals:
-        1. Explicit phrases like "I don't know"
-        2. Very short answers (< 20 chars)
-        3. Low evaluation scores (if provided)
-        """
-        answer_lower = answer.lower().strip()
-        
-        # Signal 1: Explicit "don't know" phrases
-        dont_know_phrases = [
-            "i don't know", "i dont know", "idk", "no idea", "not sure",
-            "i'm not sure", "im not sure", "i have no idea", "no clue",
-            "i am not sure", "pass", "skip", "next question",
-            "i can't answer", "i cannot answer", "no answer"
-        ]
-        if any(phrase in answer_lower for phrase in dont_know_phrases):
-            return True
-        
-        # Signal 2: Very short answer (likely not substantive)
-        if len(answer_lower) < 20:
-            return True
-        
-        # Signal 3: Low scores indicate poor answer (if available)
-        if scores:
-            final_score = scores.get("final", scores.get("correctness", 0.5))
-            # If score < 0.3 (30%), treat as "don't know" type answer
-            if final_score < 0.3:
-                return True
-        
-        return False
-
-    def _remove_inappropriate_encouragement(self, question: str, was_dont_know: bool) -> str:
-        """Remove encouraging phrases when answer was 'I don't know'"""
-        if not was_dont_know:
-            return question
-        
-        # Phrases to remove when candidate didn't know
-        inappropriate_phrases = [
-            # Praise phrases
-            "that's a good start", "good start", "keep going", "great answer",
-            "excellent", "well done", "nice try", "good thinking", "i like that",
-            "that's correct", "you're right", "exactly", "perfect", "wonderful",
-            "impressive", "that's a great point", "good point", "nice answer",
-            "that's thoughtful", "thoughtful approach",
-            # Acknowledgment phrases (inappropriate for "don't know")
-            "right, right", "right right", "i see", "i understand", "got it",
-            "that's okay", "no problem", "fair enough", "alright", "i'm with you",
-            # Collaborative phrases (can sound condescending for "don't know")
-            "let's explore this together", "let's dive into", "let's look at",
-            "let's think about", "let's discuss", "let's break it down",
-            "let's figure this out", "let's work through"
-        ]
-        
-        question_lower = question.lower()
-        
-        for phrase in inappropriate_phrases:
-            if phrase in question_lower:
-                # Find and remove the encouragement sentence
-                sentences = re.split(r'(?<=[.!])\s+', question)
-                cleaned_sentences = []
-                for sentence in sentences:
-                    if phrase not in sentence.lower():
-                        cleaned_sentences.append(sentence)
-                if cleaned_sentences:
-                    question = ' '.join(cleaned_sentences).strip()
-                    break
-        
-        # If question still starts with an encouragement, try to remove prefix
-        prefixes_to_remove = [
-            r"^that's a good start[,.]?\s*",
-            r"^keep going[,.]?\s*",
-            r"^good[,.]?\s*",
-            r"^great[,.]?\s*",
-            r"^nice[,.]?\s*",
-            r"^i'm with you[,.]?\s*",
-            r"^right[,.]?\s*right[,.]?\s*",
-            r"^i see[,.]?\s*",
-            r"^got it[,.]?\s*",
-            r"^alright[,.]?\s*",
-            r"^okay[,.]?\s*",
-            r"^ok[,.]?\s*",
-            r"^let's explore this together[,.]?\s*",
-            r"^let's dive into[,.]?\s*",
-            r"^let's look at[,.]?\s*",
-            r"^let's think about[,.]?\s*",
-            r"^let's discuss[,.]?\s*",
-            r"^let's break it down[,.]?\s*",
-            r"^let's[,.]?\s*",
-        ]
-        for pattern in prefixes_to_remove:
-            question = re.sub(pattern, '', question, flags=re.IGNORECASE)
-        
-        return question.strip()
-
     def _parse_generate_output(self, output: str) -> str:
         """Parse output từ GENERATE task
         
@@ -1693,27 +1587,6 @@ class MultitaskEvaluator:
             improved_answer=None
         )
     
-    def _generate_assessment_text(self, overview: str, strengths: list, weaknesses: list) -> str:
-        """Auto-generate assessment text from overview, strengths and weaknesses"""
-        overview_descriptions = {
-            "EXCELLENT": "The candidate demonstrated exceptional technical knowledge and communication skills.",
-            "GOOD": "The candidate showed solid understanding of core concepts with room for growth.",
-            "AVERAGE": "The candidate displayed basic competency but needs further development in key areas.",
-            "BELOW AVERAGE": "The candidate struggled with fundamental concepts and requires significant improvement.",
-            "POOR": "The candidate did not meet the minimum requirements for this position."
-        }
-        
-        base = overview_descriptions.get(overview.upper(), "The candidate's performance was evaluated.")
-        
-        # Add summary of strengths and weaknesses
-        parts = [base]
-        if strengths:
-            parts.append(f"Key strengths include: {strengths[0]}.")
-        if weaknesses:
-            parts.append(f"Areas for improvement: {weaknesses[0]}.")
-        
-        return " ".join(parts)
-
     def _parse_report_output(self, output: str) -> ReportResult:
         """Parse output thành ReportResult
         
@@ -1746,12 +1619,6 @@ class MultitaskEvaluator:
             # Training format uses "overview" for rating, "assessment" for detailed text
             overview = data.get("overview", "AVERAGE")
             assessment = data.get("assessment", "")
-            
-            # Auto-generate assessment if null/empty
-            if not assessment or assessment == "null":
-                strengths = data.get("strengths", [])
-                weaknesses = data.get("weaknesses", [])
-                assessment = self._generate_assessment_text(overview, strengths, weaknesses)
             
             # Recommendations can be string or list
             recommendations_raw = data.get("recommendations", [])

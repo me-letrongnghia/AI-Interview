@@ -95,8 +95,7 @@ public class GeminiService {
                                 log.info("Retry attempt {} for Gemini API after {}ms",
                                         retrySignal.totalRetries() + 1,
                                         retrySignal.totalRetriesInARow() * RETRY_MIN_BACKOFF.toMillis());
-                            })
-                    )
+                            }))
                     .timeout(REQUEST_TIMEOUT)
                     .block();
 
@@ -168,20 +167,47 @@ public class GeminiService {
         return generateResponse(systemPrompt, userPrompt);
     }
 
-    // Tạo câu hỏi tiếp theo
+    // Tạo câu hỏi tiếp theo (simple version without history)
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer) {
+        return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null);
+    }
+
+    // Tạo câu hỏi tiếp theo với conversation history đầy đủ
+    public String generateNextQuestion(String role, List<String> skills, String language, String level,
+            String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory) {
 
         String skillsText = (skills == null || skills.isEmpty())
                 ? "None"
                 : String.join(", ", skills);
 
+        // Build conversation context from history
+        StringBuilder historyContext = new StringBuilder();
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            historyContext.append("=== INTERVIEW HISTORY ===\n");
+            for (ConversationEntry entry : conversationHistory) {
+                if (entry.getQuestionContent() != null) {
+                    historyContext.append(String.format("Q%d: %s\n",
+                            entry.getSequenceNumber(),
+                            entry.getQuestionContent()));
+                }
+                if (entry.getAnswerContent() != null) {
+                    historyContext.append(String.format("A%d: %s\n\n",
+                            entry.getSequenceNumber(),
+                            entry.getAnswerContent()));
+                }
+            }
+            historyContext.append("=== END HISTORY ===\n\n");
+        }
+
         String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer. " +
                 "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". "
                 +
-                "Tailor it to the candidate's previous answer, role, skills, and level.\n" +
+                "You have access to the FULL interview history to understand the conversation context.\n" +
+                "Tailor your question to the candidate's previous answers, role, skills, and level.\n" +
                 "Rules:\n" +
-                "- The question must build upon the candidate's last answer or probe a related concept.\n" +
+                "- Review the entire interview history to avoid repeating questions already asked.\n" +
+                "- The question must build upon the candidate's answers or probe a related concept.\n" +
                 "- Keep the difficulty appropriate for the given level (" + level + ").\n" +
                 "- Start with: How, What, Why, When, Which, Describe, Design, or Implement.\n" +
                 "- End with a question mark (?).\n" +
@@ -189,10 +215,11 @@ public class GeminiService {
                 "- Return only the question.";
 
         String userPrompt = String.format(
-                "Role: %s\nLevel: %s\nSkills: %s\n\nPrevious Question: %s\nCandidate's Answer: %s\n\nGenerate the next interview question.",
+                "Role: %s\nLevel: %s\nSkills: %s\n\n%sCurrent Question: %s\nCandidate's Answer: %s\n\nGenerate the next interview question based on the full context.",
                 role != null ? role : "Unknown Role",
                 level != null ? level : "Junior",
                 skillsText,
+                historyContext.toString(),
                 previousQuestion != null ? previousQuestion : "N/A",
                 previousAnswer != null ? previousAnswer : "N/A");
 
@@ -208,54 +235,54 @@ public class GeminiService {
             log.info("Content truncated from {} to {} characters for AI analysis", cvText.length(), MAX_CONTENT_LENGTH);
         }
 
-        String systemPrompt =
-            "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
-            "Analyze the CV carefully and extract the following information:\n\n" +
-            "1. Role: Based on the candidate's experience, projects, and skills, determine the most suitable IT role from: " +
-            "'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', " +
-            "'DevOps Engineer', 'Data Analyst', 'Data Scientist', 'QA Engineer', 'Software Engineer', " +
-            "'System Administrator', 'Cloud Engineer', 'Security Engineer', 'UI/UX Designer', " +
-            "'Database Administrator', 'Machine Learning Engineer', 'Product Manager'\n\n" +
-            "2. Level: Assess based on education and experience: " +
-            "'Intern' (student with no professional experience), " +
-            "'Fresher' (new graduate or <1 year experience), " +
-            "'Junior' (1-2 years experience), " +
-            "'Mid-level' (3-5 years experience), " +
-            "'Senior' (5+ years experience), " +
-            "'Lead' (leadership experience), " +
-            "'Principal' (senior leadership)\n\n" +
-            "3. Skills: Extract ALL technical skills and frameworks mentioned in the CV. " +
-            "Include all relevant programming languages, frameworks, databases, and technologies. " +
-            "Avoid duplicates, but keep the full list.\n\n" +
-            "4. Language: Always set this field to 'en' by default.\n\n" +
-            "CRITICAL INSTRUCTIONS:\n" +
-            "- Return ONLY a valid JSON object with exact keys: role, level, skill, language\n" +
-            "- The 'skill' field MUST be an array of ALL detected skills and frameworks\n" +
-            "- If you cannot determine a field from the CV content, use null for that field EXCEPT 'language'\n" +
-            "- Always set 'language': 'en'\n" +
-            "- If CV mentions web development with HTML/CSS/JS/PHP = Full Stack Developer\n" +
-            "- If CV is a student with projects but no work experience = Intern or Fresher\n" +
-            "- Prioritize programming languages and frameworks when identifying role, but list all skills\n" +
-            "- If the CV is NOT related to the Information Technology (IT) field, return this JSON exactly:\n" +
-            "  {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n" +
-            "- Return only the JSON object, with no extra explanation or formatting\n\n" +
-            "Example output formats:\n" +
-            "Complete data: {\"role\":\"Full Stack Developer\",\"level\":\"Fresher\",\"skill\":[\"Java\",\"JavaScript\",\"React\",\"MySQL\",\"Docker\"],\"language\":\"en\"}\n" +
-            "Partial data: {\"role\":\"Software Engineer\",\"level\":null,\"skill\":[\"Python\",\"Django\",\"Flask\"],\"language\":\"en\"}\n" +
-            "Non-IT data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}";
+        String systemPrompt = "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
+                "Analyze the CV carefully and extract the following information:\n\n" +
+                "1. Role: Based on the candidate's experience, projects, and skills, determine the most suitable IT role from: "
+                +
+                "'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', " +
+                "'DevOps Engineer', 'Data Analyst', 'Data Scientist', 'QA Engineer', 'Software Engineer', " +
+                "'System Administrator', 'Cloud Engineer', 'Security Engineer', 'UI/UX Designer', " +
+                "'Database Administrator', 'Machine Learning Engineer', 'Product Manager'\n\n" +
+                "2. Level: Assess based on education and experience: " +
+                "'Intern' (student with no professional experience), " +
+                "'Fresher' (new graduate or <1 year experience), " +
+                "'Junior' (1-2 years experience), " +
+                "'Mid-level' (3-5 years experience), " +
+                "'Senior' (5+ years experience), " +
+                "'Lead' (leadership experience), " +
+                "'Principal' (senior leadership)\n\n" +
+                "3. Skills: Extract ALL technical skills and frameworks mentioned in the CV. " +
+                "Include all relevant programming languages, frameworks, databases, and technologies. " +
+                "Avoid duplicates, but keep the full list.\n\n" +
+                "4. Language: Always set this field to 'en' by default.\n\n" +
+                "CRITICAL INSTRUCTIONS:\n" +
+                "- Return ONLY a valid JSON object with exact keys: role, level, skill, language\n" +
+                "- The 'skill' field MUST be an array of ALL detected skills and frameworks\n" +
+                "- If you cannot determine a field from the CV content, use null for that field EXCEPT 'language'\n" +
+                "- Always set 'language': 'en'\n" +
+                "- If CV mentions web development with HTML/CSS/JS/PHP = Full Stack Developer\n" +
+                "- If CV is a student with projects but no work experience = Intern or Fresher\n" +
+                "- Prioritize programming languages and frameworks when identifying role, but list all skills\n" +
+                "- If the CV is NOT related to the Information Technology (IT) field, return this JSON exactly:\n" +
+                "  {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n" +
+                "- Return only the JSON object, with no extra explanation or formatting\n\n" +
+                "Example output formats:\n" +
+                "Complete data: {\"role\":\"Full Stack Developer\",\"level\":\"Fresher\",\"skill\":[\"Java\",\"JavaScript\",\"React\",\"MySQL\",\"Docker\"],\"language\":\"en\"}\n"
+                +
+                "Partial data: {\"role\":\"Software Engineer\",\"level\":null,\"skill\":[\"Python\",\"Django\",\"Flask\"],\"language\":\"en\"}\n"
+                +
+                "Non-IT data: {\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}";
 
         String userPrompt = String.format(
-            "CV Content to analyze:\n\n%s\n\n" +
-            "Based on this CV, determine if it belongs to the IT field. " +
-            "If it is NOT related to Information Technology, return:\n" +
-            "{\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n\n" +
-            "Otherwise, extract and return only a JSON object with the fields: role, level, skill, language.",
-            truncatedText != null ? truncatedText : ""
-        );
+                "CV Content to analyze:\n\n%s\n\n" +
+                        "Based on this CV, determine if it belongs to the IT field. " +
+                        "If it is NOT related to Information Technology, return:\n" +
+                        "{\"role\":null,\"level\":null,\"skill\":null,\"language\":\"en\"}\n\n" +
+                        "Otherwise, extract and return only a JSON object with the fields: role, level, skill, language.",
+                truncatedText != null ? truncatedText : "");
 
         return generateResponse(systemPrompt, userPrompt);
     }
-
 
     // Generate feedback cho một câu trả lời cụ thể
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
@@ -264,61 +291,63 @@ public class GeminiService {
                 "Use proper markdown formatting in your feedback including **bold** for emphasis, " +
                 "`code` for technical terms, and ``` for code blocks. Use line breaks for better readability.";
 
-        String userPrompt = String.format("""
-                You are an expert technical interviewer evaluating a candidate's answer with precise scoring standards.
+        String userPrompt = String.format(
+                """
+                        You are an expert technical interviewer evaluating a candidate's answer with precise scoring standards.
 
-                Position: %s (%s level)
-                Question: %s
-                Candidate's Answer: %s
+                        Position: %s (%s level)
+                        Question: %s
+                        Candidate's Answer: %s
 
-                LEVEL-SPECIFIC EXPECTATIONS:
-                - Intern: Basic understanding, can explain fundamental concepts
-                - Fresher: Solid foundation, some practical knowledge
-                - Junior: Good understanding, practical experience, can explain implementation
-                - Mid-level: Deep knowledge, best practices, design patterns, trade-offs
-                - Senior: Expert level, architectural decisions, optimization, mentoring ability
+                        LEVEL-SPECIFIC EXPECTATIONS:
+                        - Intern: Basic understanding, can explain fundamental concepts
+                        - Fresher: Solid foundation, some practical knowledge
+                        - Junior: Good understanding, practical experience, can explain implementation
+                        - Mid-level: Deep knowledge, best practices, design patterns, trade-offs
+                        - Senior: Expert level, architectural decisions, optimization, mentoring ability
 
-                FORMATTING GUIDELINES:
-                - Use **bold** to highlight important concepts or key points
-                - Use `backticks` for technical terms, variables, or short code snippets
-                - Use ``` for multi-line code blocks with language identifier (e.g., ```java)
-                - Use line breaks between paragraphs for readability
-                - Use - or * for bullet points when listing items
-                - Use proper spacing around code blocks
+                        FORMATTING GUIDELINES:
+                        - Use **bold** to highlight important concepts or key points
+                        - Use `backticks` for technical terms, variables, or short code snippets
+                        - Use ``` for multi-line code blocks with language identifier (e.g., ```java)
+                        - Use line breaks between paragraphs for readability
+                        - Use - or * for bullet points when listing items
+                        - Use proper spacing around code blocks
 
-                FEEDBACK REQUIREMENTS:
-                - Be specific and constructive
-                - Mention what was done well
-                - Point out specific areas for improvement
-                - Reference technical concepts where applicable
-                - Keep professional and encouraging tone
-                - Format code examples properly with syntax highlighting
+                        FEEDBACK REQUIREMENTS:
+                        - Be specific and constructive
+                        - Mention what was done well
+                        - Point out specific areas for improvement
+                        - Reference technical concepts where applicable
+                        - Keep professional and encouraging tone
+                        - Format code examples properly with syntax highlighting
 
-                SAMPLE ANSWER REQUIREMENTS:
-                - Provide a comprehensive model answer
-                - Include technical details appropriate for the level
-                - Show best practices and proper terminology
-                - Demonstrate the depth expected for the position
-                - Format any code examples with proper code blocks
+                        SAMPLE ANSWER REQUIREMENTS:
+                        - Provide a comprehensive model answer
+                        - Include technical details appropriate for the level
+                        - Show best practices and proper terminology
+                        - Demonstrate the depth expected for the position
+                        - Format any code examples with proper code blocks
 
-                Provide detailed feedback in JSON format:
-                {
-                    "feedback": "Your answer demonstrates... [3-5 sentences with specific observations, use markdown formatting]",
-                    "sampleAnswer": "A strong answer would include... [comprehensive model answer with proper formatting]"
-                }
+                        Provide detailed feedback in JSON format:
+                        {
+                            "feedback": "Your answer demonstrates... [3-5 sentences with specific observations, use markdown formatting]",
+                            "sampleAnswer": "A strong answer would include... [comprehensive model answer with proper formatting]"
+                        }
 
-                Example of good formatting:
-                {
-                    "feedback": "Your answer shows **good understanding** of the concept. You correctly mentioned `variables` but could improve by discussing:\\n\\n- Point 1\\n- Point 2\\n\\nOverall, solid response.",
-                    "sampleAnswer": "A complete answer should cover:\\n\\n**Key Concept**: Description here\\n\\n```java\\ncode example\\n```\\n\\nThis demonstrates..."
-                }
-                """, role, level, question, answer);
+                        Example of good formatting:
+                        {
+                            "feedback": "Your answer shows **good understanding** of the concept. You correctly mentioned `variables` but could improve by discussing:\\n\\n- Point 1\\n- Point 2\\n\\nOverall, solid response.",
+                            "sampleAnswer": "A complete answer should cover:\\n\\n**Key Concept**: Description here\\n\\n```java\\ncode example\\n```\\n\\nThis demonstrates..."
+                        }
+                        """,
+                role, level, question, answer);
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
             AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
-            
+
             // Format the feedback and sample answer for better readability
             if (feedbackData.getFeedback() != null) {
                 feedbackData.setFeedback(formatFeedbackContent(feedbackData.getFeedback()));
@@ -326,7 +355,7 @@ public class GeminiService {
             if (feedbackData.getSampleAnswer() != null) {
                 feedbackData.setSampleAnswer(formatFeedbackContent(feedbackData.getSampleAnswer()));
             }
-            
+
             return feedbackData;
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
@@ -362,102 +391,103 @@ public class GeminiService {
                 "Use proper markdown formatting including **bold** for emphasis, " +
                 "`code` for technical terms, and proper line breaks for readability.";
 
-        String userPrompt = String.format("""
-                You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
+        String userPrompt = String.format(
+                """
+                           You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
 
-                CANDIDATE PROFILE:
-                - Position Applied: %s
-                - Experience Level: %s
-                - Technical Skills Focus: %s
-                - Total Questions Answered: %d
+                           CANDIDATE PROFILE:
+                           - Position Applied: %s
+                           - Experience Level: %s
+                           - Technical Skills Focus: %s
+                           - Total Questions Answered: %d
 
-                COMPLETE INTERVIEW TRANSCRIPT:
-                         %s
+                           COMPLETE INTERVIEW TRANSCRIPT:
+                                    %s
 
-                         EVALUATION FRAMEWORK:
+                                    EVALUATION FRAMEWORK:
 
-                         1. OVERVIEW RATING:
-                            Evaluate the candidate's overall interview performance and assign ONE of these ratings:
-                            - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
-                            - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
-                            - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
-                            - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
-                            - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
+                                    1. OVERVIEW RATING:
+                                       Evaluate the candidate's overall interview performance and assign ONE of these ratings:
+                                       - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
+                                       - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
+                                       - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
+                                       - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
+                                       - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
 
 
-                         2. ASSESSMENT:
-                            Provide a comprehensive 4-6 sentence analysis covering:
-                            - Overall performance summary
-                            - Technical competency evaluation
-                            - Communication effectiveness
-                            - Suitability for the role and level
-                            - Key observations from the interview flow
-                            - Use **bold** for key points and `backticks` for technical terms
+                                    2. ASSESSMENT:
+                                       Provide a comprehensive 4-6 sentence analysis covering:
+                                       - Overall performance summary
+                                       - Technical competency evaluation
+                                       - Communication effectiveness
+                                       - Suitability for the role and level
+                                       - Key observations from the interview flow
+                                       - Use **bold** for key points and `backticks` for technical terms
 
-                         3. STRENGTHS (List 3-5 specific strengths):
-                            Identify concrete positive aspects with examples
-                            - Format as clear bullet points
-                            - Use **bold** for key strengths
-                            - Use `code` for technical terms
+                                    3. STRENGTHS (List 3-5 specific strengths):
+                                       Identify concrete positive aspects with examples
+                                       - Format as clear bullet points
+                                       - Use **bold** for key strengths
+                                       - Use `code` for technical terms
 
-                         4. WEAKNESSES (List 2-4 areas for improvement):
-                            Identify specific gaps or areas needing development
-                            - Format as clear bullet points
-                            - Be constructive and specific
+                                    4. WEAKNESSES (List 2-4 areas for improvement):
+                                       Identify specific gaps or areas needing development
+                                       - Format as clear bullet points
+                                       - Be constructive and specific
 
-                         5. RECOMMENDATIONS:
-                            Provide actionable 3-5 sentence guidance
-                            - Use proper formatting for readability
-                            - Include specific, actionable advice
+                                    5. RECOMMENDATIONS:
+                                       Provide actionable 3-5 sentence guidance
+                                       - Use proper formatting for readability
+                                       - Include specific, actionable advice
 
-                        IMPORTANT SCORING CRITERIA:
-                        - EXCELLENT: 90%%+ correct answers, deep technical understanding, excellent communication
-                        - GOOD: 70-89%% correct answers, solid technical knowledge, good communication
-                        - AVERAGE: 50-69%% correct answers, basic understanding, adequate communication
-                        - BELOW AVERAGE: 30-49%% correct answers, limited knowledge, poor communication
-                        - POOR: <30%% correct answers, insufficient knowledge, very weak responses
+                                   IMPORTANT SCORING CRITERIA:
+                                   - EXCELLENT: 90%%+ correct answers, deep technical understanding, excellent communication
+                                   - GOOD: 70-89%% correct answers, solid technical knowledge, good communication
+                                   - AVERAGE: 50-69%% correct answers, basic understanding, adequate communication
+                                   - BELOW AVERAGE: 30-49%% correct answers, limited knowledge, poor communication
+                                   - POOR: <30%% correct answers, insufficient knowledge, very weak responses
 
-                        FORMATTING GUIDELINES:
-                        - Use **bold** to highlight important points
-                        - Use `backticks` for technical terms
-                        - Use line breaks (\\n) between paragraphs
-                        - Format lists clearly with proper spacing
-                        - Make the feedback easy to read and scan
+                                   FORMATTING GUIDELINES:
+                                   - Use **bold** to highlight important points
+                                   - Use `backticks` for technical terms
+                                   - Use line breaks (\\n) between paragraphs
+                                   - Format lists clearly with proper spacing
+                                   - Make the feedback easy to read and scan
 
-                         Provide detailed feedback in JSON format:
-                         {
-                             "overview": "GOOD",
-                             "assessment": "Throughout the interview, the candidate demonstrated...",
-                             "strengths": [
-                                 "**Specific strength** with example from interview",
-                                 "**Another specific technical strength**",
-                                 "**Communication or approach strength**"
-                             ],
-                             "weaknesses": [
-                                 "Specific gap with example",
-                                 "Another area needing improvement"
-                             ],
-                             "recommendations": "To advance in your career and improve your interview performance, focus on..."
-                         }
+                                    Provide detailed feedback in JSON format:
+                                    {
+                                        "overview": "GOOD",
+                                        "assessment": "Throughout the interview, the candidate demonstrated...",
+                                        "strengths": [
+                                            "**Specific strength** with example from interview",
+                                            "**Another specific technical strength**",
+                                            "**Communication or approach strength**"
+                                        ],
+                                        "weaknesses": [
+                                            "Specific gap with example",
+                                            "Another area needing improvement"
+                                        ],
+                                        "recommendations": "To advance in your career and improve your interview performance, focus on..."
+                                    }
 
-                         CRITICAL: The 'overview' field MUST be EXACTLY one of: EXCELLENT, GOOD, AVERAGE, BELOW AVERAGE, or POOR
-                        Score strictly based on actual performance vs. level expectations.
-             """,
+                                    CRITICAL: The 'overview' field MUST be EXACTLY one of: EXCELLENT, GOOD, AVERAGE, BELOW AVERAGE, or POOR
+                                   Score strictly based on actual performance vs. level expectations.
+                        """,
                 role, level, skillsText, totalQuestionsAnswered, conversationSummary.toString());
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
             String cleanedJson = cleanJsonResponse(jsonResponse);
             OverallFeedbackData feedbackData = objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
-            
+
             if (feedbackData.getAssessment() != null) {
                 feedbackData.setAssessment(formatFeedbackContent(feedbackData.getAssessment()));
             }
-            
+
             if (feedbackData.getRecommendations() != null) {
                 feedbackData.setRecommendations(formatFeedbackContent(feedbackData.getRecommendations()));
             }
-            
+
             if (feedbackData.getStrengths() != null) {
                 List<String> formattedStrengths = feedbackData.getStrengths().stream()
                         .map(this::formatFeedbackContent)
@@ -471,7 +501,7 @@ public class GeminiService {
                         .toList();
                 feedbackData.setWeaknesses(formattedWeaknesses);
             }
-            
+
             return feedbackData;
         } catch (Exception e) {
             log.error("Error parsing overall feedback response", e);
@@ -523,7 +553,8 @@ public class GeminiService {
         formatted = formatted.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
         formatted = formatted.replaceAll("__([^_]+)__", "$1");
 
-        // Remove italic markdown (*text* or _text_) but be careful not to affect bullet points
+        // Remove italic markdown (*text* or _text_) but be careful not to affect bullet
+        // points
         // Only remove italic at word boundaries
         formatted = formatted.replaceAll("(?<!\\*)\\*(?!\\*)([^*]+?)\\*(?!\\*)", "$1");
         formatted = formatted.replaceAll("(?<!_)_(?!_)([^_]+?)_(?!_)", "$1");
@@ -546,11 +577,13 @@ public class GeminiService {
         formatted = formatted.replaceAll("^#{1,6}\\s+(.+)", "$1\n");
         formatted = formatted.replaceAll("\\n#{1,6}\\s+(.+)", "\n\n$1\n");
 
-        // Add line break after sentences ending with period, question mark, or exclamation
+        // Add line break after sentences ending with period, question mark, or
+        // exclamation
         // Only if followed by capital letter (new sentence)
         formatted = formatted.replaceAll("([.!?])([A-Z])", "$1\n\n$2");
 
-        // Add line break after colons if followed by newline content (like lists or explanations)
+        // Add line break after colons if followed by newline content (like lists or
+        // explanations)
         formatted = formatted.replaceAll(":(\\s*)([A-Z•\\d])", ":\n\n$2");
 
         // Ensure proper paragraph spacing (max 2 line breaks)

@@ -108,5 +108,5 @@ htmlcov/
 .env.local
 local.env
 
-NoteBook
+
 dataset/Judge/judge_overall_feedback_dataset_100k.jsonl

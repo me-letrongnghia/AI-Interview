@@ -18,21 +18,17 @@ import com.capstone.ai_interview_be.dto.response.OverallFeedbackData;
 import com.capstone.ai_interview_be.model.ConversationEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AIService {
-    
-    private final MultitaskJudgeService multitaskJudgeService;  // NEW: Multitask v2
+
+    private final MultitaskJudgeService multitaskJudgeService;
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    /**
-     * Generate first interview question using Multitask GENERATE_FIRST or Gemini fallback
-     */
-    public String generateFirstQuestion(String role, String level, List<String> skills, 
-                                       String cvText, String jdText) {
+
+    public String generateFirstQuestion(String role, String level, List<String> skills,
+            String cvText, String jdText) {
         // Try Multitask GENERATE_FIRST first
         if (multitaskJudgeService.isServiceHealthy()) {
             log.info("Using Multitask Judge v2 GENERATE_FIRST for role: {}", role);
@@ -44,9 +40,8 @@ public class AIService {
                         "English",
                         cvText,
                         jdText,
-                        0.7
-                );
-                
+                        0.7);
+
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
                     log.info("Multitask GENERATE_FIRST success - Type: {}", response.getQuestionType());
                     return response.getQuestion();
@@ -55,7 +50,7 @@ public class AIService {
                 log.error("Multitask GENERATE_FIRST failed: {}", e.getMessage());
             }
         }
-        
+
         // Fallback to Gemini
         log.warn("Multitask unavailable, using Gemini fallback for first question");
         try {
@@ -65,18 +60,19 @@ public class AIService {
             return "Please tell me a little bit about yourself and your background.";
         }
     }
-    
+
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
-    
+
     /**
      * Generate next question using Multitask GENERATE (v2) or Gemini fallback
      */
-    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
-                                     String previousQuestion, String previousAnswer, String cvText, String jdText,
-                                     List<ConversationEntry> conversationHistory) {
-        
+    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
+            String sessionLevel,
+            String previousQuestion, String previousAnswer, String cvText, String jdText,
+            List<ConversationEntry> conversationHistory) {
+
         // Try Multitask GENERATE first
         if (multitaskJudgeService.isServiceHealthy()) {
             log.info("Using Multitask Judge v2 GENERATE for next question");
@@ -85,15 +81,15 @@ public class AIService {
                 List<Map<String, String>> historyForAI = null;
                 if (conversationHistory != null && !conversationHistory.isEmpty()) {
                     historyForAI = conversationHistory.stream()
-                        .map(entry -> {
-                            Map<String, String> qa = new HashMap<>();
-                            qa.put("question", entry.getQuestionContent());
-                            qa.put("answer", entry.getAnswerContent());
-                            return qa;
-                        })
-                        .collect(Collectors.toList());
+                            .map(entry -> {
+                                Map<String, String> qa = new HashMap<>();
+                                qa.put("question", entry.getQuestionContent());
+                                qa.put("answer", entry.getAnswerContent());
+                                return qa;
+                            })
+                            .collect(Collectors.toList());
                 }
-                
+
                 // Determine difficulty based on level
                 String difficulty = "medium";
                 if (sessionLevel != null) {
@@ -103,16 +99,15 @@ public class AIService {
                         difficulty = "hard";
                     }
                 }
-                
+
                 MultitaskGenerateResponse response = multitaskJudgeService.generateFollowUp(
                         previousQuestion,
                         previousAnswer,
                         historyForAI,
-                        sessionRole,  // jobDomain
+                        sessionRole, // jobDomain
                         difficulty,
-                        0.7
-                );
-                
+                        0.7);
+
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
                     log.info("Multitask GENERATE success - Type: {}", response.getQuestionType());
                     return response.getQuestion();
@@ -121,41 +116,42 @@ public class AIService {
                 log.error("Multitask GENERATE failed: {}", e.getMessage());
             }
         }
-        
-        // Fallback to Gemini
-        log.warn("Multitask unavailable, using Gemini fallback");
+
+        // Fallback to Gemini with conversation history
+        log.warn("Multitask unavailable, using Gemini fallback with conversation history");
         try {
             return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
-                                                        previousQuestion, previousAnswer);
+                    previousQuestion, previousAnswer, conversationHistory);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
             return "Can you tell me about a challenging project you've worked on recently?";
         }
     }
-    
-    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage, String sessionLevel, 
-                                     String previousQuestion, String previousAnswer) {
-        return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel, 
-                                   previousQuestion, previousAnswer, null, null, null);
+
+    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
+            String sessionLevel,
+            String previousQuestion, String previousAnswer) {
+        return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+                previousQuestion, previousAnswer, null, null, null);
     }
-    
+
     public DataScanResponse extractData(String Text) {
         try {
             String jsonResponse = geminiService.generateData(Text);
-            
+
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
                 log.warn("Empty Gemini response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-            
+
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
                 log.error("Gemini error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-            
+
             String cleanedJson = cleanJsonResponse(jsonResponse);
             return objectMapper.readValue(cleanedJson, DataScanResponse.class);
-            
+
         } catch (Exception e) {
             log.error("Extract data error: {}", e.getMessage());
             return new DataScanResponse("null", "null", Arrays.asList(), "en");
@@ -163,15 +159,16 @@ public class AIService {
     }
 
     private String cleanJsonResponse(String jsonResponse) {
-        if (jsonResponse == null) return "{}";
-        
+        if (jsonResponse == null)
+            return "{}";
+
         String cleaned = jsonResponse
-            .replaceAll("```json\\s*", "")
-            .replaceAll("```\\s*", "")
-            .trim();
-        
+                .replaceAll("```json\\s*", "")
+                .replaceAll("```\\s*", "")
+                .trim();
+
         int start = cleaned.indexOf("{");
-        int end = cleaned.lastIndexOf("}"); 
+        int end = cleaned.lastIndexOf("}");
         if (start != -1 && end != -1 && end > start) {
             return cleaned.substring(start, end + 1);
         }
@@ -186,25 +183,25 @@ public class AIService {
                 MultitaskEvaluateResponse response = multitaskJudgeService.evaluateAnswer(
                         question,
                         answer,
-                        null,  // context
-                        role,  // jobDomain
-                        0.3
-                );
-                
+                        null, // context
+                        role, // jobDomain
+                        0.3);
+
                 if (response != null) {
                     // Convert Multitask scores (0-10) to normalized scores (0-1)
                     double normalizedScore = response.getOverall() / 10.0;
-                    
+
                     // Only show feedback text, scores are displayed separately in UI
                     String feedback = response.getFeedback() != null && !response.getFeedback().isEmpty()
                             ? response.getFeedback()
                             : "No detailed feedback available.";
-                    
+
                     // Use improved_answer from AI if available, otherwise leave null (don't show)
-                    String sampleAnswer = response.getImprovedAnswer() != null && !response.getImprovedAnswer().isEmpty()
-                            ? response.getImprovedAnswer()
-                            : null;  // Don't show default text, let frontend hide the section
-                    
+                    String sampleAnswer = response.getImprovedAnswer() != null
+                            && !response.getImprovedAnswer().isEmpty()
+                                    ? response.getImprovedAnswer()
+                                    : null; // Don't show default text, let frontend hide the section
+
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
@@ -214,7 +211,7 @@ public class AIService {
                 log.error("Multitask EVALUATE failed: {}", e.getMessage());
             }
         }
-        
+
         // Fallback to Gemini
         log.warn("Multitask unavailable, using Gemini for answer feedback");
         try {
@@ -237,7 +234,7 @@ public class AIService {
             String level,
             List<String> skills) {
         log.info("Generating overall feedback for {} questions using Multitask v2", conversation.size());
-        
+
         if (multitaskJudgeService.isServiceHealthy()) {
             log.info("Using Multitask Judge v2 REPORT (PRIMARY)");
             try {
@@ -250,32 +247,32 @@ public class AIService {
                             return qa;
                         })
                         .collect(Collectors.toList());
-                
+
                 // Build candidate info
                 String candidateInfo = String.format("Role: %s, Level: %s, Skills: %s",
                         role != null ? role : "Developer",
                         level != null ? level : "Mid-level",
                         skills != null ? String.join(", ", skills) : "");
-                
+
                 MultitaskReportResponse response = multitaskJudgeService.generateReport(
                         historyForAI,
-                        role,  // jobDomain
+                        role, // jobDomain
                         candidateInfo,
-                        0.5
-                );
-                
+                        0.5);
+
                 if (response != null && response.getOverallAssessment() != null) {
                     // Convert score (0-100) to overview rating
                     String overview = convertScoreToOverview(response.getScore());
-                    
+
                     // Convert recommendations list to string
-                    String recommendations = response.getRecommendations() != null && !response.getRecommendations().isEmpty()
-                            ? String.join(" ", response.getRecommendations())
-                            : "Continue practicing and improving your technical interview skills.";
-                    
-                    log.info("Multitask REPORT success - Score: {}/100, Overview: {}", 
+                    String recommendations = response.getRecommendations() != null
+                            && !response.getRecommendations().isEmpty()
+                                    ? String.join(" ", response.getRecommendations())
+                                    : "Continue practicing and improving your technical interview skills.";
+
+                    log.info("Multitask REPORT success - Score: {}/100, Overview: {}",
                             response.getScore(), overview);
-                    
+
                     return OverallFeedbackData.builder()
                             .overview(overview)
                             .assessment(response.getOverallAssessment())
@@ -284,7 +281,7 @@ public class AIService {
                             .recommendations(recommendations)
                             .build();
                 }
-                
+
                 log.warn("Multitask REPORT invalid response, falling back");
             } catch (Exception e) {
                 log.error("Multitask REPORT error, falling back: {}", e.getMessage());
@@ -292,7 +289,7 @@ public class AIService {
         } else {
             log.warn("Multitask Judge v2 unavailable, using Gemini (BACKUP)");
         }
-        
+
         // Fallback to Gemini
         log.info("Using Gemini fallback for overall feedback");
         try {
@@ -302,32 +299,36 @@ public class AIService {
             return OverallFeedbackData.builder()
                     .overview("AVERAGE")
                     .assessment("Thank you for completing the interview. Your performance showed potential. "
-                               + "Due to technical difficulties, we could not generate detailed automated feedback. "
-                               + "A human reviewer will evaluate your responses shortly.")
+                            + "Due to technical difficulties, we could not generate detailed automated feedback. "
+                            + "A human reviewer will evaluate your responses shortly.")
                     .strengths(Arrays.asList(
-                        "Participated in the complete interview session",
-                        "Attempted to answer all questions",
-                        "Maintained professional communication"
-                    ))
+                            "Participated in the complete interview session",
+                            "Attempted to answer all questions",
+                            "Maintained professional communication"))
                     .weaknesses(Arrays.asList(
-                        "Detailed automated evaluation unavailable",
-                        "Manual review required for comprehensive feedback"
-                    ))
-                    .recommendations("Continue practicing technical interview questions and focus on providing detailed, structured answers. "
-                                   + "A human reviewer will provide more specific feedback based on your responses.")
+                            "Detailed automated evaluation unavailable",
+                            "Manual review required for comprehensive feedback"))
+                    .recommendations(
+                            "Continue practicing technical interview questions and focus on providing detailed, structured answers. "
+                                    + "A human reviewer will provide more specific feedback based on your responses.")
                     .build();
         }
     }
-    
+
     /**
      * Convert numeric score (0-100) to overview rating
      */
     private String convertScoreToOverview(Integer score) {
-        if (score == null) return "AVERAGE";
-        if (score >= 85) return "EXCELLENT";
-        if (score >= 70) return "GOOD";
-        if (score >= 50) return "AVERAGE";
-        if (score >= 30) return "BELOW AVERAGE";
+        if (score == null)
+            return "AVERAGE";
+        if (score >= 85)
+            return "EXCELLENT";
+        if (score >= 70)
+            return "GOOD";
+        if (score >= 50)
+            return "AVERAGE";
+        if (score >= 30)
+            return "BELOW AVERAGE";
         return "POOR";
     }
 }
