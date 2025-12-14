@@ -23,12 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class CloudinaryController {
-
-    
     private final Cloudinary cloudinary;
 
+    // Phương thức upload ảnh lên Cloudinary
     @PostMapping("/upload")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
+        // Kiểm tra file rỗng
         if (file.isEmpty()) {
         return ResponseEntity.badRequest().body("File is empty");
         }
@@ -38,57 +38,32 @@ public class CloudinaryController {
             return ResponseEntity.badRequest().body("File too large (max 5MB)");
         }
 
-        // Kiểm tra MIME type
+        // Kiểm tra định dạng file
         String contentType = file.getContentType();
         if (!List.of("image/jpeg", "image/png", "image/jpg").contains(contentType)) {
             return ResponseEntity.badRequest().body("Only JPG/PNG files allowed");
         }
 
        try {
+            // Upload file lên Cloudinary   
             Map<?, ?> uploadResult = cloudinary.uploader().upload(
                 file.getBytes(),
                 ObjectUtils.asMap("resource_type", "auto")
             );
+            // Lấy URL ảnh từ kết quả upload
             String imageUrl = (String) uploadResult.get("secure_url");
             return ResponseEntity.ok(Map.of("imageUrl", imageUrl));
 
         } catch (IOException e) {
-            // LỖI QUAN TRỌNG: Thường xảy ra khi đọc file.getBytes()
-            log.error("Lỗi IO khi upload file: {}", e.getMessage(), e);
+            log.error("Error reading file for upload", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Lỗi khi đọc file: " + e.getMessage());
 
         } catch (Exception e) {
-            log.error("!!! LỖI UPLOAD: Đã xảy ra lỗi không xác định.", e);
-            
+            log.error("Error uploading file to Cloudinary", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Upload thất bại do lỗi máy chủ: " + e.getMessage());
+                                 .body("Error uploading file: " + e.getMessage());
         }
     }
 
-    // Optional: API sinh signature (nếu frontend muốn upload trực tiếp)
-    // @Value("${cloudinary.api_secret}")
-    // private String apiSecret;
-
-    // @Value("${cloudinary.api_key}")
-    // private String apiKey;
-
-    // @Value("${cloudinary.cloud_name}")
-    // private String cloudName;
-
-    // @PostMapping("/signature")
-    // public ResponseEntity<?> getSignature() {
-    //     long timestamp = System.currentTimeMillis() / 1000;
-    //     String signature = com.cloudinary.utils.SignatureUtils.apiSignRequest(
-    //             Map.of("timestamp", String.valueOf(timestamp)),
-    //             apiSecret
-    //     );
-
-    //     return ResponseEntity.ok(Map.of(
-    //             "timestamp", String.valueOf(timestamp),
-    //             "signature", signature,
-    //             "apiKey", apiKey,
-    //             "cloudName", cloudName
-    //     ));
-    // }
 }

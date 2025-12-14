@@ -1,7 +1,6 @@
 package com.capstone.ai_interview_be.controller.InterviewsController;
 
 import com.capstone.ai_interview_be.dto.response.CreatePracticeResponse;
-//import com.capstone.ai_interview_be.dto.response.PracticeSessionDTO;
 import com.capstone.ai_interview_be.service.InterviewService.PracticeService;
 import com.capstone.ai_interview_be.service.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -20,43 +19,17 @@ public class PracticeController {
     private final PracticeService practiceService;
     private final JwtService jwtService;
     
-    // GET /api/practice/sessions
-    // Lấy danh sách các session đã hoàn thành để practice
-    // @GetMapping("/sessions")
-    // public ResponseEntity<?> getCompletedSessions(
-    //         @RequestHeader("Authorization") String authHeader) {
-    //     try {
-    //         Long userId = extractUserId(authHeader);
-    //         log.info("Fetching completed sessions for user {}", userId);
-            
-    //         List<PracticeSessionDTO> sessions = practiceService.getCompletedSessions(userId);
-            
-    //         return ResponseEntity.ok(Map.of(
-    //             "success", true,
-    //             "data", sessions,
-    //             "count", sessions.size()
-    //         ));
-    //     } catch (Exception e) {
-    //         log.error("Error fetching completed sessions", e);
-    //         return ResponseEntity.badRequest().body(Map.of(
-    //             "success", false,
-    //             "error", e.getMessage()
-    //         ));
-    //     }
-    // }
-    
-    // POST /api/practice/sessions/{originalSessionId}
-    // Tạo practice session mới từ session gốc
+    // Phương thức tạo buổi thực hành mới dựa trên buổi phỏng vấn gốc
     @PostMapping("/sessions/{originalSessionId}")
     public ResponseEntity<?> createPracticeSession(
             @PathVariable Long originalSessionId,
             @RequestHeader("Authorization") String authHeader) {
         try {
+            // Lấy userId từ token
             Long userId = extractUserId(authHeader);
-            log.info("User {} creating practice session from original {}", userId, originalSessionId);
-
+            // Thực hiện tạo buổi thực hành mới
             CreatePracticeResponse response = practiceService.createPracticeSession(userId, originalSessionId);
-
+            // Trả về phản hồi thành công
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", response
@@ -70,12 +43,13 @@ public class PracticeController {
         }
     }
     
-    // GET /api/practice/check/{sessionId}
-    // Check if a session is a practice session
+    // Phương thức kiểm tra xem một buổi phỏng vấn có phải là buổi thực hành hay không
     @GetMapping("/check/{sessionId}")
     public ResponseEntity<?> checkPracticeSession(@PathVariable Long sessionId) {
         try {
+            // Kiểm tra buổi phỏng vấn có phải là buổi thực hành không
             boolean isPractice = practiceService.isPracticeSession(sessionId);
+            // Trả về phản hồi với kết quả kiểm tra
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "isPractice", isPractice
@@ -89,15 +63,15 @@ public class PracticeController {
         }
     }
     
-    // GET /api/practice/sessions/original/{originalSessionId}
-    // Get all practice sessions for a specific original session
+    // Phương thức lấy tất cả buổi thực hành dựa trên buổi phỏng vấn gốc
     @GetMapping("/sessions/original/{originalSessionId}")
     public ResponseEntity<?> getPracticeSessionsByOriginalId(@PathVariable Long originalSessionId) {
         try {
             log.info("Fetching practice sessions for original session {}", originalSessionId);
+            // Lấy tất cả buổi thực hành dựa trên buổi phỏng vấn gốc
             var practiceSessions = practiceService.getPracticeSessionsByOriginalId(originalSessionId);
             
-            // Enrich with feedback overview for each practice session
+            // Thêm thông tin phản hồi tóm tắt (feedback overview) nếu có
             var enrichedSessions = practiceSessions.stream().map(session -> {
                 var sessionMap = new java.util.HashMap<String, Object>();
                 sessionMap.put("id", session.getId());
@@ -107,7 +81,6 @@ public class PracticeController {
                 sessionMap.put("skill", session.getSkill());
                 sessionMap.put("language", session.getLanguage());
                 sessionMap.put("title", session.getTitle());
-                sessionMap.put("description", session.getDescription());
                 sessionMap.put("source", session.getSource());
                 sessionMap.put("status", session.getStatus());
                 sessionMap.put("duration", session.getDuration());
@@ -118,7 +91,7 @@ public class PracticeController {
                 sessionMap.put("createdAt", session.getCreatedAt());
                 sessionMap.put("completedAt", session.getCompletedAt());
                 
-                // Add feedback overview if available
+                // Nếu có feedbackId, lấy thông tin phản hồi tóm tắt
                 if (session.getFeedbackId() != null) {
                     try {
                         var feedback = practiceService.getFeedbackOverview(session.getFeedbackId());
@@ -128,10 +101,9 @@ public class PracticeController {
                         sessionMap.put("feedbackOverview", null);
                     }
                 }
-                
                 return sessionMap;
             }).collect(java.util.stream.Collectors.toList());
-            
+            // Trả về phản hồi với danh sách buổi thực hành đã được bổ sung thông tin
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", enrichedSessions,
@@ -146,8 +118,7 @@ public class PracticeController {
         }
     }
     
-    // DELETE /api/practice/sessions/{practiceSessionId}
-    // Delete a practice session
+    // Phương thức xóa buổi thực hành
     @DeleteMapping("/sessions/{practiceSessionId}")
     public ResponseEntity<?> deletePracticeSession(
             @PathVariable Long practiceSessionId,
@@ -155,7 +126,7 @@ public class PracticeController {
         try {
             Long userId = extractUserId(authHeader);
             log.info("User {} deleting practice session {}", userId, practiceSessionId);
-            
+            // Thực hiện xóa buổi thực hành
             practiceService.deletePracticeSession(userId, practiceSessionId);
             
             return ResponseEntity.ok(Map.of(
@@ -171,8 +142,7 @@ public class PracticeController {
         }
     }
 
-    // POST /api/practice/new-session-same-context/{originalSessionId}
-    // Create new session with same context but new questions
+    // Phương thức tạo buổi phỏng vấn mới với cùng ngữ cảnh từ buổi phỏng vấn gốc
     @PostMapping("/new-session-same-context/{originalSessionId}")
     public ResponseEntity<?> createSessionWithSameContext(
             @PathVariable Long originalSessionId,
@@ -180,7 +150,7 @@ public class PracticeController {
         try {
             Long userId = extractUserId(authHeader);
             log.info("User {} creating new session with same context from original {}", userId, originalSessionId);
-
+            // Thực hiện tạo buổi phỏng vấn mới với cùng ngữ cảnh
             CreatePracticeResponse response = practiceService.createSessionWithSameContext(userId, originalSessionId);
 
             return ResponseEntity.ok(Map.of(

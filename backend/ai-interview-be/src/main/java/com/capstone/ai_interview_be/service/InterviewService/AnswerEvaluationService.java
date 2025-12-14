@@ -9,29 +9,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Service to evaluate interview answers using Multitask Judge AI (via AIService)
- * Provides detailed scoring and qualitative feedback
- */
+// Dịch vụ đánh giá câu trả lời phỏng vấn sử dụng Multitask Judge AI
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AnswerEvaluationService {
-    
     private final AIService aiService;
     
-    /**
-     * Evaluate an interview answer with Multitask Judge AI
-     * 
-     * @param answerId The answer ID
-     * @param question The interview question
-     * @param answer The candidate's answer
-     * @param role Job role (e.g., "Java Backend Developer")
-     * @param level Experience level (e.g., "Mid-level")
-     * @param competency Main competency being tested (e.g., "Spring Boot")
-     * @param skills List of relevant skills
-     * @return AnswerFeedback entity with all evaluation data
-     */
+    // Phương thức đánh giá câu trả lời sử dụng Multitask Judge (EVALUATE task)
     public AnswerFeedback evaluateAnswer(
             Long answerId,
             String question,
@@ -41,16 +26,15 @@ public class AnswerEvaluationService {
             String competency,
             List<String> skills) {
         
-        log.info("Evaluating answer {} for role: {}, level: {}, competency: {}", 
-                answerId, role, level, competency);
-        
+        log.info("Evaluating answer {} for question using Multitask Judge AI", answerId);
+        // Tạo đối tượng AnswerFeedback để lưu kết quả
         AnswerFeedback answerFeedback = new AnswerFeedback();
         answerFeedback.setAnswerId(answerId);
         
         try {
             log.info("Using Multitask Judge AI for answer evaluation");
             
-            // Get evaluation from AIService (which uses MultitaskJudgeService)
+            // Gọi AI service để lấy phản hồi đánh giá câu trả lời  
             AnswerFeedbackData feedbackData = aiService.generateAnswerFeedback(
                     question, answer, role, level);
             
@@ -72,10 +56,7 @@ public class AnswerEvaluationService {
         return answerFeedback;
     }
     
-    /**
-     * Parse scores from feedback text and set them on AnswerFeedback
-     * Expected format: "Overall Score: X.X/10\n...• Relevance: X/10\n..."
-     */
+    // Phương thức phân tích và thiết lập điểm số từ phản hồi văn bản
     private void parseAndSetScores(AnswerFeedback feedback, String feedbackText) {
         if (feedbackText == null || feedbackText.isEmpty()) {
             setDefaultScores(feedback);
@@ -83,7 +64,7 @@ public class AnswerEvaluationService {
         }
         
         try {
-            // Parse Overall Score
+            // Trích xuất điểm số tổng thể nếu có
             if (feedbackText.contains("Overall Score:")) {
                 String overallStr = extractScore(feedbackText, "Overall Score:");
                 if (overallStr != null) {
@@ -92,14 +73,14 @@ public class AnswerEvaluationService {
                 }
             }
             
-            // Parse individual scores (convert from 0-10 to 0-1)
+            // Trích xuất điểm số chi tiết
             feedback.setScoreCorrectness(parseScoreFromText(feedbackText, "Accuracy:") / 10.0);
             feedback.setScoreCoverage(parseScoreFromText(feedbackText, "Completeness:") / 10.0);
             feedback.setScoreDepth(parseScoreFromText(feedbackText, "Relevance:") / 10.0);
             feedback.setScoreClarity(parseScoreFromText(feedbackText, "Clarity:") / 10.0);
             feedback.setScorePracticality(0.7); // Default value
             
-            // If final score not set, calculate from individual scores
+            // Tính điểm số cuối cùng trung bình nếu không có
             if (feedback.getScoreFinal() == null || feedback.getScoreFinal() == 0.0) {
                 double avg = (feedback.getScoreCorrectness() + feedback.getScoreCoverage() + 
                              feedback.getScoreDepth() + feedback.getScoreClarity()) / 4.0;
@@ -112,6 +93,7 @@ public class AnswerEvaluationService {
         }
     }
     
+    // Phương thức trích xuất điểm số từ văn bản dựa trên nhãn
     private String extractScore(String text, String label) {
         int idx = text.indexOf(label);
         if (idx == -1) return null;
@@ -124,6 +106,7 @@ public class AnswerEvaluationService {
         return text.substring(start, end).trim();
     }
     
+    // Phương thức phân tích điểm số từ văn bản dựa trên nhãn
     private double parseScoreFromText(String text, String label) {
         try {
             String scoreStr = extractScore(text, label);
@@ -131,11 +114,11 @@ public class AnswerEvaluationService {
                 return Double.parseDouble(scoreStr);
             }
         } catch (Exception e) {
-            // Ignore parsing errors
         }
-        return 7.0; // Default score
+        return 7.0; 
     }
     
+    // Phương thức thiết lập điểm số mặc định
     private void setDefaultScores(AnswerFeedback feedback) {
         feedback.setScoreCorrectness(0.7);
         feedback.setScoreCoverage(0.7);

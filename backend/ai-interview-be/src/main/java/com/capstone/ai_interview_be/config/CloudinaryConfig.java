@@ -9,6 +9,7 @@ import com.cloudinary.utils.ObjectUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
+// Cấu hình Cloudinary cho ứng dụng
 @Configuration
 @Slf4j
 public class CloudinaryConfig {

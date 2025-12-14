@@ -7,6 +7,7 @@ import org.springframework.core.annotation.Order;
 
 import java.io.File;
 
+// Cấu hình để tải biến môi trường từ file local.env
 @Configuration
 @Order(-1000) 
 @Slf4j
@@ -15,6 +16,8 @@ public class DotenvConfig {
     static {
         loadEnvironmentVariables();
     }
+
+    // Tải biến môi trường từ file local.env và đặt chúng vào System properties
     private static void loadEnvironmentVariables() {
         try {
             File envFile = findEnvFile();
@@ -36,6 +39,8 @@ public class DotenvConfig {
             log.error("Failed to load environment variables", e);
         }
     }
+
+    // Tìm file local.env trong thư mục hiện tại và các thư mục cha
     private static File findEnvFile() {
         File currentDir = new File("").getAbsoluteFile();
         while (currentDir != null) {

@@ -27,11 +27,13 @@ public class AIService {
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Phương thức tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills,
             String cvText, String jdText) {
-        // Try Multitask GENERATE_FIRST first
+        
+        // kiểm tra dịch vụ Multitask Judge có sẵn sàng sử dụng hay không
         if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 GENERATE_FIRST for role: {}", role);
+            log.info("Using Multitask Judge v2 GENERATE_FIRST for first question");
             try {
                 MultitaskGenerateResponse response = multitaskJudgeService.generateFirstQuestion(
                         role,
@@ -43,41 +45,40 @@ public class AIService {
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("Multitask GENERATE_FIRST success - Type: {}", response.getQuestionType());
                     return response.getQuestion();
                 }
             } catch (Exception e) {
-                log.error("Multitask GENERATE_FIRST failed: {}", e.getMessage());
+                log.error("Multitask GENERATE_FIRST failed");
             }
         }
 
-        // Fallback to Gemini
-        log.warn("Multitask unavailable, using Gemini fallback for first question");
+        // Gọi đến Gemini như một phương án dự phòng
+        log.warn("Multitask unavailable, using Gemini for first question");
         try {
             return geminiService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
-            log.error("Gemini failed: {}", e.getMessage());
-            return "Please tell me a little bit about yourself and your background.";
+            log.error("Gemini failed");
+            return "Sorry, AI is currently unavailable to generate questions.";
         }
     }
 
+    // Phương thức tạo câu hỏi đầu tiên  
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
 
-    /**
-     * Generate next question using Multitask GENERATE (v2) or Gemini fallback
-     */
+    // Phương thức tạo câu hỏi tiếp theo với đầy đủ tham số
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
             String sessionLevel,
             String previousQuestion, String previousAnswer, String cvText, String jdText,
-            List<ConversationEntry> conversationHistory) {
+            List<ConversationEntry> conversationHistory,
+            int currentQuestionNumber, int totalQuestions) {
 
-        // Try Multitask GENERATE first
+        // Kiểm tra dịch vụ Multitask Judge có sẵn sàng sử dụng hay không
         if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 GENERATE for next question");
+            log.info("Using Multitask Judge v2 GENERATE for next question ({}/{})", currentQuestionNumber, totalQuestions);
             try {
-                // Convert conversation history to List<Map>
+                // Chuẩn bị lịch sử hội thoại dưới dạng List<Map>
                 List<Map<String, String>> historyForAI = null;
                 if (conversationHistory != null && !conversationHistory.isEmpty()) {
                     historyForAI = conversationHistory.stream()
@@ -90,26 +91,19 @@ public class AIService {
                             .collect(Collectors.toList());
                 }
 
-                // Determine difficulty based on level
-                String difficulty = "medium";
-                if (sessionLevel != null) {
-                    if (sessionLevel.toLowerCase().contains("junior")) {
-                        difficulty = "easy";
-                    } else if (sessionLevel.toLowerCase().contains("senior")) {
-                        difficulty = "hard";
-                    }
-                }
+                // Xác định độ khó dựa trên level và tiến trình phỏng vấn
+                String difficulty = determineDifficulty(sessionLevel, currentQuestionNumber, totalQuestions);
 
                 MultitaskGenerateResponse response = multitaskJudgeService.generateFollowUp(
                         previousQuestion,
                         previousAnswer,
                         historyForAI,
-                        sessionRole, // jobDomain
+                        sessionRole,
                         difficulty,
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("Multitask GENERATE success - Type: {}", response.getQuestionType());
+                    log.info("Multitask GENERATE success - Type: {}, Difficulty: {}", response.getQuestionType(), difficulty);
                     return response.getQuestion();
                 }
             } catch (Exception e) {
@@ -117,39 +111,139 @@ public class AIService {
             }
         }
 
-        // Fallback to Gemini with conversation history
+        // Phương án dự phòng sử dụng Gemini với lịch sử hội thoại và thông tin tiến trình
         log.warn("Multitask unavailable, using Gemini fallback with conversation history");
         try {
             return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
-                    previousQuestion, previousAnswer, conversationHistory);
+                    previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
             return "Can you tell me about a challenging project you've worked on recently?";
         }
     }
 
+    // Hàm xác định độ khó dựa trên level và tiến trình phỏng vấn
+    private String determineDifficulty(String sessionLevel, int currentQuestionNumber, int totalQuestions) {
+        // Xác định độ khó cơ bản từ level
+        String baseDifficulty = "medium";
+        if (sessionLevel != null) {
+            String levelLower = sessionLevel.toLowerCase();
+            if (levelLower.contains("intern") || levelLower.contains("fresher")) {
+                baseDifficulty = "easy";
+            } else if (levelLower.contains("junior")) {
+                baseDifficulty = "easy";
+            } else if (levelLower.contains("mid")) {
+                baseDifficulty = "medium";
+            } else if (levelLower.contains("senior") || levelLower.contains("lead") || levelLower.contains("principal")) {
+                baseDifficulty = "hard";
+            }
+        }
+
+        // Nếu không có thông tin về số câu hỏi, trả về độ khó cơ bản
+        if (totalQuestions <= 0 || currentQuestionNumber <= 0) {
+            return baseDifficulty;
+        }
+
+        // Xác định phase dựa trên tiến trình phỏng vấn
+        String phase = determinePhaseForDifficulty(currentQuestionNumber, totalQuestions);
+        
+        // Điều chỉnh độ khó dựa trên phase
+        switch (phase) {
+            case "OPENING":
+                // Giai đoạn mở đầu - giảm 1 bậc
+                return baseDifficulty.equals("hard") ? "medium" : "easy";
+                
+            case "CORE_TECHNICAL":
+                // Giai đoạn kỹ thuật chính - giữ nguyên độ khó
+                return baseDifficulty;
+                
+            case "DEEP_DIVE":
+                // Giai đoạn đi sâu - tăng 1 bậc
+                if (baseDifficulty.equals("easy")) return "medium";
+                return "hard";
+                
+            case "CHALLENGING":
+                // Giai đoạn thử thách - luôn là hard
+                return "hard";
+                
+            case "WRAP_UP":
+                // Giai đoạn kết thúc - đặt về medium
+                return "medium";
+                
+            default:
+                return baseDifficulty;
+        }
+    }
+    
+    // Hàm xác định phase dựa trên số câu cụ thể
+    private String determinePhaseForDifficulty(int currentQuestion, int totalQuestions) {
+        if (totalQuestions <= 3) {
+            if (currentQuestion == 1) return "OPENING";
+            if (currentQuestion == totalQuestions) return "WRAP_UP";
+            return "CORE_TECHNICAL";
+        }
+        
+        if (totalQuestions <= 5) {
+            if (currentQuestion == 1) return "OPENING";
+            if (currentQuestion == totalQuestions) return "WRAP_UP";
+            if (currentQuestion == 2) return "CORE_TECHNICAL";
+            return "DEEP_DIVE";
+        }
+        
+        if (totalQuestions <= 8) {
+            if (currentQuestion == 1) return "OPENING";
+            if (currentQuestion == totalQuestions) return "WRAP_UP";
+            if (currentQuestion <= 3) return "CORE_TECHNICAL";
+            if (currentQuestion <= 5) return "DEEP_DIVE";
+            return "CHALLENGING";
+        }
+        
+        // Với 9+ câu
+        int openingEnd = Math.max(1, (int) Math.ceil(totalQuestions * 0.20));
+        int coreEnd = openingEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.30));
+        int deepEnd = coreEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.25));
+        
+        if (currentQuestion <= openingEnd) return "OPENING";
+        if (currentQuestion <= coreEnd) return "CORE_TECHNICAL";
+        if (currentQuestion <= deepEnd) return "DEEP_DIVE";
+        if (currentQuestion < totalQuestions) return "CHALLENGING";
+        return "WRAP_UP";
+    }
+
+    // Phương thức tạo câu hỏi tiếp theo với các tham số mặc định
+    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
+            String sessionLevel,
+            String previousQuestion, String previousAnswer, String cvText, String jdText,
+            List<ConversationEntry> conversationHistory) {
+        return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+                previousQuestion, previousAnswer, cvText, jdText, conversationHistory, 0, 0);
+    }
+
+    // Phương thức tạo câu hỏi tiếp theo với các tham số tối giản
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
             String sessionLevel,
             String previousQuestion, String previousAnswer) {
         return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
-                previousQuestion, previousAnswer, null, null, null);
+                previousQuestion, previousAnswer, null, null, null, 0, 0);
     }
 
+    // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public DataScanResponse extractData(String Text) {
         try {
             String jsonResponse = geminiService.generateData(Text);
-
+            // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
                 log.warn("Empty Gemini response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-
+            // Kiểm tra lỗi trong phản hồi
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
                 log.error("Gemini error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-
+            // Làm sạch phản hồi để lấy JSON đúng định dạng
             String cleanedJson = cleanJsonResponse(jsonResponse);
+            // Chuyển đổi JSON thành DataScanResponse
             return objectMapper.readValue(cleanedJson, DataScanResponse.class);
 
         } catch (Exception e) {
@@ -158,6 +252,7 @@ public class AIService {
         }
     }
 
+    // Làm sạch phản hồi JSON từ Gemini
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null)
             return "{}";
@@ -175,33 +270,35 @@ public class AIService {
         return cleaned;
     }
 
+    // Phương thức tạo phản hồi đánh giá câu trả lời
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
-        // Try Multitask EVALUATE first (v2)
+        // Kiểm tra dịch vụ Multitask Judge có sẵn sàng sử dụng hay không
         if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 EVALUATE for answer feedback");
+            log.info("Using Multitask Judge v2");
             try {
+                // Gọi Multitask Judge để đánh giá câu trả lời
                 MultitaskEvaluateResponse response = multitaskJudgeService.evaluateAnswer(
                         question,
                         answer,
                         null, // context
                         role, // jobDomain
                         0.3);
-
+                // Xử lý phản hồi từ Multitask Judge
                 if (response != null) {
-                    // Convert Multitask scores (0-10) to normalized scores (0-1)
+                    // Chuẩn hóa điểm số về thang 0-1
                     double normalizedScore = response.getOverall() / 10.0;
 
-                    // Only show feedback text, scores are displayed separately in UI
+                    // Lấy feedback chi tiết và improved answer
                     String feedback = response.getFeedback() != null && !response.getFeedback().isEmpty()
                             ? response.getFeedback()
                             : "No detailed feedback available.";
 
-                    // Use improved_answer from AI if available, otherwise leave null (don't show)
+                    // Lấy improved answer nếu có
                     String sampleAnswer = response.getImprovedAnswer() != null
                             && !response.getImprovedAnswer().isEmpty()
                                     ? response.getImprovedAnswer()
                                     : null; // Don't show default text, let frontend hide the section
-
+                    // Trả về dữ liệu phản hồi đánh giá câu trả lời
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
@@ -212,7 +309,7 @@ public class AIService {
             }
         }
 
-        // Fallback to Gemini
+        // Gọi Gemini như một phương án dự phòng
         log.warn("Multitask unavailable, using Gemini for answer feedback");
         try {
             return geminiService.generateAnswerFeedback(question, answer, role, level);
@@ -225,9 +322,7 @@ public class AIService {
         }
     }
 
-    /**
-     * Generate overall feedback using Multitask REPORT (v2) or Gemini fallback
-     */
+    // Phương thức tạo phản hồi tổng thể sử dụng Multitask REPORT (v2) hoặc Gemini fallback
     public OverallFeedbackData generateOverallFeedback(
             List<ConversationEntry> conversation,
             String role,
@@ -238,7 +333,7 @@ public class AIService {
         if (multitaskJudgeService.isServiceHealthy()) {
             log.info("Using Multitask Judge v2 REPORT (PRIMARY)");
             try {
-                // Convert conversation to List<Map<String, String>>
+                // Lấy lịch sử hội thoại dưới dạng List<Map>
                 List<Map<String, String>> historyForAI = conversation.stream()
                         .map(entry -> {
                             Map<String, String> qa = new HashMap<>();
@@ -248,12 +343,13 @@ public class AIService {
                         })
                         .collect(Collectors.toList());
 
-                // Build candidate info
+                // Chuẩn bị thông tin ứng viên
                 String candidateInfo = String.format("Role: %s, Level: %s, Skills: %s",
                         role != null ? role : "Developer",
                         level != null ? level : "Mid-level",
                         skills != null ? String.join(", ", skills) : "");
 
+                // Gọi Multitask Judge để tạo báo cáo tổng thể
                 MultitaskReportResponse response = multitaskJudgeService.generateReport(
                         historyForAI,
                         role, // jobDomain
@@ -261,10 +357,10 @@ public class AIService {
                         0.5);
 
                 if (response != null && response.getOverallAssessment() != null) {
-                    // Convert score (0-100) to overview rating
+                    // Chuyển đổi điểm số (0-100) thành đánh giá tổng quan
                     String overview = convertScoreToOverview(response.getScore());
 
-                    // Convert recommendations list to string
+                    // Chuyển đổi danh sách khuyến nghị thành chuỗi
                     String recommendations = response.getRecommendations() != null
                             && !response.getRecommendations().isEmpty()
                                     ? String.join(" ", response.getRecommendations())
@@ -315,9 +411,7 @@ public class AIService {
         }
     }
 
-    /**
-     * Convert numeric score (0-100) to overview rating
-     */
+    // Hàm chuyển đổi điểm số thành đánh giá tổng quan
     private String convertScoreToOverview(Integer score) {
         if (score == null)
             return "AVERAGE";

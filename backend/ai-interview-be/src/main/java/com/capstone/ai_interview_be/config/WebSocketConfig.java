@@ -8,6 +8,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+// Cấu hình WebSocket cho ứng dụng
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor

@@ -35,45 +35,43 @@ public class PracticeService {
     private final AIService aiService;
     private final ConversationService conversationService;
 
-     // Tạo practice session từ original session
-     // Clone metadata + tất cả câu hỏi từ session gốc
+    // Tạo buổi thực hành mới dựa trên buổi phỏng vấn gốc
     @Transactional
     public CreatePracticeResponse createPracticeSession(Long userId, Long originalSessionId) {
         log.info("Creating practice session from original session {} for user {}", originalSessionId, userId);
 
-        // Get original session
+        // Lấy buổi phỏng vấn gốc
         InterviewSession originalSession = sessionRepository.findById(originalSessionId)
                 .orElseThrow(() -> new RuntimeException("Original session not found"));
 
-        // Verify ownership
+        // Xác minh quyền sở hữu
         if (!originalSession.getUserId().equals(userId)) {
             throw new RuntimeException("Unauthorized: You can only practice your own interviews");
         }
 
-        // Verify session is completed
+        // Xác minh buổi phỏng vấn đã hoàn thành
         if (!"completed".equals(originalSession.getStatus())) {
             throw new RuntimeException("Can only practice completed sessions");
         }
 
-        // Prevent practicing a practice session
+        // Ngăn chặn việc thực hành một buổi thực hành khác
         if (Boolean.TRUE.equals(originalSession.getIsPractice())) {
             throw new RuntimeException("Cannot practice a practice session");
         }
 
-        // Create new practice session (clone metadata)
+        // Tạo buổi thực hành mới 
         InterviewSession practiceSession = new InterviewSession();
         practiceSession.setUserId(userId);
         practiceSession.setRole(originalSession.getRole());
         practiceSession.setLevel(originalSession.getLevel());
 
-        // Clone skills list to avoid shared references
+        // lấy danh sách kỹ năng (skills) từ buổi phỏng vấn gốc
         if (originalSession.getSkill() != null) {
             practiceSession.setSkill(new java.util.ArrayList<>(originalSession.getSkill()));
         }
 
         practiceSession.setLanguage(originalSession.getLanguage());
         practiceSession.setTitle("Practice: " + originalSession.getTitle());
-        practiceSession.setDescription("Practice session for: " + originalSession.getTitle());
         practiceSession.setCvText(originalSession.getCvText());
         practiceSession.setJdText(originalSession.getJdText());
         practiceSession.setDuration(originalSession.getDuration());
@@ -82,26 +80,26 @@ public class PracticeService {
         practiceSession.setStatus("in_progress");
         practiceSession.setIsPractice(true);
         practiceSession.setOriginalSessionId(originalSessionId);
-
+        // Lưu buổi thực hành mới vào cơ sở dữ liệu
         practiceSession = sessionRepository.save(practiceSession);
         log.info("Created practice session with id {}", practiceSession.getId());
 
-        // Clone all questions from original session
+        // Lấy tất cả câu hỏi từ buổi phỏng vấn gốc
         List<InterviewQuestion> originalQuestions = questionRepository
                 .findBySessionIdOrderByCreatedAtAsc(originalSessionId);
 
         log.info("Cloning {} questions from original session", originalQuestions.size());
 
-        // Create conversation entries for each question
+        // Tạo các câu hỏi và mục hội thoại (conversation entries) cho buổi thực hành
         int sequenceNumber = 1;
         for (InterviewQuestion originalQ : originalQuestions) {
-            // Clone question
+            // Tạo câu hỏi mới cho buổi thực hành
             InterviewQuestion practiceQ = new InterviewQuestion();
             practiceQ.setSessionId(practiceSession.getId());
             practiceQ.setContent(originalQ.getContent());
             InterviewQuestion savedQuestion = questionRepository.save(practiceQ);
 
-            // Create conversation entry for this question
+            // Tạo mục hội thoại (conversation entry) tương ứng
             ConversationEntry entry = ConversationEntry.builder()
                     .sessionId(practiceSession.getId())
                     .questionId(savedQuestion.getId())
@@ -125,7 +123,7 @@ public class PracticeService {
                 .build();
     }
 
-    // Check if a session is a practice session
+    // Kiểm tra xem một buổi phỏng vấn có phải là buổi thực hành hay không
     public boolean isPracticeSession(Long sessionId) {
         InterviewSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
@@ -145,36 +143,36 @@ public class PracticeService {
                 .orElse(null);
     }
     
-    // Delete a practice session and all related data
+    // Xóa buổi thực hành và tất cả dữ liệu liên quan
     @Transactional
     public void deletePracticeSession(Long userId, Long practiceSessionId) {
         log.info("Deleting practice session {} and all related data for user {}", practiceSessionId, userId);
         
-        // Get practice session
+        // Lấy buổi thực hành
         InterviewSession practiceSession = sessionRepository.findById(practiceSessionId)
                 .orElseThrow(() -> new RuntimeException("Practice session not found"));
         
-        // Verify ownership
+        // Xác minh quyền sở hữu
         if (!practiceSession.getUserId().equals(userId)) {
             throw new RuntimeException("Unauthorized: You can only delete your own practice sessions");
         }
         
-        // Verify it's actually a practice session
+        // Chỉ cho phép xóa buổi thực hành, không phải buổi gốc
         if (!Boolean.TRUE.equals(practiceSession.getIsPractice())) {
             throw new RuntimeException("Can only delete practice sessions, not original sessions");
         }
         
-        // 1. Xóa feedback (nếu có)
+        // Xóa tất cả dữ liệu liên quan theo thứ tự
         if (practiceSession.getFeedbackId() != null) {
             log.info("Deleting feedback with id: {}", practiceSession.getFeedbackId());
             feedbackRepository.deleteById(practiceSession.getFeedbackId());
         }
         
-        // 2. Xóa tất cả conversation entries
+        // Xóa tất cả conversation entries
         log.info("Deleting all conversation entries for practice session: {}", practiceSessionId);
         conversationRepository.deleteBySessionId(practiceSessionId);
         
-        // 3. Xóa answer_feedback trước khi xóa answers
+        // Xóa tất cả answer feedbacks
         log.info("Deleting all answer feedbacks for practice session: {}", practiceSessionId);
         List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(practiceSessionId);
         int totalAnswerFeedbackDeleted = 0;
@@ -188,7 +186,7 @@ public class PracticeService {
         }
         log.info("Deleted {} answer feedbacks", totalAnswerFeedbackDeleted);
         
-        // 4. Xóa tất cả answers
+        // Xóa tất cả answers
         log.info("Deleting all answers for practice session: {}", practiceSessionId);
         for (InterviewQuestion question : questions) {
             List<com.capstone.ai_interview_be.model.InterviewAnswer> answers = 
@@ -199,56 +197,54 @@ public class PracticeService {
             }
         }
         
-        // 5. Xóa tất cả questions
+        // Xóa tất cả questions
         log.info("Deleting all questions for practice session: {}", practiceSessionId);
         questionRepository.deleteBySessionId(practiceSessionId);
         
-        // 6. Cuối cùng xóa practice session
+        // Xóa buổi thực hành
         log.info("Deleting practice session: {}", practiceSessionId);
         sessionRepository.delete(practiceSession);
         
         log.info("Practice session {} and all related data deleted successfully", practiceSessionId);
     }
 
-    // Create new session with same context (metadata) but no questions
-    // AI will generate new questions during interview
+    // Tạo buổi phỏng vấn mới với cùng ngữ cảnh từ buổi phỏng vấn gốc
     @Transactional
     public CreatePracticeResponse createSessionWithSameContext(Long userId, Long originalSessionId) {
         log.info("Creating new session with same context from original session {} for user {}", originalSessionId, userId);
 
-        // Get original session
+        // Lấy buổi phỏng vấn gốc
         InterviewSession originalSession = sessionRepository.findById(originalSessionId)
                 .orElseThrow(() -> new RuntimeException("Original session not found"));
 
-        // Verify ownership
+        // Xác minh quyền sở hữu
         if (!originalSession.getUserId().equals(userId)) {
             throw new RuntimeException("Unauthorized: You can only practice your own interviews");
         }
 
-        // Verify session is completed
+        // Xác minh buổi phỏng vấn đã hoàn thành
         if (!"completed".equals(originalSession.getStatus())) {
             throw new RuntimeException("Can only practice completed sessions");
         }
 
-        // For practice sessions, use the original session id
+        // Ngăn chặn việc thực hành một buổi thực hành khác
         Long baseSessionId = Boolean.TRUE.equals(originalSession.getIsPractice()) 
             ? originalSession.getOriginalSessionId() 
             : originalSessionId;
 
-        // Create new session with same context (metadata only, no questions)
+        // Tạo buổi phỏng vấn mới với cùng ngữ cảnh
         InterviewSession newSession = new InterviewSession();
         newSession.setUserId(userId);
         newSession.setRole(originalSession.getRole());
         newSession.setLevel(originalSession.getLevel());
 
-        // Clone skills list to avoid shared references
+        // lấy danh sách kỹ năng (skills) từ buổi phỏng vấn gốc
         if (originalSession.getSkill() != null) {
             newSession.setSkill(new java.util.ArrayList<>(originalSession.getSkill()));
         }
 
         newSession.setLanguage(originalSession.getLanguage());
         newSession.setTitle("Practice: " + originalSession.getRole() + " - Same Context");
-        newSession.setDescription("Practice with same context for: " + originalSession.getRole());
         newSession.setCvText(originalSession.getCvText());
         newSession.setJdText(originalSession.getJdText());
         newSession.setDuration(originalSession.getDuration());
@@ -261,7 +257,7 @@ public class PracticeService {
         newSession = sessionRepository.save(newSession);
         log.info("Created new session with id {} (same context, new questions)", newSession.getId());
 
-        // Generate first question using AI
+        // Tạo câu hỏi đầu tiên sử dụng AI
         String firstQuestionContent;
         try {
             log.info("Generating first question using AI for session {}", newSession.getId());
@@ -278,14 +274,14 @@ public class PracticeService {
             firstQuestionContent = "Please tell me a little bit about yourself and your background.";
         }
 
-        // Save first question to database
+        // Lưu câu hỏi đầu tiên vào cơ sở dữ liệu
         InterviewQuestion firstQuestion = new InterviewQuestion();
         firstQuestion.setSessionId(newSession.getId());
         firstQuestion.setContent(firstQuestionContent);
         InterviewQuestion savedQuestion = questionRepository.save(firstQuestion);
         log.info("Saved first question with ID: {}", savedQuestion.getId());
 
-        // Create conversation entry
+        // Tạo mục hội thoại (conversation entry) cho câu hỏi đầu tiên
         conversationService.createConversationEntry(
             newSession.getId(),
             savedQuestion.getId(),

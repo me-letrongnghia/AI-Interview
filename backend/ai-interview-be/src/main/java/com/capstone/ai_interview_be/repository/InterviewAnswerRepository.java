@@ -29,4 +29,8 @@ public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer
            "(SELECT q.id FROM InterviewQuestion q WHERE q.sessionId = :sessionId) " +
            "ORDER BY a.createdAt ASC")
     List<InterviewAnswer> findAnswersBySessionId(@Param("sessionId") Long sessionId);
+    
+    // Đếm số câu trả lời đã hoàn thành trong một session
+    @Query("SELECT COUNT(a) FROM InterviewAnswer a WHERE a.questionId IN (SELECT q.id FROM InterviewQuestion q WHERE q.sessionId = :sessionId)")
+    long countBySessionId(@Param("sessionId") Long sessionId);
 }

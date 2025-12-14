@@ -40,7 +40,7 @@ public class FeedbackService {
     private final AIService aiService;
     private final ObjectMapper objectMapper;
 
-    // Phương thức để generate feedback cho một session
+    // Phương thức tạo feedback cho buổi phỏng vấn
     @Transactional
     public InterviewFeedbackResponse generateSessionFeedback(Long sessionId) {
         log.info("Generating feedback for session: {}", sessionId);
@@ -64,15 +64,16 @@ public class FeedbackService {
         
         List<AnswerFeedback> answerFeedbacks = answerFeedbackRepository.findByAnswerIdIn(answerIds);
         
-        // Build Q&A feedback list từ data đã có
+        // Thực hiện build Q&A feedback list
         List<QuestionAnswerFeedback> qaFeedbacks = new ArrayList<>();
         for (ConversationEntry entry : conversation) {
+            // Chỉ xử lý các entry có answerId
             if (entry.getAnswerId() != null) {
                 AnswerFeedback answerFeedback = answerFeedbacks.stream()
                     .filter(af -> af.getAnswerId().equals(entry.getAnswerId()))
                     .findFirst()
                     .orElse(null);
-                
+                // Nếu tìm thấy feedback cho câu trả lời
                 if (answerFeedback != null) {
                     try {
                         // Ưu tiên improvedAnswer từ Judge AI, fallback sang sampleAnswer từ Gemini
@@ -86,15 +87,14 @@ public class FeedbackService {
                             .answerId(entry.getAnswerId())
                             .userAnswer(entry.getAnswerContent())
                             .feedback(answerFeedback.getFeedbackText())
-                            .sampleAnswer(bestAnswer)  // Best answer: Judge AI improvedAnswer > Gemini sampleAnswer
-                            // Judge AI scores (null nếu Judge AI chưa chạy)
+                            .sampleAnswer(bestAnswer)  
                             .scoreCorrectness(answerFeedback.getScoreCorrectness())
                             .scoreCoverage(answerFeedback.getScoreCoverage())
                             .scoreDepth(answerFeedback.getScoreDepth())
                             .scoreClarity(answerFeedback.getScoreClarity())
                             .scorePracticality(answerFeedback.getScorePracticality())
                             .scoreFinal(answerFeedback.getScoreFinal())
-                            .improvedAnswer(answerFeedback.getImprovedAnswer())  // Judge AI improved answer (có thể null)
+                            .improvedAnswer(answerFeedback.getImprovedAnswer())  
                             .build());
                     } catch (Exception e) {
                         log.error("Error parsing criteria scores for answer {}", entry.getAnswerId(), e);
@@ -144,7 +144,7 @@ public class FeedbackService {
     }
     
 
-    // Lấy feedback đã generate trước đó     
+    // Phương thức lấy feedback cho buổi phỏng vấn     
     @Transactional
     public InterviewFeedbackResponse getSessionFeedback(Long sessionId) {
         log.info("Getting existing feedback for session: {}", sessionId);
@@ -236,17 +236,19 @@ public class FeedbackService {
             .build();
     }
     
+    // Hàm xây dựng SessionInfo
     private SessionInfo buildSessionInfo(InterviewSession session, int totalQuestions) {
-        // Calculate duration
+        // Tính thời gian kết thúc phiên phỏng vấn
         LocalDateTime endTime = session.getCompletedAt() != null 
             ? session.getCompletedAt() 
             : LocalDateTime.now();
-            
+        // Tính toán thời lượng phỏng vấn
         Duration duration = Duration.between(session.getCreatedAt(), endTime);
+        // Định dạng thời lượng thành chuỗi dễ đọc
         String durationStr = String.format("%dm %ds", 
             duration.toMinutes(), 
             duration.getSeconds() % 60);
-        
+        // Xây dựng và trả về SessionInfo
         return SessionInfo.builder()
             .role(session.getRole())
             .level(session.getLevel())
@@ -259,6 +261,7 @@ public class FeedbackService {
             .build();
     }
     
+    // Hàm xây dựng OverallFeedback
     private OverallFeedback buildOverallFeedback(OverallFeedbackData data) {
         return OverallFeedback.builder()
             .overview(data.getOverview())

@@ -14,6 +14,7 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Xử lý các ResponseStatusException chung
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Object> handleResponseStatusException(ResponseStatusException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -25,6 +26,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, ex.getStatusCode());
     }
 
+
+    // Xử lý lỗi gửi email
     @ExceptionHandler(MessagingException.class)
     public ResponseEntity<Object> handleMessagingException(MessagingException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -36,6 +39,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    // Xử lý các ngoại lệ chung khác
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGenericException(Exception ex) {
         Map<String, Object> body = new HashMap<>();

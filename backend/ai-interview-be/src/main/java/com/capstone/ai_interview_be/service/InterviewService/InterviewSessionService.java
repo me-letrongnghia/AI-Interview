@@ -33,12 +33,12 @@ public class InterviewSessionService {
     private final ConversationService conversationService;
     private final AIService aiService;
     
-    // Tạo một interview session mới
+    // Phương thức tạo phiên phỏng vấn mới
     @Transactional
     public CreateInterviewSessionResponse createSession(CreateInterviewSessionRequest request) {
-        log.info("Creating new interview session for role: {}, level: {}", request.getRole(), request.getLevel());
+        log.info("Creating new interview session for userId: {}", request.getUserId());
         
-        // Tạo và lưu interview session mới
+        // Tạo và lưu phiên phỏng vấn mới
         InterviewSession session = new InterviewSession();
         session.setRole(request.getRole());
         session.setLevel(request.getLevel());
@@ -46,37 +46,21 @@ public class InterviewSessionService {
         session.setLanguage(request.getLanguage());
         session.setUserId(request.getUserId());
         session.setTitle(request.getRole() + " - " + request.getLevel() + " Interview");
-        
-        // Lưu CV và JD text nếu có
         session.setCvText(request.getCvText());
         session.setJdText(request.getJdText());
-        log.info("CV text present: {}, JD text present: {}", 
-                request.getCvText() != null, request.getJdText() != null);
-        
-        // Lưu duration và questionCount từ user selection
         session.setDuration(request.getDuration());
         session.setQuestionCount(request.getQuestionCount());
-        log.info("Duration: {} minutes, Question count: {}", 
-                request.getDuration(), request.getQuestionCount());
-        
-        // Tạo description từ skills
-        if (request.getSkill() != null && !request.getSkill().isEmpty()) {
-            String skillsText = String.join(", ", request.getSkill());
-            session.setDescription("Technical interview focusing on: " + skillsText);
-        }
-        
-        // Set source từ request, mặc định là Custom
         if (request.getSource() != null) {
             session.setSource(request.getSource());
         }
 
         InterviewSession savedSession = sessionRepository.save(session);
-        log.info("Created interview session with ID: {}", savedSession.getId());
+        log.info("Saved interview session with ID: {}", savedSession.getId());
         
-        // Tạo câu hỏi đầu tiên bằng AI với CV/JD text
+        // Tạo câu hỏi đầu tiên bằng AI
         String firstQuestionContent;
         try {
-            log.info("Generating first question using AI for role: {}, level: {}", request.getRole(), request.getLevel());
+            log.info("Generating first question with AI for session: {}", savedSession.getId());
             firstQuestionContent = aiService.generateFirstQuestion(
                 request.getRole(), 
                 request.getLevel(), 
@@ -95,33 +79,31 @@ public class InterviewSessionService {
         firstQuestion.setSessionId(savedSession.getId());
         firstQuestion.setContent(firstQuestionContent);
         InterviewQuestion savedQuestion = questionRepository.save(firstQuestion);
-        log.info("Saved first question with ID: {}", savedQuestion.getId());
+        log.info("Saved first question");
         
-        // Tạo conversation entry đầu tiên để theo dõi cuộc hội thoại
+        // Tạo conversation entry cho câu hỏi đầu tiên
         conversationService.createConversationEntry(
             savedSession.getId(),
             savedQuestion.getId(),
             firstQuestionContent
         );
         log.info("Created conversation entry for session: {}", savedSession.getId());
-        
         return new CreateInterviewSessionResponse(savedSession.getId());
     }
 
-    // Lấy thông tin session theo ID
+    // Phương thức lấy session theo ID
     public InterviewSession getSessionById(Long sessionId) {
-        log.info("Getting session info for sessionId: {}", sessionId);
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
     }
     
-    // Lấy danh sách session với các bộ lọc
+    // Phương thức lấy tất cả session với các bộ lọc tùy chọn
     public java.util.List<InterviewSession> getSessionsWithFilters(
             Long userId, String source, String role, String status) {
         log.info("Getting sessions - userId: {}, source: {}, role: {}, status: {}", 
                 userId, source, role, status);
         
-        // Parse source string sang enum
+        // Chuyển đổi source từ String sang Enum nếu cần
         InterviewSession.Source sourceEnum = null;
         if (source != null) {
             try {
@@ -134,7 +116,7 @@ public class InterviewSessionService {
         return sessionRepository.findByUserIdWithFilters(userId, sourceEnum, role, status);
     }
     
-    // Cập nhật trạng thái session
+    // Phương thức cập nhật trạng thái phiên phỏng vấn
     @Transactional
     public void updateSessionStatus(Long sessionId, String status) {
         log.info("Updating status for sessionId: {} to {}", sessionId, status);
@@ -157,7 +139,7 @@ public class InterviewSessionService {
         sessionRepository.save(session);
     }
     
-    // Xóa session theo ID và tất cả dữ liệu liên quan
+    // Phương thức xóa phiên phỏng vấn  
     @Transactional
     public void deleteSession(Long sessionId) {
         log.info("Deleting sessionId: {} and all related data", sessionId);
@@ -183,7 +165,7 @@ public class InterviewSessionService {
         log.info("Session {} and all related data deleted successfully", sessionId);
     }
     
-    // Helper method để xóa một session cụ thể và dữ liệu liên quan
+    // Hàm xóa một phiên phỏng vấn đơn lẻ và tất cả dữ liệu liên quan
     private void deleteSingleSession(InterviewSession session) {
         Long sessionId = session.getId();
         log.info("Deleting single session: {}", sessionId);
@@ -227,11 +209,12 @@ public class InterviewSessionService {
         log.info("Single session {} deleted", sessionId);
     }
     
-    // Lấy thống kê session cho user
+    // Phương thức lấy thống kê phiên phỏng vấn của người dùng
     public java.util.Map<String, Object> getUserSessionStatistics(Long userId) {
         log.info("Getting session statistics for userId: {}", userId);
+        // Lấy tất cả phiên phỏng vấn của người dùng
         java.util.List<InterviewSession> sessions = getSessionsWithFilters(userId, null, null, null);
-        
+        // Tính toán thống kê dựa trên danh sách phiên phỏng vấn
         java.util.Map<String, Object> statistics = new java.util.HashMap<>();
         statistics.put("totalSessions", sessions.size());
         statistics.put("completedSessions", sessions.stream()

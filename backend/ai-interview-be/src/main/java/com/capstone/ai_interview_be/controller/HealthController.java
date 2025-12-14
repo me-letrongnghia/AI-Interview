@@ -17,7 +17,7 @@ import java.util.Map;
 public class HealthController {
     private final MultitaskJudgeService multitaskJudgeService;
     
-    // Kiểm tra trạng thái hệ thống backend
+    // Phương thức kiểm tra trạng thái chung của hệ thống
     @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> health = new HashMap<>();
@@ -28,7 +28,7 @@ public class HealthController {
         return ResponseEntity.ok(health);
     }
 
-    // Kiểm tra trạng thái dịch vụ Multitask Judge AI
+    // Phương thức kiểm tra trạng thái dịch vụ AI Multitask Judge
     @GetMapping("/ai")
     public ResponseEntity<Map<String, Object>> aiHealthCheck() {
         Map<String, Object> health = new HashMap<>();

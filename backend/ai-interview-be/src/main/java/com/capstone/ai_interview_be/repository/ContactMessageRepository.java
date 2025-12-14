@@ -12,25 +12,25 @@ import java.util.List;
 @Repository
 public interface ContactMessageRepository extends JpaRepository<ContactMessage, Long> {
     
-    // Find messages by status
+    // Tìm các tin nhắn theo trạng thái
     List<ContactMessage> findByStatusOrderByCreatedAtDesc(ContactMessage.Status status);
     
-    // Find messages by email
+    // Tìm các tin nhắn theo email
     List<ContactMessage> findByEmailOrderByCreatedAtDesc(String email);
     
-    // Find messages by issue type
+    // Tìm các tin nhắn theo loại vấn đề
     List<ContactMessage> findByIssueTypeOrderByCreatedAtDesc(String issueType);
     
-    // Find messages created between dates
+    // Tìm các tin nhắn được tạo trong khoảng thời gian nhất định
     @Query("SELECT cm FROM ContactMessage cm WHERE cm.createdAt BETWEEN :startDate AND :endDate ORDER BY cm.createdAt DESC")
     List<ContactMessage> findByCreatedAtBetweenOrderByCreatedAtDesc(
             @Param("startDate") LocalDateTime startDate, 
             @Param("endDate") LocalDateTime endDate
     );
     
-    // Count messages by status
+    // Đếm số lượng tin nhắn theo trạng thái
     long countByStatus(ContactMessage.Status status);
     
-    // Find all messages ordered by creation date
+    // Tìm tất cả các tin nhắn được sắp xếp theo ngày tạo
     List<ContactMessage> findAllByOrderByCreatedAtDesc();
 }

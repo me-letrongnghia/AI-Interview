@@ -19,14 +19,14 @@ public class FeedbackController {
     
     private final FeedbackService feedbackService;
     
-    // Generate feedback khi interview kết thúc
+    //  phương thức tạo feedback cho buổi phỏng vấn
     @PostMapping("/sessions/{sessionId}/generate")
     public ResponseEntity<InterviewFeedbackResponse> generateFeedback(@PathVariable Long sessionId) {
         InterviewFeedbackResponse feedback = feedbackService.generateSessionFeedback(sessionId);
         return ResponseEntity.ok(feedback);
     }
     
-    // Lấy feedback - tự động generate nếu chưa có
+    // phương thức lấy feedback cho buổi phỏng vấn, nếu không có thì tự động tạo
     @GetMapping("/sessions/{sessionId}")
     public ResponseEntity<InterviewFeedbackResponse> getFeedback(@PathVariable Long sessionId) {
         try {

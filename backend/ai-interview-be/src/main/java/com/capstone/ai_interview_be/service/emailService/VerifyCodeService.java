@@ -18,6 +18,8 @@ public class VerifyCodeService {
     private final VerifyCodeRepository verificationCodeRepository;
     private final UserRepository userRepository;
     private final EmailService mailService;
+
+    // phương thức tạo hoặc cập nhật mã xác nhận và gửi email
     @Transactional
     public String generateOrUpdateCodeEmail(String email) throws MessagingException {
         String code = String.format("%06d", (int)(Math.random() * 1000000));
@@ -55,6 +57,7 @@ public class VerifyCodeService {
         return "Verification code has been sent to your email.";
     }
 
+    // Phương thức tạo hoặc cập nhật mã xác nhận cho quên mật khẩu và gửi email
     @Transactional
     public String generateOrUpdateCodeForgotPassword(String email) throws MessagingException {
         String code = String.format("%06d", (int)(Math.random() * 1000000));
@@ -91,7 +94,8 @@ public class VerifyCodeService {
         mailService.sendVerificationEmailForgotPassword(user.getEmail(), user.getFullName(), verificationCode.getCode(), resetLink);
         return "Verification code has been sent to your email.";
     }
-    // Xác minh mã
+    
+    // Phương thức xác thực email bằng mã
     @Transactional
     public String verifyEmail(String code) {
         VerifyCodeEntity verificationCode = verificationCodeRepository.findByCode(code)

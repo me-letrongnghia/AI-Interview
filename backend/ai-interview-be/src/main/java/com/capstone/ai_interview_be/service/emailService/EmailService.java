@@ -15,6 +15,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
+    // Phương thức gửi email xác thực
     public void sendVerificationEmail(String to, String name,String code, String resetLink) throws jakarta.mail.MessagingException {
         try {
             // 1. Tạo Context và đưa dữ liệu vào
@@ -39,6 +40,8 @@ public class EmailService {
             e.printStackTrace();
         }
     }
+    
+    // Phương thức gửi email xác thực cho quên mật khẩu
     public void sendVerificationEmailForgotPassword(String to, String name,String code, String resetLink) throws jakarta.mail.MessagingException {
         try {
             // 1. Tạo Context và đưa dữ liệu vào

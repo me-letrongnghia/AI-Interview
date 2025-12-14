@@ -26,6 +26,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
+    // Lọc JWT cho mỗi yêu cầu HTTP
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -68,12 +69,12 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException ex) {
-            // ✅ Token hết hạn → trả 401 để frontend tự refresh
+            // Token hết hạn → trả 401
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             log.info("token hết hạn");
             response.getWriter().write("Access Token expired");
         } catch (JwtException ex) {
-            // ✅ Token sai/invalid → trả 401
+            // Token sai/invalid → trả 401
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             log.info("token sai");
             response.getWriter().write("Invalid Token");
