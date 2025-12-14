@@ -134,31 +134,31 @@ public class GeminiService {
         return null;
     }
 
-    // Phương thức tạo câu hỏi mở đầu
+    // Phương thức tạo câu hỏi mở đầu - Warm-up về vị trí và skills
     public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
         String skillsText = (skills == null || skills.isEmpty())
-                ? "None"
+                ? "general programming"
                 : String.join(", ", skills);
 
         String systemPrompt = "You are a friendly and professional interviewer conducting a job interview. " +
                 "Output EXACTLY ONE warm-up opening question in " + (language == null ? "English" : language) + ". " +
-                "This is the FIRST question of the interview - focus on making the candidate comfortable.\n\n" +
+                "This is the FIRST question of the interview - a warm-up question about the position and skills.\n\n" +
                 "Rules:\n" +
                 "- Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).\n" +
-                "- Ask the candidate to introduce themselves or share about their background.\n" +
-                "- Focus on: self-introduction, career journey, motivation for applying, or why they're interested in this role.\n" +
-                "- Keep it open-ended and conversational to help the candidate relax.\n" +
-                "- DO NOT ask technical questions yet - save those for later.\n" +
+                "- Ask about their interest in the " + role + " position OR their experience/interest with the required skills.\n" +
+                "- Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.\n" +
+                "- Keep it open-ended and conversational - this is a warm-up, not a deep technical question.\n" +
+                "- DO NOT ask complex technical implementation questions yet.\n" +
                 "- End with a question mark (?).\n" +
                 "- Do NOT include preamble, explanations, numbering, or multiple questions.\n" +
                 "- Return only the greeting and question.\n\n" +
                 "Example good opening questions:\n" +
-                "- \"Hello! Welcome to the interview. Could you please introduce yourself and tell me a bit about your background?\"\n" +
-                "- \"Hi there! Thank you for joining us today. Can you walk me through your career journey and what led you to apply for this position?\"\n" +
-                "- \"Welcome! Before we dive into the technical aspects, I'd love to hear about yourself. What motivated you to pursue a career in " + role + "?\"";
+                "- \"Hello! Welcome to the interview for the " + role + " position. What attracted you to this role and these technologies?\"\n" +
+                "- \"Hi there! I see you're interested in working with " + skillsText + ". What got you started with these technologies?\"\n" +
+                "- \"Welcome! Before we dive deeper, I'd love to know - what excites you most about the " + role + " role?\"";
 
         String userPrompt = String.format(
-                "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate a warm, welcoming opening question that asks the candidate to introduce themselves or share their background. This should feel like a natural conversation starter, not a technical question.",
+                "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.",
                 role,
                 level,
                 skillsText);
@@ -188,7 +188,7 @@ public class GeminiService {
                 ? "None"
                 : String.join(", ", skills);
 
-        // Build conversation context from history
+        // Xây dựng ngữ cảnh lịch sử phỏng vấn
         StringBuilder historyContext = new StringBuilder();
         if (conversationHistory != null && !conversationHistory.isEmpty()) {
             historyContext.append("=== INTERVIEW HISTORY ===\n");
@@ -207,11 +207,11 @@ public class GeminiService {
             historyContext.append("=== END HISTORY ===\n\n");
         }
 
-        // Determine interview phase and question strategy based on progress
+        // Xây dựng hướng dẫn phase dựa trên tiến trình phỏng vấn
         String phaseGuidance = buildPhaseGuidance(currentQuestionNumber, totalQuestions, level);
         String normalizedLevel = normalizeLevel(level);
 
-        // Build level-specific strict rules
+        // Xây dựng quy tắc cụ thể theo level
         String levelSpecificRules = buildLevelSpecificRules(normalizedLevel);
         
         String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.\n\n" +
@@ -532,13 +532,6 @@ public class GeminiService {
         // - CHALLENGING: ~15% tiếp theo
         // - WRAP_UP: ~10% cuối (ít nhất 1 câu cuối)
         
-        if (totalQuestions <= 3) {
-            // Với 3 câu trở xuống: Opening -> Core -> Wrap-up
-            if (currentQuestion == 1) return InterviewPhase.OPENING;
-            if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
-            return InterviewPhase.CORE_TECHNICAL;
-        }
-        
         if (totalQuestions <= 5) {
             // Với 4-5 câu: Opening -> Core -> Deep -> Wrap-up
             if (currentQuestion == 1) return InterviewPhase.OPENING;
@@ -548,8 +541,8 @@ public class GeminiService {
             return InterviewPhase.CORE_TECHNICAL;
         }
         
-        if (totalQuestions <= 8) {
-            // Với 6-8 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) -> Wrap(cuối)
+        if (totalQuestions <= 10) {
+            // Với 6-10 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) -> Wrap(cuối)
             if (currentQuestion == 1) return InterviewPhase.OPENING;
             if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
             if (currentQuestion <= 3) return InterviewPhase.CORE_TECHNICAL;
@@ -833,7 +826,7 @@ public class GeminiService {
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
             
-            // Check if response is an error message (not JSON)
+            // Kiểm tra nếu response không phải JSON hợp lệ
             if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
                 log.warn("Gemini API returned error message for overall feedback: {}", jsonResponse);
                 return OverallFeedbackData.builder()

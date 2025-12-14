@@ -9,9 +9,6 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Request DTO for Multitask Judge REPORT task (API v2)
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,6 +20,11 @@ public class MultitaskReportRequest {
     
     @JsonProperty("job_domain")
     private String jobDomain;
+    
+    @Builder.Default
+    private String level = "mid-level";
+    
+    private List<String> skills;
     
     @JsonProperty("candidate_info")
     private String candidateInfo;

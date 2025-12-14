@@ -1,5 +1,8 @@
 """
-Cấu hình cho Multitask Judge Service
+Cấu hình cho AI Interview Service
+=================================
+Hỗ trợ nhiều model: Qwen, MultitaskJudge, etc.
+Có thể dễ dàng chuyển đổi giữa các model bằng biến môi trường.
 """
 import logging
 import os
@@ -8,8 +11,22 @@ from pathlib import Path
 # ==================== ĐƯỜNG DẪN ====================
 BASE_DIR = Path(__file__).parent.parent.parent
 
+# ==================== MODEL PATHS ====================
 # Multitask Judge Model (GENERATE, EVALUATE, REPORT) - Custom Transformer 400K samples
 MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Multi_model")))
+
+# Qwen Model - Fine-tuned Qwen2.5-3B-Instruct 
+QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
+
+# ==================== MODEL SELECTION ====================
+# Available: "qwen", "multitask"
+# - qwen: Qwen2.5-3B-Instruct (recommended, uses HuggingFace)
+# - multitask: Custom Transformer (legacy, uses SentencePiece)
+AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen")
+
+# Qwen-specific settings
+QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # Use 4-bit quantization (saves VRAM)
+QWEN_MAX_SEQ_LENGTH = int(os.getenv("QWEN_MAX_SEQ_LENGTH", "2048"))
 
 # ==================== THIẾT LẬP API ====================
 API_TITLE = "AI Interview - Multitask Judge"

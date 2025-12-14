@@ -1,6 +1,6 @@
 package com.capstone.ai_interview_be.controller;
 
-import com.capstone.ai_interview_be.service.AIService.MultitaskJudgeService;
+import com.capstone.ai_interview_be.service.AIService.UnifiedModelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/health")
 @RequiredArgsConstructor
 public class HealthController {
-    private final MultitaskJudgeService multitaskJudgeService;
+    private final UnifiedModelService unifiedModelService;
     
     // Phương thức kiểm tra trạng thái chung của hệ thống
     @GetMapping
@@ -28,14 +28,17 @@ public class HealthController {
         return ResponseEntity.ok(health);
     }
 
-    // Phương thức kiểm tra trạng thái dịch vụ AI Multitask Judge
+    // Phương thức kiểm tra trạng thái dịch vụ AI
     @GetMapping("/ai")
     public ResponseEntity<Map<String, Object>> aiHealthCheck() {
         Map<String, Object> health = new HashMap<>();
         
-        boolean isHealthy = multitaskJudgeService.isServiceHealthy();
+        boolean isHealthy = unifiedModelService.isServiceHealthy();
+        Map<String, Object> modelInfo = unifiedModelService.getModelInfo();
+        
         health.put("status", isHealthy ? "UP" : "DOWN");
-        health.put("service", "Multitask Judge AI Service");
+        health.put("service", "Unified AI Model Service");
+        health.put("model_info", modelInfo);
         health.put("timestamp", System.currentTimeMillis());
         
         return ResponseEntity.ok(health);
