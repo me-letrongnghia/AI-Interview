@@ -37,10 +37,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> authLogin(@RequestBody LoginRequest request,HttpServletResponse response) {
         try {
-            // Logic to authenticate user and generate JWT token
+            // Thực hiện đăng nhập và lấy thông tin người dùng
             UserProfileResponse profileResponse = authService.authenticate(request);
+            // Lấy refresh token từ phản hồi
             String refreshToken = profileResponse.getRefresh_token();
-            // Set Cookie
+            // Đặt refresh token vào cookie
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
                     .secure(false)
@@ -49,6 +50,7 @@ public class AuthController {
                     .maxAge(7 * 24 * 60 * 60).build();
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             profileResponse.setRefresh_token(null);
+            // Trả về thông tin người dùng
             return ResponseEntity.ok(profileResponse);
         } catch (ResponseStatusException e) {
             if (e.getStatusCode() == org.springframework.http.HttpStatus.FORBIDDEN) {
@@ -61,7 +63,7 @@ public class AuthController {
     // Phương thức để đăng ký người dùng mới
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) throws MessagingException {
-        // Logic to register user
+        // Thực hiện đăng ký người dùng
         String responseMessage = authService.register(request);
         return ResponseEntity.ok(responseMessage);
     }
@@ -70,12 +72,12 @@ public class AuthController {
     @PostMapping("/loginFirebase")
     public ResponseEntity<?> loginWithFirebase(@RequestBody FireRequest idToken,HttpServletResponse response) {
         try {
-            // Debug log
+            // Log Bug 
             System.out.println("Firebase login request - Email: " + idToken.getEmail() + ", Token: " + (idToken.getIdToken() != null ? "Present" : "Null"));
-            // Logic to authenticate user with Firebase and generate JWT token
+            // Thực hiện đăng nhập bằng Firebase và lấy thông tin người dùng
             UserProfileResponse profileResponse = authService.loginWithFirebase(idToken);
             String refreshToken = profileResponse.getRefresh_token();
-        // Set Cookie
+        // Đặt refresh token vào cookie
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
                 .secure(isCookieSecure)
@@ -96,7 +98,7 @@ public class AuthController {
     // Phương thức để làm mới JWT token sử dụng refresh token từ cookie
     @PostMapping("/refresh-token")
     public ResponseEntity<UserProfileResponse> refreshToken(@CookieValue(name = "refreshToken") String refreshToken) {
-        // Logic to refresh JWT token
+        // Thực hiện làm mới token
         UserProfileResponse profileResponse = authService.refreshToken(refreshToken);
         return ResponseEntity.ok(profileResponse);
     }

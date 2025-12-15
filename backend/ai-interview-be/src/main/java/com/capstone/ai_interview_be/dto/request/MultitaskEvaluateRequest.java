@@ -6,9 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Request DTO for Multitask Judge EVALUATE task (API v2)
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,6 +20,9 @@ public class MultitaskEvaluateRequest {
     
     @JsonProperty("job_domain")
     private String jobDomain;
+    
+    @Builder.Default
+    private String level = "mid-level";
     
     @Builder.Default
     private Double temperature = 0.3;

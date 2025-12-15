@@ -45,12 +45,9 @@ public class AnswerFeedback {
     @Column(name = "sample_answer", columnDefinition = "TEXT")
     private String sampleAnswer;
     
-    // Judge AI evaluation scores (JSON stored as TEXT)
-    // Example: {"correctness": 0.75, "coverage": 0.70, "depth": 0.65, "clarity": 0.80, "practicality": 0.60, "final": 0.71}
     @Column(name = "scores_json", columnDefinition = "TEXT")
     private String scoresJson;
     
-    // Individual score fields for easy querying
     @Column(name = "score_correctness")
     private Double scoreCorrectness;
     
@@ -69,11 +66,9 @@ public class AnswerFeedback {
     @Column(name = "score_final")
     private Double scoreFinal;
     
-    // Improved answer from Judge AI
     @Column(name = "improved_answer", columnDefinition = "TEXT")
     private String improvedAnswer;
     
-    // Evaluation generation time (seconds)
     @Column(name = "generation_time")
     private Double generationTime;
     

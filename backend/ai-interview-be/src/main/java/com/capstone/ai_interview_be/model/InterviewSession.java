@@ -59,9 +59,6 @@ public class InterviewSession {
     private String language;
 
     private String title;
-
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
     
     @Column(name = "cv_text", columnDefinition = "TEXT")
     private String cvText;
@@ -70,7 +67,7 @@ public class InterviewSession {
     private String jdText;
 
     @Column(name = "duration")
-    private Integer duration; // in minutes
+    private Integer duration;
     
     @Column(name = "elapsed_minutes")
     private Double elapsedMinutes; // thời gian thực tế (phút, có phần lẻ)
@@ -84,7 +81,7 @@ public class InterviewSession {
     private Source source = Source.Custom;
     
     @Column(name = "status")
-    private String status = "in_progress"; // in_progress, completed
+    private String status = "in_progress";
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;

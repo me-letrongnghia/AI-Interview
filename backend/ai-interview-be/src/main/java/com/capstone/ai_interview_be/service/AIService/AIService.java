@@ -23,17 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Slf4j
 public class AIService {
 
-    private final MultitaskJudgeService multitaskJudgeService;
+    private final UnifiedModelService unifiedModelService;
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Phương thức tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills,
             String cvText, String jdText) {
-        // Try Multitask GENERATE_FIRST first
-        if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 GENERATE_FIRST for role: {}", role);
+        
+        // Kiểm tra dịch vụ Unified Model Service (v3 API)
+        if (unifiedModelService.isServiceHealthy()) {
+            log.info("Using Unified Model Service (v3 API) for first question");
             try {
-                MultitaskGenerateResponse response = multitaskJudgeService.generateFirstQuestion(
+                MultitaskGenerateResponse response = unifiedModelService.generateFirstQuestion(
                         role,
                         skills,
                         level,
@@ -43,113 +45,118 @@ public class AIService {
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("Multitask GENERATE_FIRST success - Type: {}", response.getQuestionType());
+                    log.info("First question generated using model: {}", response.getModelUsed());
                     return response.getQuestion();
                 }
             } catch (Exception e) {
-                log.error("Multitask GENERATE_FIRST failed: {}", e.getMessage());
+                log.error("Unified Model Service failed: {}", e.getMessage());
             }
         }
 
-        // Fallback to Gemini
-        log.warn("Multitask unavailable, using Gemini fallback for first question");
+        // Fallback: Gemini
+        log.warn("AI Model Service unavailable, using Gemini for first question");
         try {
             return geminiService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
-            log.error("Gemini failed: {}", e.getMessage());
-            return "Please tell me a little bit about yourself and your background.";
+            log.error("Gemini failed");
+            return "Sorry, AI is currently unavailable to generate questions.";
         }
     }
 
+    // Phương thức tạo câu hỏi đầu tiên  
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
 
-    /**
-     * Generate next question using Multitask GENERATE (v2) or Gemini fallback
-     */
+    // Phương thức tạo câu hỏi tiếp theo với đầy đủ tham số
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
             String sessionLevel,
             String previousQuestion, String previousAnswer, String cvText, String jdText,
-            List<ConversationEntry> conversationHistory) {
+            List<ConversationEntry> conversationHistory,
+            int currentQuestionNumber, int totalQuestions) {
 
-        // Try Multitask GENERATE first
-        if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 GENERATE for next question");
+        // Chuẩn bị lịch sử hội thoại dưới dạng List<Map>
+        List<Map<String, String>> historyForAI = null;
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            historyForAI = conversationHistory.stream()
+                    .map(entry -> {
+                        Map<String, String> qa = new HashMap<>();
+                        qa.put("question", entry.getQuestionContent());
+                        qa.put("answer", entry.getAnswerContent());
+                        return qa;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        // Kiểm tra dịch vụ Unified Model Service (v3 API)
+        if (unifiedModelService.isServiceHealthy()) {
+            log.info("Using Unified Model Service (v3 API) for next question ({}/{})", currentQuestionNumber, totalQuestions);
             try {
-                // Convert conversation history to List<Map>
-                List<Map<String, String>> historyForAI = null;
-                if (conversationHistory != null && !conversationHistory.isEmpty()) {
-                    historyForAI = conversationHistory.stream()
-                            .map(entry -> {
-                                Map<String, String> qa = new HashMap<>();
-                                qa.put("question", entry.getQuestionContent());
-                                qa.put("answer", entry.getAnswerContent());
-                                return qa;
-                            })
-                            .collect(Collectors.toList());
-                }
-
-                // Determine difficulty based on level
-                String difficulty = "medium";
-                if (sessionLevel != null) {
-                    if (sessionLevel.toLowerCase().contains("junior")) {
-                        difficulty = "easy";
-                    } else if (sessionLevel.toLowerCase().contains("senior")) {
-                        difficulty = "hard";
-                    }
-                }
-
-                MultitaskGenerateResponse response = multitaskJudgeService.generateFollowUp(
+                MultitaskGenerateResponse response = unifiedModelService.generateFollowUp(
                         previousQuestion,
                         previousAnswer,
                         historyForAI,
-                        sessionRole, // jobDomain
-                        difficulty,
+                        sessionRole,
+                        sessionLevel,      
+                        sessionSkill,      
+                        currentQuestionNumber,  
+                        totalQuestions,         
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("Multitask GENERATE success - Type: {}", response.getQuestionType());
+                    log.info("Next question generated - Type: {}, Model: {}", response.getQuestionType(), response.getModelUsed());
                     return response.getQuestion();
                 }
             } catch (Exception e) {
-                log.error("Multitask GENERATE failed: {}", e.getMessage());
+                log.error("Unified Model Service GENERATE failed: {}", e.getMessage());
             }
         }
 
-        // Fallback to Gemini with conversation history
-        log.warn("Multitask unavailable, using Gemini fallback with conversation history");
+        // Fallback: Gemini
+        log.warn("AI Model Service unavailable, using Gemini fallback");
         try {
             return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
-                    previousQuestion, previousAnswer, conversationHistory);
+                    previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
             return "Can you tell me about a challenging project you've worked on recently?";
         }
     }
 
+    // Phương thức tạo câu hỏi tiếp theo với các tham số mặc định
+    public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
+            String sessionLevel,
+            String previousQuestion, String previousAnswer, String cvText, String jdText,
+            List<ConversationEntry> conversationHistory) {
+        return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+                previousQuestion, previousAnswer, cvText, jdText, conversationHistory, 0, 0);
+    }
+
+    // Phương thức tạo câu hỏi tiếp theo với các tham số tối giản
     public String generateNextQuestion(String sessionRole, List<String> sessionSkill, String sessionLanguage,
             String sessionLevel,
             String previousQuestion, String previousAnswer) {
         return generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
-                previousQuestion, previousAnswer, null, null, null);
+                previousQuestion, previousAnswer, null, null, null, 0, 0);
     }
 
+    // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public DataScanResponse extractData(String Text) {
         try {
             String jsonResponse = geminiService.generateData(Text);
-
+            // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
                 log.warn("Empty Gemini response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-
+            // Kiểm tra lỗi trong phản hồi
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
                 log.error("Gemini error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
-
+            // Làm sạch phản hồi để lấy JSON đúng định dạng
             String cleanedJson = cleanJsonResponse(jsonResponse);
+            // Chuyển đổi JSON thành DataScanResponse
             return objectMapper.readValue(cleanedJson, DataScanResponse.class);
 
         } catch (Exception e) {
@@ -158,6 +165,7 @@ public class AIService {
         }
     }
 
+    // Làm sạch phản hồi JSON từ Gemini
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null)
             return "{}";
@@ -175,45 +183,44 @@ public class AIService {
         return cleaned;
     }
 
+    // Phương thức tạo phản hồi đánh giá câu trả lời
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
-        // Try Multitask EVALUATE first (v2)
-        if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 EVALUATE for answer feedback");
+        // Primary: Try Unified Model Service (v3 API) with level param like Gemini
+        if (unifiedModelService.isServiceHealthy()) {
+            log.info("Using Unified Model Service (v3 API) for EVALUATE - Level: {}", level);
             try {
-                MultitaskEvaluateResponse response = multitaskJudgeService.evaluateAnswer(
+                MultitaskEvaluateResponse response = unifiedModelService.evaluateAnswer(
                         question,
                         answer,
                         null, // context
                         role, // jobDomain
+                        level, // Pass level like Gemini
                         0.3);
-
+                
                 if (response != null) {
-                    // Convert Multitask scores (0-10) to normalized scores (0-1)
-                    double normalizedScore = response.getOverall() / 10.0;
-
-                    // Only show feedback text, scores are displayed separately in UI
+                    log.info("EVALUATE success - Overall: {}/10, Model: {}", response.getOverall(), response.getModelUsed());
+                    
                     String feedback = response.getFeedback() != null && !response.getFeedback().isEmpty()
                             ? response.getFeedback()
                             : "No detailed feedback available.";
 
-                    // Use improved_answer from AI if available, otherwise leave null (don't show)
                     String sampleAnswer = response.getImprovedAnswer() != null
                             && !response.getImprovedAnswer().isEmpty()
                                     ? response.getImprovedAnswer()
-                                    : null; // Don't show default text, let frontend hide the section
-
+                                    : null;
+                    
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
                             .build();
                 }
             } catch (Exception e) {
-                log.error("Multitask EVALUATE failed: {}", e.getMessage());
+                log.error("Unified Model Service EVALUATE failed: {}", e.getMessage());
             }
         }
 
-        // Fallback to Gemini
-        log.warn("Multitask unavailable, using Gemini for answer feedback");
+        // Fallback: Gemini
+        log.warn("AI Model Service unavailable, using Gemini for answer feedback");
         try {
             return geminiService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
@@ -225,53 +232,49 @@ public class AIService {
         }
     }
 
-    /**
-     * Generate overall feedback using Multitask REPORT (v2) or Gemini fallback
-     */
+    // Phương thức tạo phản hồi tổng thể
     public OverallFeedbackData generateOverallFeedback(
             List<ConversationEntry> conversation,
             String role,
             String level,
             List<String> skills) {
-        log.info("Generating overall feedback for {} questions using Multitask v2", conversation.size());
+        log.info("Generating overall feedback for {} questions", conversation.size());
 
-        if (multitaskJudgeService.isServiceHealthy()) {
-            log.info("Using Multitask Judge v2 REPORT (PRIMARY)");
+        // Chuẩn bị dữ liệu
+        List<Map<String, String>> historyForAI = conversation.stream()
+                .map(entry -> {
+                    Map<String, String> qa = new HashMap<>();
+                    qa.put("question", entry.getQuestionContent());
+                    qa.put("answer", entry.getAnswerContent());
+                    return qa;
+                })
+                .collect(Collectors.toList());
+
+        String candidateInfo = String.format("Role: %s, Level: %s, Skills: %s",
+                role != null ? role : "Developer",
+                level != null ? level : "Mid-level",
+                skills != null ? String.join(", ", skills) : "");
+
+        // Primary: Try Unified Model Service (v3 API) with level and skills like Gemini
+        if (unifiedModelService.isServiceHealthy()) {
+            log.info("Using Unified Model Service (v3 API) for REPORT - Level: {}, Skills: {}", level, skills);
             try {
-                // Convert conversation to List<Map<String, String>>
-                List<Map<String, String>> historyForAI = conversation.stream()
-                        .map(entry -> {
-                            Map<String, String> qa = new HashMap<>();
-                            qa.put("question", entry.getQuestionContent());
-                            qa.put("answer", entry.getAnswerContent());
-                            return qa;
-                        })
-                        .collect(Collectors.toList());
-
-                // Build candidate info
-                String candidateInfo = String.format("Role: %s, Level: %s, Skills: %s",
-                        role != null ? role : "Developer",
-                        level != null ? level : "Mid-level",
-                        skills != null ? String.join(", ", skills) : "");
-
-                MultitaskReportResponse response = multitaskJudgeService.generateReport(
+                MultitaskReportResponse response = unifiedModelService.generateReport(
                         historyForAI,
-                        role, // jobDomain
+                        role,
+                        level,      // Pass level like Gemini
+                        skills,     // Pass skills like Gemini
                         candidateInfo,
                         0.5);
 
                 if (response != null && response.getOverallAssessment() != null) {
-                    // Convert score (0-100) to overview rating
                     String overview = convertScoreToOverview(response.getScore());
-
-                    // Convert recommendations list to string
                     String recommendations = response.getRecommendations() != null
                             && !response.getRecommendations().isEmpty()
                                     ? String.join(" ", response.getRecommendations())
                                     : "Continue practicing and improving your technical interview skills.";
 
-                    log.info("Multitask REPORT success - Score: {}/100, Overview: {}",
-                            response.getScore(), overview);
+                    log.info("REPORT success - Score: {}/100, Model: {}", response.getScore(), response.getModelUsed());
 
                     return OverallFeedbackData.builder()
                             .overview(overview)
@@ -281,16 +284,12 @@ public class AIService {
                             .recommendations(recommendations)
                             .build();
                 }
-
-                log.warn("Multitask REPORT invalid response, falling back");
             } catch (Exception e) {
-                log.error("Multitask REPORT error, falling back: {}", e.getMessage());
+                log.error("Unified Model Service REPORT failed: {}", e.getMessage());
             }
-        } else {
-            log.warn("Multitask Judge v2 unavailable, using Gemini (BACKUP)");
         }
 
-        // Fallback to Gemini
+        // Fallback: Gemini
         log.info("Using Gemini fallback for overall feedback");
         try {
             return geminiService.generateOverallFeedback(conversation, role, level, skills);
@@ -315,9 +314,7 @@ public class AIService {
         }
     }
 
-    /**
-     * Convert numeric score (0-100) to overview rating
-     */
+    // Hàm chuyển đổi điểm số thành đánh giá tổng quan
     private String convertScoreToOverview(Integer score) {
         if (score == null)
             return "AVERAGE";

@@ -15,6 +15,7 @@ import com.capstone.ai_interview_be.filter.JwtFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+// Cấu hình bảo mật cho ứng dụng
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

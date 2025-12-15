@@ -9,9 +9,6 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Request DTO for Multitask Judge GENERATE task (API v2)
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,7 +26,20 @@ public class MultitaskGenerateRequest {
     private String jobDomain;
     
     @Builder.Default
-    private String difficulty = "medium";
+    private String level = "mid-level";
+    
+    private List<String> skills;
+    
+    @JsonProperty("current_question_number")
+    @Builder.Default
+    private int currentQuestionNumber = 0;
+    
+    @JsonProperty("total_questions")
+    @Builder.Default
+    private int totalQuestions = 0;
+    
+    @Builder.Default
+    private String language = "English";
     
     @Builder.Default
     private Double temperature = 0.7;

@@ -36,14 +36,15 @@ public class JDController {
     @PostMapping("/scan-url")
     public ResponseEntity<?> scanJDFromUrl(@RequestBody Map<String, String> request) {
         try {
+            // Lấy URL từ yêu cầu
             String url = request.get("url");
-            
+            // Kiểm tra URL hợp lệ không?
             if (url == null || url.trim().isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "URL cannot be empty"));
             }
             
-            // Lấy JD text từ URL
+            // Trích xuất JD từ URL
             String jdText = jdScraperService.scrapeJDFromUrl(url);
             
             return ResponseEntity.ok(jdText);

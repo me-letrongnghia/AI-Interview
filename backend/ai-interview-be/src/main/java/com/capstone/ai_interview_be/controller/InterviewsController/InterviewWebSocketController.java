@@ -26,15 +26,13 @@ public class InterviewWebSocketController {
     private final InterviewService interviewService;
     private final InterviewSessionRepository sessionRepository;
 
+    //phương thức Xử lý câu trả lời từ client
     @MessageMapping("/interview/{sessionId}/answer")
     public void handleAnswer(@DestinationVariable Long sessionId, AnswerMessage answerMessage) {
         try {
-            log.info("Received answer for session {}, isLastAnswer: {}", sessionId, answerMessage.getIsLastAnswer());
-            
             // Kiểm tra nếu đây là câu trả lời cuối cùng
             if (Boolean.TRUE.equals(answerMessage.getIsLastAnswer())) {
                 // Xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
-                log.info("Processing last answer for session {}, will not generate next question", sessionId);
                 interviewService.processLastAnswer(sessionId, answerMessage);
 
                 // Gửi thông báo hoàn thành
@@ -84,10 +82,11 @@ public class InterviewWebSocketController {
         }
     }
 
+    //phương thức Xử lý kết thúc buổi phỏng vấn
     @MessageMapping("/interview/{sessionId}/end")
     public void handleEndInterview(@DestinationVariable Long sessionId) {
         try {
-            // Update session status
+            // Cập nhật trạng thái buổi phỏng vấn trong cơ sở dữ liệu
             InterviewSession session = sessionRepository.findById(sessionId)
                     .orElseThrow(() -> new RuntimeException("Session not found"));
 
@@ -95,7 +94,7 @@ public class InterviewWebSocketController {
             session.setCompletedAt(LocalDateTime.now());
             sessionRepository.save(session);
 
-            // Gửi message yêu cầu client redirect
+            // Gửi thông báo kết thúc buổi phỏng vấn đến client
             FeedbackMessage endMessage = new FeedbackMessage();
             endMessage.setType("interview_ended");
             endMessage.setSessionId(sessionId);

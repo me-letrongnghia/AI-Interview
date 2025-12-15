@@ -1,6 +1,5 @@
 package com.capstone.ai_interview_be.service.InterviewService;
 
-import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.ProcessAnswerResponse;
 import com.capstone.ai_interview_be.dto.websocket.AnswerMessage;
 import com.capstone.ai_interview_be.model.AnswerFeedback;
@@ -14,7 +13,6 @@ import com.capstone.ai_interview_be.repository.InterviewAnswerRepository;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.repository.InterviewSessionRepository;
 import com.capstone.ai_interview_be.service.AIService.AIService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +37,6 @@ public class InterviewService {
     private final AIService aiService;
     private final ConversationService conversationService;
     private final AnswerEvaluationService answerEvaluationService;
-    private final ObjectMapper objectMapper;
     
     // Phương thức để xử lý câu trả lời và tạo câu hỏi tiếp theo
     @Transactional
@@ -52,7 +49,6 @@ public class InterviewService {
         InterviewQuestion question = questionRepository.findById(answerMessage.getQuestionId())
                 .orElseThrow(
                         () -> new RuntimeException("Question not found with id: " + answerMessage.getQuestionId()));
-
         if (!question.getSessionId().equals(sessionId)) {
             throw new RuntimeException("Question does not belong to this session");
         }
@@ -63,59 +59,47 @@ public class InterviewService {
         answer.setContent(answerMessage.getContent());
         InterviewAnswer savedAnswer = answerRepository.save(answer);
 
-        // Eager fetch skills BEFORE async to avoid LazyInitializationException
-        List<String> skills = new ArrayList<>(session.getSkill());  // Force Hibernate to initialize collection NOW
+        // Thực hiện đánh giá câu trả lời trong nền
+        List<String> skills = new ArrayList<>(session.getSkill());  
         String role = session.getRole();
         String level = session.getLevel();
         String questionContent = question.getContent();
         String answerContent = answerMessage.getContent();
         
-        // OPTIMIZATION: Generate question FIRST (sync), then evaluate answer (async)
-        // This ensures user gets next question immediately while evaluation runs in background
-        // The AI model processes requests sequentially, so we prioritize question generation
-        
-        // Cập nhật conversation entry với answer (nhưng chưa có feedback)
+        // Cập nhập conversation entry với câu trả lời mới
         conversationService.updateConversationEntry(
                 answerMessage.getQuestionId(),
                 savedAnswer.getId(),
                 answerMessage.getContent()
         );
 
-        // For PRACTICE sessions with OLD QUESTIONS: Return pre-generated question instead of calling AI
+        // Xử lý logic tạo câu hỏi tiếp theo
         if (Boolean.TRUE.equals(session.getIsPractice())) {
             log.info("Practice mode detected - checking question type");
-
-            // Get all questions for this practice session
+            // Lấy tất cả câu hỏi trong session để kiểm tra
             List<InterviewQuestion> allQuestions = questionRepository
                     .findBySessionIdOrderByCreatedAtAsc(sessionId);
-
-            // Check if this is practice with OLD questions (multiple pre-generated) or SAME CONTEXT (only 1 pre-generated)
-            // If questionCount matches actual question count, it's OLD questions
-            // If questionCount > actual question count, it's SAME CONTEXT (generate new)
-            long currentQuestionCount = questionRepository.countBySessionId(sessionId);
-            
-            if (currentQuestionCount >= session.getQuestionCount()) {
-                // Practice with OLD questions - all questions pre-generated
-                log.info("Practice with OLD questions detected - using pre-generated questions");
-                
-                // Find current question index
-                int currentIndex = -1;
+            // Đếm tổng số câu hỏi trong database để phân biệt loại practice
+            long totalQuestionsInDb = questionRepository.countBySessionId(sessionId);
+            // Nếu tổng số câu hỏi >= questionCount, nghĩa là dùng câu hỏi cũ
+            if (totalQuestionsInDb >= session.getQuestionCount()) {
+                int currentIndex = -1; // Tìm vị trí câu hỏi hiện tại
+                // Tìm vị trí câu hỏi hiện tại trong danh sách
                 for (int i = 0; i < allQuestions.size(); i++) {
                     if (allQuestions.get(i).getId().equals(question.getId())) {
                         currentIndex = i;
                         break;
                     }
                 }
-
+                // Nếu không tìm thấy, ném lỗi
                 if (currentIndex == -1) {
                     throw new RuntimeException("Current question not found in practice session");
                 }
-
-                // Check if there's a next question
-                if (currentIndex < allQuestions.size() - 1) {
+                int maxQuestions = session.getQuestionCount() != null ? session.getQuestionCount() : allQuestions.size(); // Giới hạn câu hỏi theo session setting
+                // Lấy câu hỏi tiếp theo từ danh sách đã có sẵn
+                if (currentIndex < maxQuestions - 1 && currentIndex < allQuestions.size() - 1) {
                     InterviewQuestion nextQuestion = allQuestions.get(currentIndex + 1);
-
-                    // Check if conversation entry exists, create if not
+                    // Tạo conversation entry nếu chưa có
                     ConversationEntry existingEntry = conversationRepository.findByQuestionId(nextQuestion.getId());
                     if (existingEntry == null) {
                         log.info("Creating conversation entry for pre-generated question {}", nextQuestion.getId());
@@ -124,25 +108,27 @@ public class InterviewService {
                                 nextQuestion.getId(),
                                 nextQuestion.getContent());
                     }
-
+                    // Chuẩn bị response trả về cho WebSocket
                     ProcessAnswerResponse.NextQuestion nextQuestionDto = new ProcessAnswerResponse.NextQuestion(
                             nextQuestion.getId(),
                             nextQuestion.getContent());
+                
+                    log.info("Returned pre-generated question {} of {} (limit: {})", 
+                            currentIndex + 2, allQuestions.size(), maxQuestions);
 
-                    log.info("Returned pre-generated question {} of {}", currentIndex + 2, allQuestions.size());
-
-                    // Start async evaluation for practice mode too
+                    // Bắt đầu đánh giá không đồng bộ
                     startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
 
                     return new ProcessAnswerResponse(
                             savedAnswer.getId(),
                             savedAnswer.getFeedback(),
                             nextQuestionDto);
-                } else {
-                    // No more questions - practice session ends
-                    log.info("Practice session completed - no more questions");
+                } else { 
+                    // Đã hết câu hỏi trong practice với cùng context
+                    log.info("Practice session completed - reached question {} of {} (limit: {})", 
+                            currentIndex + 1, allQuestions.size(), maxQuestions);
                     
-                    // Start async evaluation for last answer
+                    // Bắt đầu đánh giá không đồng bộ cho câu trả lời cuối cùng
                     startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
                     
                     return new ProcessAnswerResponse(
@@ -152,18 +138,22 @@ public class InterviewService {
                     );
                 }
             } else {
-                // Practice with SAME CONTEXT - only first question pre-generated, generate new questions
+                // Trường hợp practice với SAME CONTEXT, tạo câu hỏi mới bằng AI
                 log.info("Practice with SAME CONTEXT detected - will generate new question using AI (current: {}, target: {})",
-                        currentQuestionCount, session.getQuestionCount());
-                // Fall through to AI generation below
+                        totalQuestionsInDb, session.getQuestionCount());
             }
         }
 
-        // Check if we've reached the question limit
-        long currentQuestionCount = questionRepository.countBySessionId(sessionId);
-        if (session.getQuestionCount() != null && currentQuestionCount >= session.getQuestionCount()) {
+        // Count ANSWERED questions, not total questions in database
+        // This is crucial to prevent early termination due to old/orphaned questions
+        long answeredQuestionCount = answerRepository.countBySessionId(sessionId);
+        log.info("Session {} - Answered questions: {}, Target: {}", 
+                sessionId, answeredQuestionCount, session.getQuestionCount());
+        
+        // Check if we've reached the question limit based on ANSWERED questions
+        if (session.getQuestionCount() != null && answeredQuestionCount >= session.getQuestionCount()) {
             log.info("Session {} has reached question limit ({}/{}), ending interview",
-                    sessionId, currentQuestionCount, session.getQuestionCount());
+                    sessionId, answeredQuestionCount, session.getQuestionCount());
             
             // Start async evaluation even when session ends
             startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
@@ -177,12 +167,17 @@ public class InterviewService {
 
         // Tạo câu hỏi tiếp theo bằng AI với CV/JD text từ session
         log.info("Generating next question for session {} ({}/{}), CV text: {}, JD text: {}",
-                sessionId, currentQuestionCount + 1, session.getQuestionCount(),
+                sessionId, answeredQuestionCount + 1, session.getQuestionCount(),
                 session.getCvText() != null, session.getJdText() != null);
 
         // Lấy 20 cặp Q&A gần nhất làm context
         List<ConversationEntry> recentHistory = conversationService.getRecentConversation(sessionId, 20);
         log.info("Retrieved {} recent conversation entries for context", recentHistory.size());
+
+        // Tính toán thứ tự câu hỏi hiện tại và tổng số câu hỏi
+        // nextQuestionNumber = số câu đã trả lời + 1 (câu tiếp theo sẽ hỏi)
+        int nextQuestionNumber = (int) answeredQuestionCount + 1;
+        int totalQuestions = session.getQuestionCount() != null ? session.getQuestionCount() : 0;
 
         String nextQuestionContent = aiService.generateNextQuestion(
                 session.getRole(),
@@ -193,7 +188,9 @@ public class InterviewService {
                 answerMessage.getContent(),
                 session.getCvText(),
                 session.getJdText(),
-                recentHistory);
+                recentHistory,
+                nextQuestionNumber,
+                totalQuestions);
 
         // Lấy câu mới nhất lưu vào DB
         InterviewQuestion nextQuestion = new InterviewQuestion();
@@ -213,7 +210,7 @@ public class InterviewService {
                 savedNextQuestion.getContent());
 
         log.info("Generated question {} of {} for session {}",
-                currentQuestionCount + 1, session.getQuestionCount(), sessionId);
+                answeredQuestionCount + 1, session.getQuestionCount(), sessionId);
 
         // NOW start async evaluation AFTER question is generated
         // This ensures user gets next question immediately while evaluation runs in background
@@ -225,10 +222,7 @@ public class InterviewService {
                 nextQuestionDto);
     }
     
-    /**
-     * Start async evaluation in background thread
-     * This method is called AFTER question generation to prioritize user experience
-     */
+    // Hàm khởi động đánh giá không đồng bộ cho câu trả lời
     private void startAsyncEvaluation(
             InterviewAnswer savedAnswer,
             String questionContent,
@@ -241,7 +235,7 @@ public class InterviewService {
             try {
                 log.info("Generating feedback for answer {} in background (after question generated)", savedAnswer.getId());
 
-                // Use new AnswerEvaluationService which integrates Judge AI + Gemini
+                // Gọi dịch vụ đánh giá câu trả lời
                 AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
                         savedAnswer.getId(),
                         questionContent,
@@ -266,34 +260,33 @@ public class InterviewService {
     // Phương thức để xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
     @Transactional
     public void processLastAnswer(Long sessionId, AnswerMessage answerMessage) {
-        log.info("Processing last answer for session {}", sessionId);
-
+        log.info("Processing last answer for session");
+        // Kiểm tra session có tồn tại không
         InterviewSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
-
+        // Kiểm tra question có thuộc về session này không
         InterviewQuestion question = questionRepository.findById(answerMessage.getQuestionId())
                 .orElseThrow(
                         () -> new RuntimeException("Question not found with id: " + answerMessage.getQuestionId()));
-
         if (!question.getSessionId().equals(sessionId)) {
             throw new RuntimeException("Question does not belong to this session");
         }
-
+        // Lưu câu trả lời vào database
         InterviewAnswer answer = new InterviewAnswer();
         answer.setQuestionId(answerMessage.getQuestionId());
         answer.setContent(answerMessage.getContent());
         InterviewAnswer savedAnswer = answerRepository.save(answer);
 
-        log.info("Saved last answer {} for session {}", savedAnswer.getId(), sessionId);
+        log.info("Saved last answer ");
 
-        // Eager fetch skills BEFORE async to avoid LazyInitializationException
-        List<String> skills = new ArrayList<>(session.getSkill());  // Force Hibernate to initialize collection NOW
+        // Thực hiện đánh giá câu trả lời trong nền
+        List<String> skills = new ArrayList<>(session.getSkill());  
         String role = session.getRole();
         String level = session.getLevel();
         String questionContent = question.getContent();
         String answerContent = answerMessage.getContent();
 
-        // Start async evaluation using helper method
+        // Bắt đầu đánh giá không đồng bộ
         startAsyncEvaluation(savedAnswer, questionContent, answerContent, role, level, skills);
 
         conversationService.updateConversationEntry(
@@ -304,10 +297,7 @@ public class InterviewService {
         log.info("Completed processing last answer for session {}", sessionId);
     }
     
-    /**
-     * Extract main competency from skills list
-     * Returns first skill if available, or empty string
-     */
+    // Phương thức trích xuất kỹ năng chính từ danh sách kỹ năng
     private String extractMainCompetency(List<String> skills) {
         if (skills != null && !skills.isEmpty()) {
             return skills.get(0);

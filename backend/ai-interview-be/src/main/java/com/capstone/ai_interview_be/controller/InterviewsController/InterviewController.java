@@ -22,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,7 +36,9 @@ public class InterviewController {
     private final ConversationService conversationService;
     private final InterviewQuestionRepository questionRepository;
     private final InterviewAnswerRepository answerRepository;
-    // Endpoint to get all interview questions
+
+
+    // Phương thức tạo phiên phỏng vấn mới
     @PostMapping("/sessions")
     public ResponseEntity<CreateInterviewSessionResponse> createInterviewSession(
             @Valid @RequestBody CreateInterviewSessionRequest request) {
@@ -45,24 +46,22 @@ public class InterviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // Endpoint to get the latest interview question for a session
+    // Phương thức lấy danh sách câu hỏi của phiên phỏng vấn
     @GetMapping("/{sessionId}/questions")
     public ResponseEntity<?> getSessionQuestions(@PathVariable Long sessionId) {
 
-        // Get session to check if it's practice mode
-        InterviewSession session = sessionService.getSessionById(sessionId);
-        
+        // Lấy danh sách câu hỏi đã được tạo sẵn cho phiên phỏng vấn
         List<InterviewQuestion> questions = questionRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
-        
+        // Kiểm tra nếu có câu hỏi
         if (!questions.isEmpty()) {
+            // Lấy tất cả câu trả lời đã được lưu cho phiên phỏng vấn
             List<InterviewAnswer> answers = answerRepository.findAnswersBySessionId(sessionId);
             
-            // If has answers → This is a reload/continue, return answered questions + next unanswered
+            // Nếu đã có câu trả lời 
+            // → Trả về lịch sử chat gồm các câu hỏi đã trả lời + câu hỏi tiếp theo chưa trả lời
             if (!answers.isEmpty()) {
-                log.info("Session {} has history ({} questions, {} answers) - returning answered questions + next unanswered", 
-                         sessionId, questions.size(), answers.size());
                 
-                // Create answer map for quick lookup
+                // Tạo map để tra cứu nhanh câu trả lời theo questionId
                 Map<Long, InterviewAnswer> answerMap = answers.stream()
                     .collect(Collectors.toMap(
                         InterviewAnswer::getQuestionId,
@@ -70,31 +69,29 @@ public class InterviewController {
                         (existing, replacement) -> existing
                     ));
                 
-                // Build conversation with ONLY answered questions + next unanswered
+                // Xây dựng danh sách messages (câu hỏi + câu trả lời)
                 List<ChatMessageDTO> messages = new ArrayList<>();
+                // Flag để đánh dấu đã tìm thấy câu hỏi chưa trả lời
                 boolean foundUnanswered = false;
-                
+                // Duyệt qua từng câu hỏi
                 for (InterviewQuestion question : questions) {
+                    // Tìm câu trả lời tương ứng
                     InterviewAnswer answer = answerMap.get(question.getId());
-                    
                     if (answer != null) {
-                        // Add answered question + answer
+                        // Thêm cả câu hỏi và câu trả lời vào danh sách messages
                         ChatMessageDTO questionMsg = createQuestionMessage(question, sessionId);
                         messages.add(questionMsg);
-                        
                         ChatMessageDTO answerMsg = createAnswerMessage(answer, question, sessionId);
                         messages.add(answerMsg);
                     } else if (!foundUnanswered) {
-                        // Add ONLY the FIRST unanswered question
+                        // Thêm câu hỏi chưa trả lời đầu tiên và dừng lại
                         ChatMessageDTO questionMsg = createQuestionMessage(question, sessionId);
                         messages.add(questionMsg);
                         foundUnanswered = true;
-                        break; // Stop here, don't add remaining questions
+                        break;
                     }
                 }
-                
-                // Messages already in correct order (Q1, A1, Q2, A2, Q3) - no sorting needed
-                
+                // Trả về lịch sử chat
                 ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
                     .success(true)
                     .data(messages)
@@ -102,10 +99,7 @@ public class InterviewController {
                 return ResponseEntity.ok(chatHistoryResponse);
             }
             
-            // If NO answers yet → New practice session, return only FIRST question
-            log.info("Practice session {} - has {} pre-loaded questions but NO answers yet, returning FIRST question only", 
-                     sessionId, questions.size());
-            
+            // Chưa có câu trả lời nào cả trả về câu hỏi đầu tiên
             InterviewQuestion firstQuestion = questions.get(0);
             ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
                 .success(false)
@@ -114,27 +108,25 @@ public class InterviewController {
             return ResponseEntity.ok(chatHistoryResponse);
         }
         
-        // No questions at all
-        log.warn("No questions found for session {}", sessionId);
+        // Không tìm thấy câu hỏi nào cho phiên phỏng vấn
+        log.warn("No questions found for session ID: {}", sessionId);
         return ResponseEntity.notFound().build();
     }
 
-    // Endpoint to get all interview questions
+    // Phương thức lấy lịch sử hội thoại của phiên phỏng vấn
     @GetMapping("/{sessionId}/conversation")
     public ResponseEntity<List<ConversationEntry>> getSessionConversation(
             @PathVariable Long sessionId) {
-
         List<ConversationEntry> conversation = conversationService.getSessionConversation(sessionId);
         return ResponseEntity.ok(conversation);
     }
 
-    // Endpoint to get session info (including level for frontend config)
+    // Phương thức lấy thông tin chi tiết của phiên phỏng vấn
     @GetMapping("/sessions/{sessionId}")
     public ResponseEntity<InterviewSessionInfoResponse> getSessionInfo(
             @PathVariable Long sessionId) {
-
+        // Lấy thông tin phiên phỏng vấn
         InterviewSession session = sessionService.getSessionById(sessionId);
-        // Map to DTO response
         InterviewSessionInfoResponse response =
                 InterviewSessionInfoResponse.builder()
             .id(session.getId())
@@ -144,7 +136,6 @@ public class InterviewController {
             .skill(session.getSkill())
             .language(session.getLanguage())
             .title(session.getTitle())
-            .description(session.getDescription())
             .source(session.getSource().toString())
             .status(session.getStatus())
             .createdAt(session.getCreatedAt())
@@ -153,29 +144,27 @@ public class InterviewController {
             .questionCount(session.getQuestionCount())
             .startedAt(session.getStartedAt())
             .build();
+        // Nếu phiên phỏng vấn đang tiến hành, tính thời gian đã trôi qua
         if(session.getStatus().equals("in_progress")){
             response.setElapsedMinues(session.getElapsedMinutes() != null ? session.getElapsedMinutes() : 0.0);
         }
         return ResponseEntity.ok(response);
     }
 
-    // Start timer when user enters InterviewPage (only sets once)
+    // Phương thức bắt đầu hẹn giờ phỏng vấn cho phiên phỏng vấn 
     @PostMapping("/sessions/{sessionId}/start-timer")
     public ResponseEntity<Map<String, Object>> startTimer(@PathVariable Long sessionId) {
         try {
+            // Lấy phiên phỏng vấn
             InterviewSession session = sessionService.getSessionById(sessionId);
-            
-            // Only set startedAt if not already set (first time)
+            // Bắt đầu hẹn giờ nếu chưa bắt đầu
             if (session.getStartedAt() == null) {
                 session.setStartedAt(java.time.LocalDateTime.now());
                 sessionService.updateSession(session);
-                log.info("Timer started for session {} at {}", 
-                    sessionId, session.getStartedAt());
             } else {
-                log.info("Timer already started for session {} at {}", 
-                    sessionId, session.getStartedAt());
+                log.info("Timer already started");
             }
-            
+            // Trả về thời gian bắt đầu
             return ResponseEntity.ok(Map.of(
                 "message", "Timer started",
                 "startedAt", session.getStartedAt().toString()
@@ -186,38 +175,42 @@ public class InterviewController {
                 .body(Map.of("error", e.getMessage()));
         }
     }
+
+    // Phương thức kết thúc phỏng vấn và lưu thời gian đã trôi qua
     @PostMapping("/{sessionId}/leave")
-public ResponseEntity<Map<String, Object>> leaveInterview(
-    @PathVariable Long sessionId,
-    @RequestBody Map<String, Object> requestBody) {
-    try {
-        InterviewSession session = sessionService.getSessionById(sessionId);
-        
-        // Extract elapsed seconds from request
-        Integer elapsedSeconds = (Integer) requestBody.get("elapsedSeconds");
-        
-        // ✅ ĐÚNG: Lưu ELAPSED time, không phải remaining
-        double elapsedMinutes = elapsedSeconds / 60.0;
-        elapsedMinutes = Math.round(elapsedMinutes * 10.0) / 10.0;
-        
-        // ✅ LƯU elapsed time vào DB
-        session.setElapsedMinutes(elapsedMinutes);
-        sessionService.updateSession(session);
-        
-        log.info("Session {} updated - Elapsed: {}min", sessionId, elapsedMinutes);
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Interview session updated",
-            "sessionId", sessionId,
-            "elapsedMinutes", elapsedMinutes,
-            "remainingMinutes", session.getDuration() - elapsedMinutes
-        ));
-    } catch (Exception e) {
-        log.error("Error leaving interview session {}: {}", sessionId, e.getMessage());
-        return ResponseEntity.badRequest()
-            .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<Map<String, Object>> leaveInterview(
+        @PathVariable Long sessionId,
+        @RequestBody Map<String, Object> requestBody) {
+        try {
+            // Lấy phiên phỏng vấn
+            InterviewSession session = sessionService.getSessionById(sessionId);
+            
+            // Lấy thời gian đã trôi qua từ request
+            Integer elapsedSeconds = (Integer) requestBody.get("elapsedSeconds");
+            
+            // Tính lại thời gian đã trôi qua theo phút với 1 chữ số thập phân
+            double elapsedMinutes = elapsedSeconds / 60.0;
+            elapsedMinutes = Math.round(elapsedMinutes * 10.0) / 10.0;
+            
+            // Cập nhật thời gian đã trôi qua cho phiên phỏng vấn
+            session.setElapsedMinutes(elapsedMinutes);
+            sessionService.updateSession(session);
+    
+            log.info("Interview session updated with elapsed minutes");
+            return ResponseEntity.ok(Map.of(
+                "message", "Interview session updated",
+                "sessionId", sessionId,
+                "elapsedMinutes", elapsedMinutes,
+                "remainingMinutes", session.getDuration() - elapsedMinutes
+            ));
+        } catch (Exception e) {
+            log.error("Error leaving interview session {}: {}", sessionId, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        }
     }
-}
+
+    // Hàm tạo message cho câu hỏi
     private ChatMessageDTO createQuestionMessage(InterviewQuestion question, Long sessionId) {
         ChatMessageDTO message = new ChatMessageDTO();
         message.setId("q-" + question.getId());
@@ -230,11 +223,11 @@ public ResponseEntity<Map<String, Object>> leaveInterview(
         
         return message;
     }
+    
+    // Hàm tạo message cho câu trả lời
     private ChatMessageDTO createAnswerMessage(InterviewAnswer answer, 
                                                InterviewQuestion question, 
                                                Long sessionId) {
-        
-        
         ChatMessageDTO message = new ChatMessageDTO();
         message.setId("a-" + answer.getId());
         message.setSessionId(sessionId.toString());

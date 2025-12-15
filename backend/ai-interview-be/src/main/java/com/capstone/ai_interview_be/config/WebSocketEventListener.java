@@ -2,46 +2,44 @@ package com.capstone.ai_interview_be.config;
 
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
-import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+// Cấu hình lắng nghe sự kiện WebSocket
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class WebSocketEventListener implements ApplicationListener<SessionDisconnectEvent> {
 
-    /**
-     * Sự kiện khi người dùng kết nối WebSocket
-     */
+    // phương thức xử lý sự kiện kết nối WebSocket
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         System.out.println("🟢 CONNECTED: " + accessor.getSessionId());
     }
 
+    // phương thức xử lý sự kiện ngắt kết nối WebSocket
     @Override
     public void onApplicationEvent(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         System.out.println("🔴 DISCONNECTED: " + accessor.getSessionId());
     }
 
+    // phương thức xử lý sự kiện ngắt kết nối WebSocket
     @EventListener
     public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = accessor.getSessionId();
-        log.info("🔴 WebSocket disconnected, sessionId={}", sessionId);
-        // TODO: thêm logic cập nhật trạng thái user/room nếu cần
+        log.info("WebSocket disconnected, sessionId={}", sessionId);
     }
-    /**
-     * Sự kiện khi người dùng subscribe vào một topic
-     */
+   
+    // phương thức xử lý sự kiện subscribe WebSocket
     @EventListener
     public void handleSubscribeEvent(SessionSubscribeEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
@@ -51,10 +49,8 @@ public class WebSocketEventListener implements ApplicationListener<SessionDiscon
         log.info("User subscribed - SessionId: {}, Destination: {}", sessionId, destination);
     }
 
-    /**
-     * Broadcast trạng thái user đến tất cả clients
-     */
-    private void broadcastUserStatus(Long userId, String username, String status) {
-       log.info("Broadcasting user status - UserId: {}, Username: {}, Status: {}", userId, username, status);
-    }
+    //Hàm giả để phát sóng trạng thái người dùng (kết nối/ngắt kết nối)
+    // private void broadcastUserStatus(Long userId, String username, String status) {
+    //    log.info("Broadcasting user status - UserId: {}, Username: {}, Status: {}", userId, username, status);
+    // }
 }

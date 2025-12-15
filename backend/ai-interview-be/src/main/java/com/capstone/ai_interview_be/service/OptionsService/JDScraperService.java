@@ -13,43 +13,45 @@ import java.net.URL;
 @Service
 @Slf4j
 public class JDScraperService {
-
+    // Thời gian chờ kết nối (milliseconds)
     private static final int TIMEOUT_MS = 15000; 
+    // User-Agent để giả lập trình duyệt
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 
     // Phương thức chính để trích xuất JD từ URL
     public String scrapeJDFromUrl(String url) throws IOException {
-        // Validate URL
+        // Kiểm tra tính hợp lệ của URL
         validateUrl(url);
         log.info("Scraping JD from URL: {}", url);
         
         try {
-            // Tạo kết nối và lấy nội dung trang
+            // Kết nối và lấy nội dung trang web từ URL
             Document doc = Jsoup.connect(url)
                     .userAgent(USER_AGENT)
                     .timeout(TIMEOUT_MS)
                     .followRedirects(true)
                     .get();
-            
+            // Trích xuất tên miền từ URL
             String domain = extractDomain(url);
+            // Trích xuất nội dung JD dựa trên tên miền
             String jdText = extractJDContent(doc, domain);
             
             if (jdText == null || jdText.trim().isEmpty()) {
                 throw new IOException("No job description content found on the page");
             }
-            log.info("Successfully scraped JD from {}, length: {} characters", domain, jdText.length());
+            log.info("Successfully scraped JD ");
             return cleanText(jdText);
             
         } catch (IOException e) {
-            log.error("Failed to scrape JD from URL: {}", url, e);
+            log.error("Failed to scrape JD from URL");
             throw new IOException("Failed to fetch job description from URL: " + e.getMessage(), e);
         }
     }
     
-    // Hàm kiểm tra tính hợp lệ của URL
+    // Hàm trích xuất nội dung JD dựa trên tên miền
     private String extractJDContent(Document doc, String domain) {
-        // Thử các selector phổ biến trước
+        // Tìm nội dung JD dựa trên các selector phổ biến
         String content = extractWithCommonSelectors(doc);
         
         // Nếu không đủ nội dung, dùng phương pháp chung
@@ -62,6 +64,7 @@ public class JDScraperService {
     
     //Hàm trích xuất nội dung JD từ các selector phổ biến - Version nâng cao
     private String extractWithCommonSelectors(Document doc) {
+        // Sử dụng StringBuilder để xây dựng nội dung JD
         StringBuilder sb = new StringBuilder();
         
         // 1. Tìm tiêu đề công việc
@@ -72,7 +75,6 @@ public class JDScraperService {
             "[data-automation='job-detail-title']", ".job-title__text",
             "h1", "h2.job-title"
         };
-        
         String title = extractFirstMatch(doc, titleSelectors);
         if (!title.isEmpty()) {
             sb.append("- POSITION: \n").append(title).append("\n\n");
@@ -91,7 +93,7 @@ public class JDScraperService {
             sb.append("- COMPANY: \n").append(company).append("\n\n");
         }
         
-        // 4. Tìm mức lương
+        // 3. Tìm mức lương
         String[] salarySelectors = {
             ".salary", "[class*='salary']", "[data-automation='job-detail-salary']",
             ".salary-snippet", ".job-salary", "span[itemprop='baseSalary']",
@@ -103,7 +105,7 @@ public class JDScraperService {
             sb.append("- SALARY: \n").append(salary).append("\n\n");
         }
         
-        // 5. Tìm loại hình công việc
+        // 4. Tìm loại hình công việc
         String[] jobTypeSelectors = {
             ".job-type", "[class*='employment']", "[data-automation='job-detail-work-type']",
             ".jobsearch-JobMetadataHeader-item", "[class*='work-type']"
@@ -114,7 +116,7 @@ public class JDScraperService {
             sb.append("- JOB TYPE: \n").append(jobType).append("\n\n");
         }
         
-        // 6. Tìm kinh nghiệm yêu cầu
+        // 5. Tìm kinh nghiệm yêu cầu
         String[] experienceSelectors = {
             ".experience", "[class*='experience']", "[class*='seniority']",
             "[data-automation='job-detail-experience']", ".job-experience-level"
@@ -125,7 +127,7 @@ public class JDScraperService {
             sb.append("- EXPERIENCE: \n").append(experience).append("\n\n");
         }
         
-        // 7. Tìm mô tả công việc
+        // 6. Tìm mô tả công việc
         String[] descriptionSelectors = {
             // Generic selectors
             "div.job-description", "div#job-description", 
@@ -152,7 +154,7 @@ public class JDScraperService {
             sb.append("- JOB DESCRIPTION: \n").append(description).append("\n\n");
         }
         
-        // 8. Tìm yêu cầu công việc
+        // 7. Tìm yêu cầu công việc
         String[] requirementsSelectors = {
             "div[class*='requirement']", "section[class*='requirement']",
             "div[class*='qualification']", "[class*='skills-section']",
@@ -165,7 +167,7 @@ public class JDScraperService {
             sb.append("- REQUIREMENTS: \n").append(requirements).append("\n\n");
         }
         
-        // 9. Tìm quyền lợi
+        // 8. Tìm quyền lợi
         String[] benefitsSelectors = {
             "div[class*='benefit']", "section[class*='benefit']",
             "div[class*='perk']", "[class*='welfare']",
@@ -178,7 +180,7 @@ public class JDScraperService {
             sb.append("- BENEFITS: \n").append(benefits).append("\n\n");
         }
         
-        // 10. Tìm thông tin liên hệ
+        // 9. Tìm thông tin liên hệ
         String[] contactSelectors = {
             ".contact-info", "[class*='contact']", "[class*='apply']",
             ".application-details", "[data-automation='job-detail-apply']"
@@ -283,14 +285,13 @@ public class JDScraperService {
         }
 
         try {
-            // Kiểm tra định dạng URL
             new URL(urlString);
         } catch (MalformedURLException e) {
             throw new MalformedURLException("Invalid URL format: " + e.getMessage());
         }
     }
     
-    // Hàm trích xuất domain từ URL
+    // Hàm trích xuất tên miền từ URL
     private String extractDomain(String urlString) {
         try {
             URL url = new URL(urlString);

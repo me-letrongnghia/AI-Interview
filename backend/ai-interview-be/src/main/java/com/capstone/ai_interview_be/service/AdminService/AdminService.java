@@ -29,11 +29,12 @@ public class AdminService {
     private final InterviewSessionRepository interviewSessionRepository;
     private final JavaMailSender mailSender;
 
+    // Phương thức lấy thống kê tổng quan cho dashboard admin
     public AdminDashboardStatsResponse getDashboardStats() {
         Long totalUsers = userRepository.count();
         Long totalInterviews = interviewSessionRepository.count();
         
-        // Calculate interviews this week
+        //Đếm số buổi phỏng vấn trong tuần hiện tại
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDateTime startOfWeekDateTime = startOfWeek.atStartOfDay();
@@ -45,7 +46,7 @@ public class AdminService {
                         && s.getCreatedAt().isBefore(endOfWeekDateTime))
                 .count();
 
-        // Count active users today (users who had interviews today)
+        // Đếm số người dùng hoạt động trong ngày hôm nay
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         Long activeToday = interviewSessionRepository.findAll().stream()
@@ -58,7 +59,8 @@ public class AdminService {
 
         return new AdminDashboardStatsResponse(totalUsers, totalInterviews, interviewsThisWeek, activeToday);
     }
-
+    
+    // Phương thức lấy hoạt động hàng tuần cho dashboard admin
     public WeeklyActivityResponse getWeeklyActivity() {
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -93,7 +95,8 @@ public class AdminService {
         response.setActivities(activities);
         return response;
     }
-
+    
+    // Phương thức lấy các buổi phỏng vấn gần đây cho dashboard admin
     public List<AdminInterviewResponse> getRecentInterviews(Integer limit) {
         if (limit == null || limit <= 0) limit = 10;
         
@@ -117,11 +120,12 @@ public class AdminService {
                 })
                 .collect(Collectors.toList());
     }
-
+    
+    // Phương thức lấy các nhà phỏng vấn hàng đầu cho dashboard admin
     public List<TopInterviewerResponse> getTopInterviewers(Integer limit) {
         if (limit == null || limit <= 0) limit = 10;
         
-        // Get all users and their interview statistics
+        // Nhóm các buổi phỏng vấn theo userId
         Map<Long, List<InterviewSession>> userSessions = interviewSessionRepository.findAll().stream()
                 .collect(Collectors.groupingBy(InterviewSession::getUserId));
         
@@ -135,18 +139,18 @@ public class AdminService {
                         return null; // Skip admin users or deleted users
                     }
                     
-                    // Calculate statistics
+                    // Tính toán các thông tin cần thiết
                     Long interviewCount = (long) sessions.size();
                     Long totalDurationSeconds = sessions.stream()
                             .mapToLong(s -> s.getDuration() != null ? s.getDuration() : 0L)
                             .sum();
                     
-                    // Get the most recent session
+                    // Lấy buổi phỏng vấn gần đây nhất
                     InterviewSession latestSession = sessions.stream()
                             .max(Comparator.comparing(InterviewSession::getCreatedAt))
                             .orElse(null);
                     
-                    // Get the most common position they interviewed for
+                    // Xác định vị trí/chức danh phổ biến nhất
                     String mostCommonPosition = sessions.stream()
                             .collect(Collectors.groupingBy(
                                     s -> s.getRole() != null ? s.getRole() : "Unknown",
@@ -174,7 +178,8 @@ public class AdminService {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
-
+    
+    // Phương thức lấy tất cả người dùng cho admin
     public List<AdminUserResponse> getAllUsers() {
         return userRepository.findAll().stream()
                 .filter(user -> !"ADMIN".equals(user.getRole())) // Exclude admin users
@@ -197,12 +202,13 @@ public class AdminService {
                             user.isEnabled() ? "active" : "banned",
                             interviewCount,
                             avgScore,
-                            LocalDateTime.now() // You might want to add a createdAt field to UserEntity
+                            LocalDateTime.now()
                     );
                 })
                 .collect(Collectors.toList());
     }
-
+    
+    // Phương thức lấy tất cả buổi phỏng vấn cho admin
     public List<AdminInterviewResponse> getAllInterviews() {
         return interviewSessionRepository.findAll().stream()
                 .sorted((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()))
@@ -223,7 +229,8 @@ public class AdminService {
                 })
                 .collect(Collectors.toList());
     }
-
+    
+    // Phương thức ban người dùng
     public boolean banUser(Long userId) {
         Optional<UserEntity> userOpt = userRepository.findById(userId);
         if (userOpt.isPresent()) {
@@ -234,7 +241,8 @@ public class AdminService {
         }
         return false;
     }
-
+    
+    // Phương thức unban người dùng
     public boolean unbanUser(Long userId) {
         Optional<UserEntity> userOpt = userRepository.findById(userId);
         if (userOpt.isPresent()) {
@@ -245,10 +253,11 @@ public class AdminService {
         }
         return false;
     }
-
+    
+    // Phương thức xóa người dùng
     public boolean deleteUser(Long userId) {
         if (userRepository.existsById(userId)) {
-            // Delete related sessions first
+            // Xóa tất cả buổi phỏng vấn liên quan đến người dùng
             List<InterviewSession> sessions = interviewSessionRepository.findAll().stream()
                     .filter(s -> s.getUserId().equals(userId))
                     .collect(Collectors.toList());
@@ -259,7 +268,8 @@ public class AdminService {
         }
         return false;
     }
-
+    
+    // Phương thức xóa buổi phỏng vấn
     public boolean deleteInterview(Long sessionId) {
         if (interviewSessionRepository.existsById(sessionId)) {
             interviewSessionRepository.deleteById(sessionId);
@@ -267,7 +277,8 @@ public class AdminService {
         }
         return false;
     }
-
+    
+    // Hàm tính toán thời lượng buổi phỏng vấn
     private String calculateDuration(InterviewSession session) {
         if (session.getDuration() != null) {
             long minutes = session.getDuration() / 60;
@@ -275,7 +286,8 @@ public class AdminService {
         }
         return "0 mins";
     }
-
+    
+    // Hàm định dạng thời lượng từ giây sang định dạng giờ và phút
     private String formatDuration(Long totalSeconds) {
         if (totalSeconds == null || totalSeconds == 0) {
             return "0 mins";
@@ -290,13 +302,13 @@ public class AdminService {
             return minutes + " mins";
         }
     }
-
+    
+    // Hàm tính toán điểm số buổi phỏng vấn
     private Double calculateScore(Long sessionId) {
-        // Since InterviewFeedback doesn't have overallScore field,
-        // return a placeholder or calculate based on other metrics
-        return 75.0; // Placeholder - adjust based on your actual scoring logic
+        return 75.0; 
     }
-
+    
+    // Phương thức gửi email đến người dùng
     public void sendEmailToUser(Long userId, String subject, String body) throws MessagingException {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
@@ -310,7 +322,8 @@ public class AdminService {
 
         mailSender.send(message);
     }
-
+    
+    // Phương thức cập nhật thông tin người dùng
     public void updateUser(Long userId, com.capstone.ai_interview_be.dto.request.UserUpdateRequest updateRequest) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));

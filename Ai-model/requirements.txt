@@ -5,7 +5,14 @@ pydantic==2.9.2
 
 # ML/AI - PyTorch
 torch>=2.0.0
-sentencepiece>=0.1.99  # Tokenizer for Multitask model
+
+# Tokenizers
+sentencepiece>=0.1.99          # Tokenizer for MultitaskJudge model
+transformers>=4.40.0           # HuggingFace Transformers for Qwen
+
+# Quantization (optional, for 4-bit Qwen)
+bitsandbytes>=0.43.0           # For 4-bit quantization on CUDA
+accelerate>=0.30.0             # For device_map="auto"
 
 # Utilities
 python-multipart>=0.0.6

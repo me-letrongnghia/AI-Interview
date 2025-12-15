@@ -20,7 +20,8 @@ public class ContactMessageService {
     
     private final ContactMessageRepository contactMessageRepository;
     private final JavaMailSender mailSender;
-    
+
+    // phương thức tạo tin nhắn liên hệ mới
     public ContactMessage createContactMessage(ContactMessageRequest request) {
         ContactMessage contactMessage = new ContactMessage();
         contactMessage.setName(request.getName());
@@ -34,26 +35,32 @@ public class ContactMessageService {
         return contactMessageRepository.save(contactMessage);
     }
     
+    //phương thức lấy tất cả tin nhắn liên hệ
     public List<ContactMessage> getAllMessages() {
         return contactMessageRepository.findAllByOrderByCreatedAtDesc();
     }
     
+    // phương thức lấy tin nhắn liên hệ theo trạng thái
     public List<ContactMessage> getMessagesByStatus(ContactMessage.Status status) {
         return contactMessageRepository.findByStatusOrderByCreatedAtDesc(status);
     }
     
+    // phương thức lấy tin nhắn liên hệ theo email
     public List<ContactMessage> getMessagesByEmail(String email) {
         return contactMessageRepository.findByEmailOrderByCreatedAtDesc(email);
     }
     
+    // phương thức lấy tin nhắn liên hệ theo loại vấn đề
     public List<ContactMessage> getMessagesByIssueType(String issueType) {
         return contactMessageRepository.findByIssueTypeOrderByCreatedAtDesc(issueType);
     }
     
+    // phương thức lấy tin nhắn liên hệ theo id
     public Optional<ContactMessage> getMessageById(Long id) {
         return contactMessageRepository.findById(id);
     }
     
+    // phương thức cập nhật trạng thái tin nhắn liên hệ
     public ContactMessage updateMessageStatus(Long id, ContactMessage.Status status, Long respondedByUserId) {
         ContactMessage message = contactMessageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contact message not found with id: " + id));
@@ -68,6 +75,7 @@ public class ContactMessageService {
         return contactMessageRepository.save(message);
     }
     
+    // phương thức gửi phản hồi email cho tin nhắn liên hệ
     public ContactMessage sendEmailResponse(Long id, String response, Long adminUserId) throws MessagingException {
         ContactMessage message = contactMessageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contact message not found with id: " + id));
@@ -84,6 +92,7 @@ public class ContactMessageService {
         return contactMessageRepository.save(message);
     }
     
+    // Hàm trợ gửi email đến người dùng
     private void sendEmailToUser(ContactMessage message, String response) throws MessagingException {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -97,6 +106,7 @@ public class ContactMessageService {
         mailSender.send(mimeMessage);
     }
     
+    // Hàm trợ lấy tiêu đề email dựa trên loại vấn đề
     private String getEmailSubjectByIssueType(String issueType, String originalSubject) {
         String prefix;
         switch (issueType) {
@@ -125,6 +135,7 @@ public class ContactMessageService {
         return prefix + "Re: " + originalSubject;
     }
     
+    // Hàm trợ xây dựng nội dung email phản hồi
     private String buildEmailContent(ContactMessage message, String response) {
         return String.format(
             "<html><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
@@ -155,6 +166,7 @@ public class ContactMessageService {
         );
     }
     
+    // phương thức xóa tin nhắn liên hệ
     public boolean deleteMessage(Long id) {
         if (contactMessageRepository.existsById(id)) {
             contactMessageRepository.deleteById(id);
@@ -163,6 +175,7 @@ public class ContactMessageService {
         return false;
     }
     
+    // phương thức đếm số lượng tin nhắn theo trạng thái
     public long getMessageCountByStatus(ContactMessage.Status status) {
         return contactMessageRepository.countByStatus(status);
     }

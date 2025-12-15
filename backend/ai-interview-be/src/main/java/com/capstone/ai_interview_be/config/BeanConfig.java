@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+// Cấu hình các bean cần thiết cho ứng dụng
 @Configuration
 public class BeanConfig {
     @Bean

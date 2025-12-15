@@ -22,8 +22,7 @@ public class SessionController {
     
     private final InterviewSessionService sessionService;
     
-    // Lấy thông tin chi tiết của một phiên phỏng vấn theo ID
-
+    // Phương thức lấy thông tin phiên phỏng vấn theo id
     @GetMapping("/{sessionId}")
     public ResponseEntity<InterviewSessionInfoResponse> getSessionById(@PathVariable Long sessionId) {
         log.info("Getting session info for sessionId: {}", sessionId);
@@ -38,8 +37,7 @@ public class SessionController {
         }
     }
     
-    // Lấy tất cả phiên phỏng vấn của user với bộ lọc tùy chọn
-
+    // Phương thức lấy tất cả phiên phỏng vấn của người dùng với các bộ lọc tùy chọn
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<InterviewSessionInfoResponse>> getSessionsByUserId(
             @PathVariable Long userId,
@@ -65,7 +63,7 @@ public class SessionController {
         }
     }
     
-    // Cập nhật trạng thái của phiên phỏng vấn
+    // Phương thức cập nhật trạng thái phiên phỏng vấn
     @PutMapping("/{sessionId}/status")
     public ResponseEntity<Map<String, String>> updateSessionStatus(
             @PathVariable Long sessionId,
@@ -85,9 +83,7 @@ public class SessionController {
         }
     }
     
-    // Xóa một phiên phỏng vấn
-    
-    @DeleteMapping("/{sessionId}")
+    // Phương thức xóa phiên phỏng vấn
     public ResponseEntity<Map<String, String>> deleteSession(@PathVariable Long sessionId) {
         log.info("Deleting session: {}", sessionId);
         
@@ -103,9 +99,7 @@ public class SessionController {
         }
     }
     
-
-    
-    // Chuyển đổi InterviewSession entity sang InterviewSessionInfoResponse DTO
+    // Hàm chuyển đổi từ InterviewSession sang InterviewSessionInfoResponse
     private InterviewSessionInfoResponse convertToResponse(InterviewSession session) {
         return InterviewSessionInfoResponse.builder()
                 .id(session.getId())
@@ -115,7 +109,6 @@ public class SessionController {
                 .skill(session.getSkill())
                 .language(session.getLanguage())
                 .title(session.getTitle())
-                .description(session.getDescription())
                 .source(session.getSource() != null ? session.getSource().name() : "Custom")
                 .status(session.getStatus())
                 .createdAt(session.getCreatedAt())

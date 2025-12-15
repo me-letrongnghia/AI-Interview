@@ -19,19 +19,22 @@ public class AdminController {
 
     private final AdminService adminService;
     private final ContactMessageService contactMessageService;
-
+    
+    // Phương thức lấy thống kê tổng quan cho dashboard admin
     @GetMapping("/dashboard/stats")
     public ResponseEntity<AdminDashboardStatsResponse> getDashboardStats() {
         AdminDashboardStatsResponse stats = adminService.getDashboardStats();
         return ResponseEntity.ok(stats);
     }
 
+    // Phương thức lấy hoạt động hàng tuần cho dashboard admin
     @GetMapping("/dashboard/weekly-activity")
     public ResponseEntity<WeeklyActivityResponse> getWeeklyActivity() {
         WeeklyActivityResponse activity = adminService.getWeeklyActivity();
         return ResponseEntity.ok(activity);
     }
 
+    // Phương thức lấy các buổi phỏng vấn gần đây cho dashboard admin
     @GetMapping("/dashboard/recent-interviews")
     public ResponseEntity<List<AdminInterviewResponse>> getRecentInterviews(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
@@ -39,6 +42,7 @@ public class AdminController {
         return ResponseEntity.ok(interviews);
     }
 
+    // Phương thức lấy top người phỏng vấn cho dashboard admin
     @GetMapping("/dashboard/top-interviewers")
     public ResponseEntity<List<TopInterviewerResponse>> getTopInterviewers(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
@@ -46,30 +50,35 @@ public class AdminController {
         return ResponseEntity.ok(topInterviewers);
     }
 
+    // Phương thức quản lý người dùng và buổi phỏng vấn
     @GetMapping("/users")
     public ResponseEntity<List<AdminUserResponse>> getAllUsers() {
         List<AdminUserResponse> users = adminService.getAllUsers();
         return ResponseEntity.ok(users);
     }
 
+    // Phương thức lấy tất cả buổi phỏng vấn
     @GetMapping("/interviews")
     public ResponseEntity<List<AdminInterviewResponse>> getAllInterviews() {
         List<AdminInterviewResponse> interviews = adminService.getAllInterviews();
         return ResponseEntity.ok(interviews);
     }
 
+    // Phương thức ban người dùng
     @PostMapping("/users/{userId}/ban")
     public ResponseEntity<Void> banUser(@PathVariable Long userId) {
         boolean success = adminService.banUser(userId);
         return success ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
+    // Phương thức bỏ ban người dùng
     @PostMapping("/users/{userId}/unban")
     public ResponseEntity<Void> unbanUser(@PathVariable Long userId) {
         boolean success = adminService.unbanUser(userId);
         return success ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
+    // Phương thức cập nhật thông tin người dùng
     @PutMapping("/users/{userId}")
     public ResponseEntity<String> updateUser(@PathVariable Long userId, @RequestBody UserUpdateRequest updateRequest) {
         try {
@@ -80,18 +89,21 @@ public class AdminController {
         }
     }
 
+    // Phương thức xóa người dùng
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
         boolean success = adminService.deleteUser(userId);
         return success ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
+    // Phương thức xóa buổi phỏng vấn
     @DeleteMapping("/interviews/{sessionId}")
     public ResponseEntity<Void> deleteInterview(@PathVariable Long sessionId) {
         boolean success = adminService.deleteInterview(sessionId);
         return success ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
+    // Phương thức gửi email đến người dùng
     @PostMapping("/users/{userId}/send-email")
     public ResponseEntity<String> sendEmailToUser(
             @PathVariable Long userId,
@@ -104,7 +116,7 @@ public class AdminController {
         }
     }
 
-    // Contact Messages Management
+    // Phương thức lấy danh sách tin nhắn liên hệ
     @GetMapping("/contact-messages")
     public ResponseEntity<List<ContactMessage>> getContactMessages(
             @RequestParam(required = false) String status,
@@ -131,6 +143,7 @@ public class AdminController {
         }
     }
 
+    // Phương thức lấy thống kê tin nhắn liên hệ
     @GetMapping("/contact-messages/stats")
     public ResponseEntity<ContactMessageStats> getContactMessageStats() {
         ContactMessageStats stats = new ContactMessageStats(
@@ -140,6 +153,7 @@ public class AdminController {
         return ResponseEntity.ok(stats);
     }
 
+    // Phương thức cập nhật trạng thái tin nhắn liên hệ
     @PutMapping("/contact-messages/{id}/status")
     public ResponseEntity<ContactMessage> updateContactMessageStatus(
             @PathVariable Long id,
@@ -155,6 +169,7 @@ public class AdminController {
         }
     }
 
+    // Phương thức gửi phản hồi email cho tin nhắn liên hệ
     @PutMapping("/contact-messages/{id}/response")
     public ResponseEntity<String> sendContactMessageResponse(
             @PathVariable Long id,
@@ -169,6 +184,7 @@ public class AdminController {
         }
     }
 
+    // Phương thức xóa tin nhắn liên hệ
     public static class ContactMessageStats {
         public final long pending;
         public final long resolved;

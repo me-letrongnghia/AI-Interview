@@ -21,16 +21,21 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
     private final UserRepository userRepository;
     private final InterviewSessionRepository interviewSessionRepository;
+    // Phương thức lấy thông tin người dùng dựa trên email từ Principal
     @GetMapping
     public ResponseEntity<UserProfileResponse> getUserByEmail(Principal principal) {
+        // Lấy thông tin người dùng từ cơ sở dữ liệu dựa trên email
         UserEntity user = userRepository.findByEmail(principal.getName()).orElse(null);
+        // Nếu không tìm thấy người dùng, trả về mã lỗi 404
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
+        // Lấy phiên phỏng vấn mới nhất của người dùng
         InterviewSession session = interviewSessionRepository.findLatestSessionWithCvByUserId(user.getId()).orElse(null);
         Long countSession = interviewSessionRepository.countByUserId(user.getId());
         Long totalDuration = interviewSessionRepository.sumDurationByUserId(user.getId());
         Long totalQuestion = interviewSessionRepository.sumQuestionCountByUserId(user.getId());
+        // Tạo đối tượng phản hồi và điền thông tin người dùng
         UserProfileResponse response = new UserProfileResponse();
         response.setId(user.getId());
         response.setEmail(user.getEmail());
@@ -41,8 +46,11 @@ public class UserController {
         response.setCountSession(countSession);
         response.setTotalDuration(totalDuration);
         response.setTotalQuestion(totalQuestion);
+        // Trả về phản hồi với mã trạng thái 200 OK
         return ResponseEntity.ok(response);
     }
+    
+    // Phương thức cập nhật ảnh đại diện người dùng
     @PutMapping("/update-picture")
     public ResponseEntity<UserProfileResponse> updateUserPicture(@RequestBody UserProfileRequest request, Principal principal) {
         UserEntity user = userRepository.findByEmail(principal.getName()).orElse(null);
@@ -52,7 +60,7 @@ public class UserController {
         user.setPicture(request.getPictureUrl());
         user.setFullName(request.getFullName());
         userRepository.save(user);
-
+        // Tạo đối tượng phản hồi và điền thông tin người dùng đã cập nhật
         UserProfileResponse response = new UserProfileResponse();
         response.setId(user.getId());
         response.setEmail(user.getEmail());

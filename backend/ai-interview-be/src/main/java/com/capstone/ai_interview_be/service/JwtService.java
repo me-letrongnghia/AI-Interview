@@ -37,38 +37,38 @@ public class JwtService {
     @Value("${setTime.refreshToken}")
     private long refresh_tokenExpiration;
 
-    // Generate Access Token
+    // Phương thức tạo Access Token
     public String generateAccessToken(Authentication authentication) {
         Map<String, String> claims = new HashMap<>();
         return generateToken(authentication,jwtExpiration,claims);
     }
 
-    // Generate Refresh Token
+    // Phương thức tạo Refresh Token
     public String generateRefreshToken(Authentication authentication) {
         Map<String, String> claims = new HashMap<>();
         claims.put("tokenType","refresh");
         return generateToken(authentication,refresh_tokenExpiration,claims);
     }
     
-    // validate token user
+    // Phương thức xác thực token người dùng
     public boolean validateToken(String token, UserDetails userDetails) {
         String email = extractEmailToToken(token);
         return email != null && email.equals(userDetails.getUsername());
     }
     
-    // validate refresh token
+    // Phương thức xác thực Refresh Token
     public boolean validateRefreshToken(String token) {
         Claims claims = extractAllClaims(token);
         if(claims == null) return false;
         return "refresh".equals(claims.get("tokenType"));
     }
     
-    // validate token
+    // Phương thức xác thực token
     public boolean isValidateToken(String token) {
         return extractAllClaims(token) != null;
     }
     
-    // generate token
+    // Phương thức tạo token mới
     private String generateToken(Authentication authentication, long jwtExpiration, Map<String, String> claims) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Instant now = Instant.now();
@@ -87,7 +87,7 @@ public class JwtService {
                 .compact();
     }
 
-    // extract email to token
+    // Phương thức trích xuất email từ token
     public String extractEmailToToken(String token) {
         Claims claims = extractAllClaims(token);
         if(claims != null) {
@@ -96,7 +96,7 @@ public class JwtService {
         return null;
     }
 
-    // extract all claims from token
+    // Phương thức trích xuất tất cả các claims từ token
     private Claims extractAllClaims(String token) {
         if (token == null || token.trim().isEmpty()) {
             return null;
@@ -113,12 +113,12 @@ public class JwtService {
         }
     }
 
-    // extract email from token
+    // Phương thức trích xuất email từ token
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // extract user id from token
+    // Phương thức trích xuất user id từ token
     public Long extractUserId(String token) {
         String email = extractEmailToToken(token);
         if (email == null) {

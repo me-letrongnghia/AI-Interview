@@ -19,6 +19,7 @@ public class ContactMessageController {
     
     private final ContactMessageService contactMessageService;
     
+    // Phương thức gửi tin nhắn liên hệ
     @PostMapping("/message")
     public ResponseEntity<String> sendContactMessage(@Valid @RequestBody ContactMessageRequest request) {
         try {
@@ -29,6 +30,7 @@ public class ContactMessageController {
         }
     }
     
+    // Phương thức lấy tất cả tin nhắn liên hệ với các bộ lọc tùy chọn
     @GetMapping("/messages")
     public ResponseEntity<List<ContactMessage>> getAllMessages(
             @RequestParam(required = false) String status,
@@ -37,7 +39,7 @@ public class ContactMessageController {
         
         try {
             List<ContactMessage> messages;
-            
+            // Áp dụng bộ lọc nếu có
             if (status != null) {
                 ContactMessage.Status messageStatus = ContactMessage.Status.valueOf(status.toUpperCase());
                 messages = contactMessageService.getMessagesByStatus(messageStatus);
@@ -55,6 +57,7 @@ public class ContactMessageController {
         }
     }
     
+    // Phương thức lấy tin nhắn liên hệ theo id
     @GetMapping("/messages/{id}")
     public ResponseEntity<ContactMessage> getMessageById(@PathVariable Long id) {
         Optional<ContactMessage> message = contactMessageService.getMessageById(id);
@@ -62,6 +65,7 @@ public class ContactMessageController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
+    // Phương thức cập nhật trạng thái tin nhắn liên hệ
     @PutMapping("/messages/{id}/status")
     public ResponseEntity<ContactMessage> updateMessageStatus(
             @PathVariable Long id,
@@ -77,6 +81,7 @@ public class ContactMessageController {
         }
     }
     
+    // Phương thức gửi phản hồi qua email và cập nhật tin nhắn liên hệ
     @PutMapping("/messages/{id}/response")
     public ResponseEntity<String> sendEmailResponse(
             @PathVariable Long id,
@@ -91,12 +96,14 @@ public class ContactMessageController {
         }
     }
     
+    // Phương thức xóa tin nhắn liên hệ
     @DeleteMapping("/messages/{id}")
     public ResponseEntity<Void> deleteMessage(@PathVariable Long id) {
         boolean deleted = contactMessageService.deleteMessage(id);
         return deleted ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
     
+    // Phương thức lấy thống kê tin nhắn liên hệ
     @GetMapping("/stats")
     public ResponseEntity<ContactMessageStats> getMessageStats() {
         ContactMessageStats stats = new ContactMessageStats(
@@ -106,6 +113,7 @@ public class ContactMessageController {
         return ResponseEntity.ok(stats);
     }
     
+    // Phương thức thống kê tin nhắn liên hệ
     public static class ContactMessageStats {
         public final long pending;
         public final long resolved;

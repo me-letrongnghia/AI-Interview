@@ -21,21 +21,17 @@ import reactor.util.retry.Retry;
 @Service
 @Slf4j
 public class GeminiService {
-
-    private static final String DEFAULT_ERROR_MESSAGE = "Sorry, I couldn't generate a response at the moment.";
-    private static final String API_ERROR_MESSAGE = "Sorry, there was an error with the AI service.";
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(90); // Increased for retries
-    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
-    private static final int MAX_RETRIES = 3;
-    private static final Duration RETRY_MIN_BACKOFF = Duration.ofMillis(500);
-    private static final Duration RETRY_MAX_BACKOFF = Duration.ofSeconds(5);
-
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(120); // Tăng timeout cho các request dài
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com"; // Gemini API base URL
+    private static final int MAX_RETRIES = 5; // Số lần retry tối đa
+    private static final Duration RETRY_MIN_BACKOFF = Duration.ofSeconds(2); // Thời gian chờ tối thiểu giữa các lần retry
+    private static final Duration RETRY_MAX_BACKOFF = Duration.ofSeconds(30); // Thời gian chờ tối đa giữa các lần retry
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Khởi tạo Gemini service với WebClient
+    // Phương thức khởi tạo GeminiService với WebClient và cấu hình
     public GeminiService(@Value("${gemini.api-key}") String apiKey,
             @Value("${gemini.model}") String model) {
         this.apiKey = apiKey;
@@ -47,14 +43,13 @@ public class GeminiService {
         log.info("Initialized GeminiService with model: {}", model);
     }
 
-    // Gửi request tới Gemini API và xử lý response (tối ưu với Map thay vì DTO)
+    // Phương thức gọi Gemini API để tạo phản hồi dựa trên systemPrompt và userPrompt
     public String generateResponse(String systemPrompt, String userPrompt) {
         try {
             long startTime = System.currentTimeMillis();
 
             String combinedPrompt = systemPrompt + "\n\n" + userPrompt;
 
-            // Build request body inline với Map (gọn hơn DTO)
             Map<String, Object> requestBody = Map.of(
                     "contents", List.of(
                             Map.of("parts", List.of(Map.of("text", combinedPrompt)))),
@@ -66,7 +61,7 @@ public class GeminiService {
 
             log.info("Sending request to Gemini with model: {}", model);
 
-            // Call API - Use x-goog-api-key header instead of query parameter
+            // Gọi Gemini API với retry cho 429 và 503
             String url = String.format("/v1beta/models/%s:generateContent", model);
 
             @SuppressWarnings("unchecked")
@@ -80,7 +75,6 @@ public class GeminiService {
                     .retryWhen(Retry.backoff(MAX_RETRIES, RETRY_MIN_BACKOFF)
                             .maxBackoff(RETRY_MAX_BACKOFF)
                             .filter(throwable -> {
-                                // Retry on 503 Service Unavailable and 429 Too Many Requests
                                 if (throwable instanceof WebClientResponseException) {
                                     WebClientResponseException ex = (WebClientResponseException) throwable;
                                     int status = ex.getStatusCode().value();
@@ -102,24 +96,23 @@ public class GeminiService {
             long duration = System.currentTimeMillis() - startTime;
             log.info("Gemini API responded in {}ms", duration);
 
-            // Extract text from response
             String content = extractTextFromResponse(response);
 
             if (content != null && !content.trim().isEmpty()) {
-                log.info("Received response from Gemini: {}", content.substring(0, Math.min(100, content.length())));
+                log.info("Received response from Gemini");
                 return content.trim();
             }
 
             log.warn("Empty response from Gemini");
-            return DEFAULT_ERROR_MESSAGE;
+            return "Sorry, AI is currently unavailable.";
 
         } catch (Exception e) {
             log.error("Error calling Gemini API: {}", e.getMessage(), e);
-            return API_ERROR_MESSAGE;
+            return "Sorry, AI is currently unavailable.";
         }
     }
 
-    // Helper method để extract text từ Gemini response
+    // Hàm trích xuất text từ phản hồi của Gemini
     @SuppressWarnings("unchecked")
     private String extractTextFromResponse(Map<String, Object> response) {
         try {
@@ -141,47 +134,61 @@ public class GeminiService {
         return null;
     }
 
-    // Tạo câu hỏi đầu tiên
+    // Phương thức tạo câu hỏi mở đầu - Warm-up về vị trí và skills
     public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
         String skillsText = (skills == null || skills.isEmpty())
-                ? "None"
+                ? "general programming"
                 : String.join(", ", skills);
 
-        String systemPrompt = "You are an expert TECHNICAL interviewer. " +
-                "Output EXACTLY ONE opening interview question in " + (language == null ? "English" : language) + ". " +
-                "Tailor it to the candidate's role, skills, and level.\n" +
+        String systemPrompt = "You are a friendly and professional interviewer conducting a job interview. " +
+                "Output EXACTLY ONE warm-up opening question in " + (language == null ? "English" : language) + ". " +
+                "This is the FIRST question of the interview - a warm-up question about the position and skills.\n\n" +
                 "Rules:\n" +
-                "- Start with a friendly greeting and introduction.\n" +
-                "- Ask an appropriate opening question for the given level (" + level + ").\n" +
-                "- Start with: Hello, Hi, Welcome, or similar greeting.\n" +
+                "- Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).\n" +
+                "- Ask about their interest in the " + role + " position OR their experience/interest with the required skills.\n" +
+                "- Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.\n" +
+                "- Keep it open-ended and conversational - this is a warm-up, not a deep technical question.\n" +
+                "- DO NOT ask complex technical implementation questions yet.\n" +
                 "- End with a question mark (?).\n" +
                 "- Do NOT include preamble, explanations, numbering, or multiple questions.\n" +
-                "- Return only the greeting and question.";
+                "- Return only the greeting and question.\n\n" +
+                "Example good opening questions:\n" +
+                "- \"Hello! Welcome to the interview for the " + role + " position. What attracted you to this role and these technologies?\"\n" +
+                "- \"Hi there! I see you're interested in working with " + skillsText + ". What got you started with these technologies?\"\n" +
+                "- \"Welcome! Before we dive deeper, I'd love to know - what excites you most about the " + role + " role?\"";
 
         String userPrompt = String.format(
-                "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate the opening interview question.",
-                role != null ? role : "Unknown Role",
-                level != null ? level : "Junior",
+                "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.",
+                role,
+                level,
                 skillsText);
 
         return generateResponse(systemPrompt, userPrompt);
     }
 
-    // Tạo câu hỏi tiếp theo (simple version without history)
+    // Phương thức tạo câu hỏi tiếp theo mà không có lịch sử hội thoại
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer) {
-        return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null);
+        return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null, 0, 0);
     }
 
-    // Tạo câu hỏi tiếp theo với conversation history đầy đủ
+    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại mà không có thông tin tiến trình
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory) {
+        return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer,
+                conversationHistory, 0, 0);
+    }
+
+    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại và thông tin tiến trình
+    public String generateNextQuestion(String role, List<String> skills, String language, String level,
+            String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory,
+            int currentQuestionNumber, int totalQuestions) {
 
         String skillsText = (skills == null || skills.isEmpty())
                 ? "None"
                 : String.join(", ", skills);
 
-        // Build conversation context from history
+        // Xây dựng ngữ cảnh lịch sử phỏng vấn
         StringBuilder historyContext = new StringBuilder();
         if (conversationHistory != null && !conversationHistory.isEmpty()) {
             historyContext.append("=== INTERVIEW HISTORY ===\n");
@@ -200,41 +207,372 @@ public class GeminiService {
             historyContext.append("=== END HISTORY ===\n\n");
         }
 
-        String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer. " +
-                "Output EXACTLY ONE follow-up interview question in " + (language == null ? "English" : language) + ". "
-                +
-                "You have access to the FULL interview history to understand the conversation context.\n" +
-                "Tailor your question to the candidate's previous answers, role, skills, and level.\n" +
-                "Rules:\n" +
-                "- Review the entire interview history to avoid repeating questions already asked.\n" +
-                "- The question must build upon the candidate's answers or probe a related concept.\n" +
-                "- Keep the difficulty appropriate for the given level (" + level + ").\n" +
+        // Xây dựng hướng dẫn phase dựa trên tiến trình phỏng vấn
+        String phaseGuidance = buildPhaseGuidance(currentQuestionNumber, totalQuestions, level);
+        String normalizedLevel = normalizeLevel(level);
+
+        // Xây dựng quy tắc cụ thể theo level
+        String levelSpecificRules = buildLevelSpecificRules(normalizedLevel);
+        
+        String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.\n\n" +
+                "=== CRITICAL REQUIREMENTS ===\n" +
+                "1. You MUST follow the INTERVIEW PHASE STRATEGY below EXACTLY.\n" +
+                "2. You MUST generate questions appropriate for the candidate's level: " + normalizedLevel + "\n" +
+                "3. You MUST match the difficulty specified in the phase strategy.\n" +
+                "4. Output EXACTLY ONE question in " + (language == null ? "English" : language) + ".\n\n" +
+                phaseGuidance + "\n\n" +
+                levelSpecificRules +
+                "=== STRICT RULES ===\n" +
+                "- FOLLOW the phase strategy difficulty level strictly.\n" +
+                "- DO NOT ask questions too hard or too easy for " + normalizedLevel + " level.\n" +
+                "- Review interview history to avoid repeating questions.\n" +
+                "- Build upon the candidate's previous answers.\n" +
                 "- Start with: How, What, Why, When, Which, Describe, Design, or Implement.\n" +
                 "- End with a question mark (?).\n" +
-                "- Do NOT include preamble, explanations, numbering, or multiple questions.\n" +
-                "- Return only the question.";
+                "- Return ONLY the question - no preamble, no explanation, no numbering.\n";
+
+        String progressInfo = "";
+        if (totalQuestions > 0 && currentQuestionNumber > 0) {
+            progressInfo = String.format("\n\n=== INTERVIEW PROGRESS ===\nQuestion: %d of %d (%.0f%% complete)\nPhase guidance above is based on this progress.\n",
+                    currentQuestionNumber, totalQuestions,
+                    (double) currentQuestionNumber / totalQuestions * 100);
+        }
 
         String userPrompt = String.format(
-                "Role: %s\nLevel: %s\nSkills: %s\n\n%sCurrent Question: %s\nCandidate's Answer: %s\n\nGenerate the next interview question based on the full context.",
+                "=== CANDIDATE INFO ===\nRole: %s\nLevel: %s (IMPORTANT: Match question difficulty to this level!)\nSkills: %s%s\n\n%s=== CURRENT CONTEXT ===\nPrevious Question: %s\nCandidate's Answer: %s\n\n=== YOUR TASK ===\nGenerate the next interview question following the PHASE STRATEGY above. The question MUST be appropriate for a %s candidate.",
                 role != null ? role : "Unknown Role",
-                level != null ? level : "Junior",
+                normalizedLevel,
                 skillsText,
+                progressInfo,
                 historyContext.toString(),
                 previousQuestion != null ? previousQuestion : "N/A",
-                previousAnswer != null ? previousAnswer : "N/A");
+                previousAnswer != null ? previousAnswer : "N/A",
+                normalizedLevel);
 
         return generateResponse(systemPrompt, userPrompt);
     }
 
+    // Hàm xác định phase dựa trên tiến trình phỏng vấn
+    private String buildPhaseGuidance(int currentQuestionNumber, int totalQuestions, String level) {
+        // Nếu không có thông tin về tiến trình, trả về hướng dẫn chung
+        if (totalQuestions <= 0 || currentQuestionNumber <= 0) {
+            return "INTERVIEW PHASE: Standard technical question - adjust difficulty based on candidate's level (" + level + ").";
+        }
+
+        // Xác định phase dựa trên thứ tự câu hỏi
+        String normalizedLevel = normalizeLevel(level);
+        // Tạo hướng dẫn dựa trên phase và level
+        StringBuilder guidance = new StringBuilder();
+        guidance.append("=== INTERVIEW PHASE STRATEGY ===\n"); 
+        guidance.append(String.format("Current: Question %d of %d\n", currentQuestionNumber, totalQuestions));
+        guidance.append(String.format("Candidate Level: %s\n\n", normalizedLevel));
+
+        // Xác định phase dựa trên thứ tự câu hỏi cụ thể
+        InterviewPhase phase = determinePhase(currentQuestionNumber, totalQuestions);
+        
+        // Xây dựng hướng dẫn dựa trên phase và level
+        buildPhaseAndLevelGuidance(guidance, phase, normalizedLevel);
+        
+        guidance.append("\n=== END PHASE STRATEGY ===");
+        return guidance.toString();
+    }
+    
+    // Hàm xác định phase dựa trên thứ tự câu hỏi
+    private String buildLevelSpecificRules(String level) {
+        StringBuilder rules = new StringBuilder();
+        rules.append("=== LEVEL-SPECIFIC RULES FOR " + level.toUpperCase() + " ===\n");
+        if (level.equals("Intern") || level.equals("Fresher")) {
+            rules.append("⚠️ CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:\n");
+            rules.append("1. DO NOT ask about work experience or past projects - they likely have none\n");
+            rules.append("2. DO NOT ask about frameworks like Hibernate, JPA, Spring Security unless they listed it in skills\n");
+            rules.append("3. FOCUS on fundamental concepts: variables, data types, loops, conditionals, OOP basics\n");
+            rules.append("4. Use simple, clear language - avoid complex technical jargon\n");
+            rules.append("5. Ask theoretical questions like 'What is...?', 'Why do we use...?', 'What are the differences between...?'\n");
+            rules.append("6. For Java: Focus on String, Array, List, basic OOP, basic SQL concepts\n");
+            rules.append("7. MAXIMUM difficulty: Simple implementation questions (NOT architecture or design patterns)\n");
+            rules.append("\n");
+        } else if (level.equals("Junior")) {
+            rules.append("GUIDELINES FOR JUNIOR CANDIDATES:\n");
+            rules.append("1. Can ask about basic project experience but don't expect production-level answers\n");
+            rules.append("2. Focus on common frameworks and tools they likely learned\n");
+            rules.append("3. Test understanding of core concepts with some practical application\n");
+            rules.append("4. Avoid complex system design or advanced architectural questions\n");
+            rules.append("\n");
+        }
+        
+        return rules.toString();
+    }
+    
+    // Hàm chuẩn hóa level thành các mức cụ thể
+    private String normalizeLevel(String level) {
+        if (level == null) return "Intern";
+        String l = level.toLowerCase();
+        if (l.contains("intern")) return "Intern";
+        if (l.contains("fresher")) return "Fresher";
+        if (l.contains("junior")) return "Junior";
+        if (l.contains("mid")) return "Mid-level";
+        if (l.contains("senior")) return "Senior";
+        if (l.contains("lead")) return "Lead";
+        return "Intern";
+    }
+    
+    // Hàm xác định phase dựa trên thứ tự câu hỏi
+    private void buildPhaseAndLevelGuidance(StringBuilder guidance, InterviewPhase phase, String level) {
+        boolean isEntry = level.equals("Intern") || level.equals("Fresher");
+        boolean isJunior = level.equals("Junior");
+        boolean isMid = level.equals("Mid-level");
+        boolean isSenior = level.equals("Senior") || level.equals("Lead") || level.equals("Principal");
+        
+        switch (phase) {
+            case OPENING:
+                guidance.append("Phase: OPENING (Foundational Knowledge)\n");
+                guidance.append("Strategy:\n");
+                
+                if (isEntry) {
+                    guidance.append("- Ask basic conceptual questions suitable for " + level + "\n");
+                    guidance.append("- Focus on fundamental definitions and simple explanations\n");
+                    guidance.append("- Help build confidence with accessible questions\n");
+                    guidance.append("- Difficulty: VERY EASY\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'What is a variable in programming?'\n");
+                    guidance.append("  * 'Can you explain what HTML and CSS are used for?'\n");
+                    guidance.append("  * 'What is the difference between frontend and backend?'\n");
+                } else if (isJunior) {
+                    guidance.append("- Ask foundational questions appropriate for Junior level\n");
+                    guidance.append("- Focus on core concepts and common terminology\n");
+                    guidance.append("- Difficulty: EASY\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'What is OOP and can you name its main principles?'\n");
+                    guidance.append("  * 'Explain the difference between GET and POST requests'\n");
+                    guidance.append("  * 'What is a REST API?'\n");
+                } else if (isMid) {
+                    guidance.append("- Ask conceptual questions with some depth for Mid-level\n");
+                    guidance.append("- Expect clear explanations with examples\n");
+                    guidance.append("- Difficulty: EASY-MEDIUM\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'Explain SOLID principles and why they matter'\n");
+                    guidance.append("  * 'What are the differences between SQL and NoSQL databases?'\n");
+                    guidance.append("  * 'Describe the MVC pattern and its benefits'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask conceptual questions expecting expert-level answers\n");
+                    guidance.append("- Expect deep understanding with real-world context\n");
+                    guidance.append("- Difficulty: MEDIUM\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you explain microservices vs monolith trade-offs?'\n");
+                    guidance.append("  * 'What architectural patterns have you found most valuable?'\n");
+                    guidance.append("  * 'Describe your approach to ensuring code quality in a team'\n");
+                }
+                break;
+                
+            case CORE_TECHNICAL:
+                guidance.append("Phase: CORE TECHNICAL (Practical Skills)\n");
+                guidance.append("Strategy:\n");
+                
+                if (isEntry) {
+                    guidance.append("- Ask about basic implementations suitable for " + level + "\n");
+                    guidance.append("- Focus on simple coding scenarios and basic problem-solving\n");
+                    guidance.append("- Difficulty: EASY\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you create a simple function to add two numbers?'\n");
+                    guidance.append("  * 'Describe how you would build a basic to-do list'\n");
+                    guidance.append("  * 'What steps would you take to debug a simple error?'\n");
+                } else if (isJunior) {
+                    guidance.append("- Ask about practical implementations for Junior level\n");
+                    guidance.append("- Focus on common development tasks and patterns\n");
+                    guidance.append("- Difficulty: MEDIUM\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'How would you implement user authentication?'\n");
+                    guidance.append("  * 'Describe how you would handle form validation'\n");
+                    guidance.append("  * 'Walk me through creating a CRUD API endpoint'\n");
+                } else if (isMid) {
+                    guidance.append("- Ask about real-world implementations for Mid-level\n");
+                    guidance.append("- Expect knowledge of best practices and common patterns\n");
+                    guidance.append("- Difficulty: MEDIUM-HARD\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'How would you implement caching in your application?'\n");
+                    guidance.append("  * 'Describe your approach to handling database transactions'\n");
+                    guidance.append("  * 'How would you design an API versioning strategy?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask about complex implementations for " + level + "\n");
+                    guidance.append("- Expect architectural thinking and trade-off analysis\n");
+                    guidance.append("- Difficulty: HARD\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you design a distributed caching system?'\n");
+                    guidance.append("  * 'Describe your approach to implementing event sourcing'\n");
+                    guidance.append("  * 'How would you handle cross-service transactions?'\n");
+                }
+                break;
+                
+            case DEEP_DIVE:
+                guidance.append("Phase: DEEP DIVE (Advanced Understanding)\n");
+                guidance.append("Strategy:\n");
+                
+                if (isEntry) {
+                    guidance.append("- Go slightly deeper but remain accessible for " + level + "\n");
+                    guidance.append("- Ask about understanding of why things work\n");
+                    guidance.append("- Difficulty: EASY-MEDIUM\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'Why do we use version control like Git?'\n");
+                    guidance.append("  * 'What happens when you type a URL in the browser?'\n");
+                    guidance.append("  * 'Why is it important to write clean code?'\n");
+                } else if (isJunior) {
+                    guidance.append("- Ask about trade-offs and deeper understanding for Junior\n");
+                    guidance.append("- Test problem-solving with moderately complex scenarios\n");
+                    guidance.append("- Difficulty: MEDIUM\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'What are the trade-offs between using SQL vs NoSQL here?'\n");
+                    guidance.append("  * 'How would you optimize a slow database query?'\n");
+                    guidance.append("  * 'What would you do if your API is getting rate limited?'\n");
+                } else if (isMid) {
+                    guidance.append("- Ask about optimization and architectural decisions for Mid-level\n");
+                    guidance.append("- Test ability to analyze trade-offs and edge cases\n");
+                    guidance.append("- Difficulty: HARD\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'How would you handle 10x traffic increase?'\n");
+                    guidance.append("  * 'What strategies would you use to ensure data consistency?'\n");
+                    guidance.append("  * 'How would you debug a production performance issue?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask about complex architectural decisions for " + level + "\n");
+                    guidance.append("- Test strategic thinking and system-wide optimization\n");
+                    guidance.append("- Difficulty: VERY HARD\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you design for 99.99% uptime?'\n");
+                    guidance.append("  * 'Describe your approach to managing technical debt at scale'\n");
+                    guidance.append("  * 'How would you migrate a monolith to microservices safely?'\n");
+                }
+                break;
+                
+            case CHALLENGING:
+                guidance.append("Phase: CHALLENGING (Problem Solving & Design)\n");
+                guidance.append("Strategy:\n");
+                
+                if (isEntry) {
+                    guidance.append("- Present simple problem-solving scenarios for " + level + "\n");
+                    guidance.append("- Focus on logical thinking rather than complex systems\n");
+                    guidance.append("- Difficulty: MEDIUM (challenging but achievable)\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you approach building a simple calculator app?'\n");
+                    guidance.append("  * 'What would you do if you encountered a bug you cannot solve?'\n");
+                    guidance.append("  * 'How would you organize files in a small project?'\n");
+                } else if (isJunior) {
+                    guidance.append("- Present moderately complex scenarios for Junior\n");
+                    guidance.append("- Test ability to think through problems systematically\n");
+                    guidance.append("- Difficulty: MEDIUM-HARD\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'Design a basic notification system for a web app'\n");
+                    guidance.append("  * 'How would you handle file uploads securely?'\n");
+                    guidance.append("  * 'What would you do if two users edit the same data?'\n");
+                } else if (isMid) {
+                    guidance.append("- Present system design questions for Mid-level\n");
+                    guidance.append("- Test architectural thinking and scalability awareness\n");
+                    guidance.append("- Difficulty: HARD\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'Design a URL shortener service'\n");
+                    guidance.append("  * 'How would you implement a rate limiter?'\n");
+                    guidance.append("  * 'Design a basic chat application architecture'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Present complex system design for " + level + "\n");
+                    guidance.append("- Test leadership in technical decision-making\n");
+                    guidance.append("- Difficulty: VERY HARD\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'Design a distributed file storage system like S3'\n");
+                    guidance.append("  * 'How would you architect a real-time bidding platform?'\n");
+                    guidance.append("  * 'Design a system to handle 1M concurrent WebSocket connections'\n");
+                }
+                break;
+                
+            case WRAP_UP:
+                guidance.append("Phase: WRAP-UP (Soft Skills & Growth)\n");
+                guidance.append("Strategy:\n");
+                guidance.append("- Ask about learning approach, teamwork, and career goals\n");
+                guidance.append("- Give candidate opportunity to showcase strengths\n");
+                guidance.append("- End on a positive, conversational note\n");
+                guidance.append("- Difficulty: COMFORTABLE (no trick questions)\n");
+                
+                if (isEntry) {
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How do you approach learning new technologies?'\n");
+                    guidance.append("  * 'What project are you most proud of and why?'\n");
+                    guidance.append("  * 'Where do you see yourself growing in the next year?'\n");
+                } else if (isJunior) {
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'How do you handle feedback on your code?'\n");
+                    guidance.append("  * 'Describe a challenging bug you solved and what you learned'\n");
+                    guidance.append("  * 'How do you stay updated with new technologies?'\n");
+                } else if (isMid) {
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'How do you mentor junior developers?'\n");
+                    guidance.append("  * 'Describe a time you had to make a difficult technical decision'\n");
+                    guidance.append("  * 'How do you balance technical debt with new features?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How do you drive technical vision in a team?'\n");
+                    guidance.append("  * 'Describe your approach to building high-performing teams'\n");
+                    guidance.append("  * 'How do you handle disagreements on architectural decisions?'\n");
+                }
+                break;
+        }
+    }
+    
+    // Hàm định nghĩa các phase trong buổi phỏng vấn
+    private enum InterviewPhase {
+        OPENING,        // Câu hỏi cơ bản, warm-up
+        CORE_TECHNICAL, // Kỹ thuật thực hành
+        DEEP_DIVE,      // Đi sâu vào chi tiết
+        CHALLENGING,    // Thử thách, system design
+        WRAP_UP         // Kết thúc, soft skills
+    }
+    
+    // Hàm xác định phase dựa trên thứ tự câu hỏi
+    private InterviewPhase determinePhase(int currentQuestion, int totalQuestions) {
+        // Phân bổ câu hỏi theo tỷ lệ:
+        // - OPENING: ~20% đầu (ít nhất 1 câu)
+        // - CORE_TECHNICAL: ~30% tiếp theo
+        // - DEEP_DIVE: ~25% tiếp theo
+        // - CHALLENGING: ~15% tiếp theo
+        // - WRAP_UP: ~10% cuối (ít nhất 1 câu cuối)
+        
+        if (totalQuestions <= 5) {
+            // Với 4-5 câu: Opening -> Core -> Deep -> Wrap-up
+            if (currentQuestion == 1) return InterviewPhase.OPENING;
+            if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
+            if (currentQuestion == 2) return InterviewPhase.CORE_TECHNICAL;
+            if (currentQuestion <= totalQuestions - 1) return InterviewPhase.DEEP_DIVE;
+            return InterviewPhase.CORE_TECHNICAL;
+        }
+        
+        if (totalQuestions <= 10) {
+            // Với 6-10 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) -> Wrap(cuối)
+            if (currentQuestion == 1) return InterviewPhase.OPENING;
+            if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
+            if (currentQuestion <= 3) return InterviewPhase.CORE_TECHNICAL;
+            if (currentQuestion <= 5) return InterviewPhase.DEEP_DIVE;
+            return InterviewPhase.CHALLENGING;
+        }
+        
+        // Với 9+ câu: phân bổ đầy đủ theo tỷ lệ
+        int openingEnd = Math.max(1, (int) Math.ceil(totalQuestions * 0.20));
+        int coreEnd = openingEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.30));
+        int deepEnd = coreEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.25));
+        int challengeEnd = deepEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.15));
+        // Wrap-up: câu cuối cùng
+        
+        if (currentQuestion <= openingEnd) return InterviewPhase.OPENING;
+        if (currentQuestion <= coreEnd) return InterviewPhase.CORE_TECHNICAL;
+        if (currentQuestion <= deepEnd) return InterviewPhase.DEEP_DIVE;
+        if (currentQuestion < totalQuestions) return InterviewPhase.CHALLENGING;
+        return InterviewPhase.WRAP_UP;
+    }
+
+    // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public String generateData(String cvText) {
-        // Truncate content if too long to avoid token limits
         final int MAX_CONTENT_LENGTH = 8000;
+        // Làm tròn nội dung nếu quá dài
         String truncatedText = cvText;
         if (cvText != null && cvText.length() > MAX_CONTENT_LENGTH) {
             truncatedText = cvText.substring(0, MAX_CONTENT_LENGTH);
-            log.info("Content truncated from {} to {} characters for AI analysis", cvText.length(), MAX_CONTENT_LENGTH);
         }
-
+        
         String systemPrompt = "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
                 "Analyze the CV carefully and extract the following information:\n\n" +
                 "1. Role: Based on the candidate's experience, projects, and skills, determine the most suitable IT role from: "
@@ -284,7 +622,7 @@ public class GeminiService {
         return generateResponse(systemPrompt, userPrompt);
     }
 
-    // Generate feedback cho một câu trả lời cụ thể
+    // Phương thức tạo phản hồi đánh giá câu trả lời của ứng viên
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
 
         String systemPrompt = "You are a precise and analytical evaluator. Always respond with valid JSON only. " +
@@ -345,6 +683,16 @@ public class GeminiService {
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
+            
+            // Kiểm tra nếu response không phải JSON hợp lệ
+            if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
+                log.warn("Gemini API returned error message instead of JSON: {}", jsonResponse);
+                return AnswerFeedbackData.builder()
+                        .feedback("Unable to generate detailed feedback at this moment due to high demand. Please try again later.")
+                        .sampleAnswer("Feedback generation is temporarily unavailable.")
+                        .build();
+            }
+            // Thực hiện làm sạch JSON response để tránh lỗi phân tích cú pháp
             String cleanedJson = cleanJsonResponse(jsonResponse);
             AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
 
@@ -366,7 +714,7 @@ public class GeminiService {
         }
     }
 
-    // Generate overall feedback cho toàn bộ buổi phỏng vấn
+    // Phương thức tạo phản hồi tổng thể sau khi hoàn thành phỏng vấn
     public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role,
             String level, List<String> skills) {
 
@@ -477,6 +825,19 @@ public class GeminiService {
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
+            
+            // Kiểm tra nếu response không phải JSON hợp lệ
+            if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
+                log.warn("Gemini API returned error message for overall feedback: {}", jsonResponse);
+                return OverallFeedbackData.builder()
+                        .overview("AVERAGE")
+                        .assessment("Unable to generate detailed assessment due to high demand. Please try again later.")
+                        .strengths(java.util.Arrays.asList("Interview completed"))
+                        .weaknesses(java.util.Arrays.asList("Detailed feedback temporarily unavailable"))
+                        .recommendations("Please try viewing the feedback again later when the AI service is available.")
+                        .build();
+            }
+            
             String cleanedJson = cleanJsonResponse(jsonResponse);
             OverallFeedbackData feedbackData = objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
 
@@ -519,29 +880,27 @@ public class GeminiService {
         }
     }
 
-    // Helper method to clean JSON response
+    // Hàm làm sạch phản hồi JSON từ Gemini
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null)
             return "{}";
 
-        // Remove markdown code fences (```json, ```, etc.)
+        // Xóa các markdown code block nếu có
         String cleaned = jsonResponse
                 .replaceAll("```json\\s*", "") // Remove ```json
                 .replaceAll("```\\s*", "") // Remove trailing ```
                 .trim();
-
-        // Extract JSON object
+        // Tìm vị trí của dấu ngoặc nhọn đầu tiên và cuối cùng để trích xuất JSON hợp lệ
         int start = cleaned.indexOf("{");
         int end = cleaned.lastIndexOf("}");
-
+        // Nếu tìm thấy cả hai dấu ngoặc, trích xuất phần JSON
         if (start != -1 && end != -1 && end > start) {
             return cleaned.substring(start, end + 1);
         }
-
         return cleaned;
     }
 
-    // Helper method to format feedback content
+    // Hàm định dạng nội dung phản hồi để dễ đọc hơn
     private String formatFeedbackContent(String content) {
         if (content == null || content.trim().isEmpty()) {
             return content;
@@ -594,7 +953,7 @@ public class GeminiService {
         formatted = formatted.replaceAll("[ \\t]+\\n", "\n");
         formatted = formatted.replaceAll("\\n[ \\t]+", "\n");
 
-        // Trim leading/trailing whitespace from each line
+        // Trim leading/trailing spaces on each line
         String[] lines = formatted.split("\n");
         StringBuilder result = new StringBuilder();
         for (String line : lines) {

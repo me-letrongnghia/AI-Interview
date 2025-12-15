@@ -33,24 +33,28 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final VerifyCodeService verificationService;
+
+    // Phương thức để đăng nhập người dùng và tạo JWT token
     public UserProfileResponse authenticate(LoginRequest request) {
-         // xác thực user
+         // Xác thực người dùng
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
                         request.getPassword()
                 )
         );
+        // Lấy thông tin người dùng đã xác thực
         CustomUserDetails userEntity = (CustomUserDetails) authentication.getPrincipal();
+        // Kiểm tra nếu tài khoản bị khóa 
         if(userEntity.isEnabled() == false) {
-            
             throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Account has been locked");
         }
+        // Tạo JWT token
         String email = userEntity.getUsername();
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtService.generateAccessToken(authentication);
         String refreshToken = jwtService.generateRefreshToken(authentication);
-        // Tao and tra ve user profile
+        // Tạo và trả về user profile
         UserProfileResponse userProfileResponse = new UserProfileResponse();
         userProfileResponse.setId(userEntity.getId());
         userProfileResponse.setAccess_token(token);
@@ -61,6 +65,8 @@ public class AuthService {
         userProfileResponse.setRole(userEntity.getRole());
         return userProfileResponse;
     }
+    
+    // Phương thức để đăng ký người dùng mới
     public String register(RegisterRequest request) throws MessagingException {
         UserEntity userEntity = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (userEntity != null) {
@@ -76,19 +82,20 @@ public class AuthService {
         verificationService.generateOrUpdateCodeEmail(newUser.getEmail());
         return "Registration successful";
     }
+    
+    // Phương thức để đăng nhập người dùng bằng Firebase và tạo JWT token
     public UserProfileResponse loginWithFirebase(FireRequest fireRequest) {
         String email = fireRequest.getEmail();
-        System.out.println("AuthService.loginWithFirebase - Email from request: " + email);
         String uId = null;
         String fullName = null;
         String picture = null;
         try{
             FirebaseToken firebaseToken = FirebaseAuth.getInstance().verifyIdToken(fireRequest.getIdToken()); // authentication IdToken with Firebase Admin
-            uId = firebaseToken.getUid();       // get uId to idToken
+            uId = firebaseToken.getUid();       
             fullName = firebaseToken.getName();
             picture = firebaseToken.getPicture();
             
-            // If email is empty or null, try to get it from Firebase token
+            // Kiểm tra nếu email từ yêu cầu rỗng thì lấy từ token
             if (email == null || email.isEmpty()) {
                 email = firebaseToken.getEmail();
                 System.out.println("AuthService.loginWithFirebase - Email from Firebase token: " + email);
@@ -96,9 +103,10 @@ public class AuthService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        // Kiểm tra nếu user đã tồn tại trong database 
         UserEntity userEntity = userRepository.findByEmail(email).orElse(null);
         CustomUserDetails customUserDetails = null;
-        // user is null save database
+        // Nếu chưa tồn tại thì tạo mới user với thông tin từ Firebase
         if(userEntity == null) {
             UserEntity userEntity1 = new UserEntity();
             userEntity1.setEmail(email);
@@ -110,21 +118,19 @@ public class AuthService {
 
             userRepository.save(userEntity1);
             customUserDetails = new CustomUserDetails(userEntity1);
-
         }else{
             if(userEntity.isEnabled() == false) {
-            
-            throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Account has been locked");
-        }
+                throw new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Account has been locked");
+            }
             customUserDetails = new CustomUserDetails(userEntity);
         }
-
+        // Tạo Authentication từ CustomUserDetails
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 customUserDetails,
                 null,
                 customUserDetails.getAuthorities()
         );
-
+        // Đặt Authentication vào SecurityContext
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         String accessToken = jwtService.generateAccessToken(auth);
@@ -139,6 +145,8 @@ public class AuthService {
         userProfileResponse.setRole(customUserDetails.getRole());
         return userProfileResponse;
     }
+
+    // Phương thức để làm mới JWT token sử dụng refresh token từ cookie
     public UserProfileResponse refreshToken(String refreshToken) {
         if(!jwtService.validateRefreshToken(refreshToken)) {
             throw new IllegalStateException("Invalid refresh token");
@@ -159,6 +167,8 @@ public class AuthService {
         userProfileResponse.setEmail(email);
         return userProfileResponse;
     }
+
+    // Phương thức để đặt lại mật khẩu
     public String resetPassword(ResetPasswordRequest newPassword) {
         UserEntity userEntity = userRepository.findByEmail(newPassword.getEmail()).orElse(null);
         if(userEntity == null) {
