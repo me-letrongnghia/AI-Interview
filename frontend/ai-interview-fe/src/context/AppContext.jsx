@@ -23,7 +23,7 @@ export const AppProvider = ({ children }) => {
       // Clear all auth state
       setUserProfile(null);
       setIsLogin(false);
-      
+
       // Clear all auth data including Firebase persistence
       clearAllAuthData();
     }
@@ -38,7 +38,7 @@ export const AppProvider = ({ children }) => {
     if (storedUser && storedToken && storedIsLogin === "true") {
       try {
         const user = JSON.parse(storedUser);
-        
+
         // Check if token is already expired
         if (isTokenExpired(storedToken)) {
           console.log("Token expired on init, clearing auth data");
@@ -71,7 +71,7 @@ export const AppProvider = ({ children }) => {
     // Function to check token expiration
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("access_token");
-      
+
       if (!token) {
         console.log("No token found, logging out");
         logout();
@@ -111,7 +111,7 @@ export const AppProvider = ({ children }) => {
         // User is signed in with Firebase (Google/GitHub login)
         const storedUser = localStorage.getItem("user");
         const storedToken = localStorage.getItem("access_token");
-        
+
         if (storedUser && storedToken) {
           try {
             const user = JSON.parse(storedUser);
@@ -150,13 +150,13 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider
-      value={{ 
-        userProfile, 
-        setUserProfile, 
-        isLogin, 
-        setIsLogin, 
+      value={{
+        userProfile,
+        setUserProfile,
+        isLogin,
+        setIsLogin,
         logout,
-        isAuthChecking 
+        isAuthChecking
       }}
     >
       {children}

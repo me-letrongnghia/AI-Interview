@@ -73,7 +73,6 @@ export default function LoginPage() {
 
   const handleLoginSuccess = async (data) => {
     console.log("handleLoginSuccess - Received data:", data);
-    console.log("Email:", data.email, "TokenFirebase:", data.tokenFirebase);
     try {
       const response = await Auth.LoginFirebase(data.tokenFirebase, data.email);
       console.log("Login Firebase response:", response);
@@ -193,11 +192,10 @@ export default function LoginPage() {
             value={email}
             onChange={handleEmailChange}
             placeholder="username@gmail.com"
-            className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${
-              emailError
+            className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${emailError
                 ? "border-red-500"
                 : "border-green-300 focus:border-green-500"
-            }`}
+              }`}
           />
           {emailError && (
             <p className="text-red-500 text-xs mt-1">{emailError}</p>
@@ -214,9 +212,8 @@ export default function LoginPage() {
                 value={password}
                 onChange={handlePasswordChange}
                 placeholder="Password"
-                className={`w-full h-10 px-4 border-2 rounded-lg pr-12 ${
-                  passwordError ? "border-red-500" : "border-green-300"
-                }`}
+                className={`w-full h-10 px-4 border-2 rounded-lg pr-12 ${passwordError ? "border-red-500" : "border-green-300"
+                  }`}
               />
               <button
                 type="button"
@@ -240,11 +237,10 @@ export default function LoginPage() {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
-              isLoading
+            className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${isLoading
                 ? "bg-green-600 cursor-not-allowed"
                 : "bg-green-500 hover:bg-green-700"
-            }`}
+              }`}
           >
             {isLoading ? (
               <div className="flex space-x-1">
