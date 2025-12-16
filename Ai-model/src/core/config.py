@@ -7,6 +7,10 @@ Có thể dễ dàng chuyển đổi giữa các model bằng biến môi trư�
 import logging
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # ==================== ĐƯỜNG DẪN ====================
 BASE_DIR = Path(__file__).parent.parent.parent
@@ -19,14 +23,20 @@ MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BA
 QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
 
 # ==================== MODEL SELECTION ====================
-# Available: "qwen", "multitask"
-# - qwen: Qwen2.5-3B-Instruct (recommended, uses HuggingFace)
-# - multitask: Custom Transformer (legacy, uses SentencePiece)
-AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen")
+# Available: "qwen-3B", "qwen-external", "multitask"
+# - qwen-3B: Qwen2.5-3B-Instruct local (default)
+# - qwen-external: Qwen-7B via external API (Colab/ngrok)
+# - multitask: Custom Transformer (legacy)
+AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen-3B")
 
 # Qwen-specific settings
 QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # Use 4-bit quantization (saves VRAM)
 QWEN_MAX_SEQ_LENGTH = int(os.getenv("QWEN_MAX_SEQ_LENGTH", "2048"))
+
+# ==================== QWEN EXTERNAL API CONFIG ====================
+# Use external Qwen-7B API (Colab/Cloud deployment with ngrok)
+QWEN_EXTERNAL_API_URL = os.getenv("QWEN_EXTERNAL_API_URL", None) 
+QWEN_EXTERNAL_API_TIMEOUT = int(os.getenv("QWEN_EXTERNAL_API_TIMEOUT", "120"))
 
 # ==================== THIẾT LẬP API ====================
 API_TITLE = "AI Interview - Multitask Judge"

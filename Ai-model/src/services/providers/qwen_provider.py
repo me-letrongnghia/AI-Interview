@@ -51,7 +51,7 @@ class InterviewPhase(Enum):
 # =============================================================================
 
 PROMPT_TEMPLATES = {
-    # System prompt for generating first question - Warm-up về vị trí và skills
+    # System prompt for generating first question
     "generate_first_system": """You are a friendly and professional interviewer conducting a job interview.
 Output EXACTLY ONE warm-up opening question in {language}.
 This is the FIRST question of the interview - a warm-up question about the position and skills.
@@ -77,7 +77,7 @@ Skills: {skills}
 
 Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.""",
 
-    # System prompt for generating follow-up question (IDENTICAL TO GEMINI)
+    # System prompt for generating follow-up question
     "generate_followup_system": """You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.
 
 === CRITICAL REQUIREMENTS ===
@@ -94,7 +94,7 @@ Generate a warm-up opening question that asks about their interest in this posit
 - FOLLOW the phase strategy difficulty level strictly.
 - DO NOT ask questions too hard or too easy for {level} level.
 - Review interview history to avoid repeating questions.
-- Build upon the candidate's previous answers.
+- Build upon the candidate's previous answers if applicable.
 - Start with: How, What, Why, When, Which, Describe, Design, or Implement.
 - End with a question mark (?).
 - Return ONLY the question - no preamble, no explanation, no numbering.""",
@@ -115,7 +115,7 @@ Candidate's Answer: {previous_answer}
 === YOUR TASK ===
 Generate the next interview question following the PHASE STRATEGY above. The question MUST be appropriate for a {level} candidate.""",
 
-    # System prompt for evaluation task (IDENTICAL TO GEMINI)
+    # System prompt for evaluation task
     "evaluate_system": """You are a precise and analytical evaluator. Always respond with valid JSON only.
 Use proper markdown formatting in your feedback including **bold** for emphasis, `code` for technical terms, and ``` for code blocks. Use line breaks for better readability.""",
 
@@ -159,11 +159,11 @@ Provide detailed evaluation in JSON format:
     "accuracy": <0-10>,
     "clarity": <0-10>,
     "overall": <0-10>,
-    "feedback": "Your answer demonstrates... [3-5 sentences with specific observations]",
-    "improved_answer": "A strong answer would include... [comprehensive model answer]"
+    "feedback": "Your answer demonstrates... [Write 3-5 detailed sentences. Be specific about what they said right/wrong]",
+    "improved_answer": "A strong answer would include... [Write a comprehensive model answer with technical depth]"
 }}""",
 
-    # System prompt for generating report (IDENTICAL TO GEMINI)
+    # System prompt for generating report
     "report_system": """You are a comprehensive interview evaluator. Always respond with valid JSON only.
 Use proper markdown formatting including **bold** for emphasis, `code` for technical terms, and proper line breaks for readability.""",
 
@@ -179,14 +179,8 @@ COMPLETE INTERVIEW TRANSCRIPT:
 {interview_history}
 
 EVALUATION FRAMEWORK:
-
 1. OVERVIEW RATING:
-   Evaluate the candidate's overall interview performance and assign ONE of these ratings:
-   - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
-   - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
-   - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
-   - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
-   - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
+   Based on the score and analysis, the system will assign a rating. You must provide the EVIDENCE and ANALYSIS below.
 
 2. ASSESSMENT:
    Provide a comprehensive 4-6 sentence analysis covering:
@@ -206,23 +200,34 @@ EVALUATION FRAMEWORK:
    Provide actionable 3-5 sentence guidance
 
 IMPORTANT SCORING CRITERIA:
-- EXCELLENT: 90%+ correct answers, deep technical understanding, excellent communication
-- GOOD: 70-89% correct answers, solid technical knowledge, good communication
-- AVERAGE: 50-69% correct answers, basic understanding, adequate communication
-- BELOW AVERAGE: 30-49% correct answers, limited knowledge, poor communication
-- POOR: <30% correct answers, insufficient knowledge, very weak responses
+- 90-100: Outstanding, exceeds expectations, deep understanding
+- 70-89: Strong performance, solid knowledge, good communication
+- 50-69: Average, meets basic expectations, some gaps
+- 30-49: Below average, limited knowledge
+- <30: Poor, insufficient knowledge
 
 Provide detailed feedback in JSON format:
 {{
-    "overall_assessment": "<2-3 sentence summary>",
-    "strengths": ["strength 1", "strength 2", ...],
-    "weaknesses": ["weakness 1", "weakness 2", ...],
-    "recommendations": ["recommendation 1", "recommendation 2", ...],
-    "score": <0-100>
+    "overall_assessment": "<Detailed 4-6 sentence textual analysis of the candidate's performance. DO NOT put a single rating word here. Write a full paragraph analyzing their technical depth, communication, and fit for the {level} level.>',
+    "strengths": ["strength 1 with specific example", "strength 2 with specific example", ...],
+    "weaknesses": ["weakness 1 with specific area to improve", "weakness 2 with specific area to improve", ...],
+    "recommendations": ["actionable recommendation 1", "actionable recommendation 2", ...],
+    "score": <0-100 based on SCORING CRITERIA above>
 }}
 
-CRITICAL: Score strictly based on actual performance vs. level expectations."""
-}
+EXAMPLE OUTPUT:
+{{
+    "overall_assessment": "The candidate demonstrated a solid foundational understanding of Spring Boot concepts, correctly identifying core features and dependencies. However, responses lacked depth in explaining practical implementations and real-world scenarios. Communication was clear but could benefit from more structured explanations. Overall, the candidate shows potential but needs more hands-on experience to meet Junior level expectations.",
+    "strengths": ["Shows foundational understanding of Spring Boot concepts", "Clear communication in explaining basic concepts", "Willing to attempt answers even when uncertain"],
+    "weaknesses": ["Lacks depth in practical implementation details", "Could not provide concrete code examples", "Limited understanding of Spring Boot ecosystem"],
+    "recommendations": ["Practice building complete Spring Boot applications from scratch", "Study Spring Boot official documentation with hands-on examples", "Focus on understanding dependency injection and configuration in depth"],
+    "score": 45
+}}
+
+CRITICAL: 
+- The 'overall_assessment' MUST be a detailed paragraph (4-6 sentences).
+- Score strictly based on actual performance vs. level expectations.
+"""}
 
 
 # =============================================================================

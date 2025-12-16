@@ -13,6 +13,7 @@ import com.capstone.ai_interview_be.repository.InterviewAnswerRepository;
 import com.capstone.ai_interview_be.repository.InterviewQuestionRepository;
 import com.capstone.ai_interview_be.service.InterviewService.ConversationService;
 import com.capstone.ai_interview_be.service.InterviewService.InterviewSessionService;
+import com.capstone.ai_interview_be.repository.AnswerFeedbackRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,7 @@ public class InterviewController {
     private final ConversationService conversationService;
     private final InterviewQuestionRepository questionRepository;
     private final InterviewAnswerRepository answerRepository;
-
+    private final AnswerFeedbackRepository feedbackRepository;
 
     // Phương thức tạo phiên phỏng vấn mới
     @PostMapping("/sessions")
@@ -56,19 +57,19 @@ public class InterviewController {
         if (!questions.isEmpty()) {
             // Lấy tất cả câu trả lời đã được lưu cho phiên phỏng vấn
             List<InterviewAnswer> answers = answerRepository.findAnswersBySessionId(sessionId);
-            
-            // Nếu đã có câu trả lời 
-            // → Trả về lịch sử chat gồm các câu hỏi đã trả lời + câu hỏi tiếp theo chưa trả lời
+
+            // Nếu đã có câu trả lời
+            // → Trả về lịch sử chat gồm các câu hỏi đã trả lời + câu hỏi tiếp theo chưa trả
+            // lời
             if (!answers.isEmpty()) {
-                
+
                 // Tạo map để tra cứu nhanh câu trả lời theo questionId
                 Map<Long, InterviewAnswer> answerMap = answers.stream()
-                    .collect(Collectors.toMap(
-                        InterviewAnswer::getQuestionId,
-                        answer -> answer,
-                        (existing, replacement) -> existing
-                    ));
-                
+                        .collect(Collectors.toMap(
+                                InterviewAnswer::getQuestionId,
+                                answer -> answer,
+                                (existing, replacement) -> existing));
+
                 // Xây dựng danh sách messages (câu hỏi + câu trả lời)
                 List<ChatMessageDTO> messages = new ArrayList<>();
                 // Flag để đánh dấu đã tìm thấy câu hỏi chưa trả lời
@@ -93,21 +94,21 @@ public class InterviewController {
                 }
                 // Trả về lịch sử chat
                 ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
-                    .success(true)
-                    .data(messages)
-                    .build();
+                        .success(true)
+                        .data(messages)
+                        .build();
                 return ResponseEntity.ok(chatHistoryResponse);
             }
-            
+
             // Chưa có câu trả lời nào cả trả về câu hỏi đầu tiên
             InterviewQuestion firstQuestion = questions.get(0);
             ChatHistoryResponse chatHistoryResponse = ChatHistoryResponse.builder()
-                .success(false)
-                .question(firstQuestion)
-                .build();
+                    .success(false)
+                    .question(firstQuestion)
+                    .build();
             return ResponseEntity.ok(chatHistoryResponse);
         }
-        
+
         // Không tìm thấy câu hỏi nào cho phiên phỏng vấn
         log.warn("No questions found for session ID: {}", sessionId);
         return ResponseEntity.notFound().build();
@@ -127,31 +128,30 @@ public class InterviewController {
             @PathVariable Long sessionId) {
         // Lấy thông tin phiên phỏng vấn
         InterviewSession session = sessionService.getSessionById(sessionId);
-        InterviewSessionInfoResponse response =
-                InterviewSessionInfoResponse.builder()
-            .id(session.getId())
-            .userId(session.getUserId())
-            .role(session.getRole())
-            .level(session.getLevel())
-            .skill(session.getSkill())
-            .language(session.getLanguage())
-            .title(session.getTitle())
-            .source(session.getSource().toString())
-            .status(session.getStatus())
-            .createdAt(session.getCreatedAt())
-            .updatedAt(session.getUpdatedAt())
-            .duration(session.getDuration())
-            .questionCount(session.getQuestionCount())
-            .startedAt(session.getStartedAt())
-            .build();
+        InterviewSessionInfoResponse response = InterviewSessionInfoResponse.builder()
+                .id(session.getId())
+                .userId(session.getUserId())
+                .role(session.getRole())
+                .level(session.getLevel())
+                .skill(session.getSkill())
+                .language(session.getLanguage())
+                .title(session.getTitle())
+                .source(session.getSource().toString())
+                .status(session.getStatus())
+                .createdAt(session.getCreatedAt())
+                .updatedAt(session.getUpdatedAt())
+                .duration(session.getDuration())
+                .questionCount(session.getQuestionCount())
+                .startedAt(session.getStartedAt())
+                .build();
         // Nếu phiên phỏng vấn đang tiến hành, tính thời gian đã trôi qua
-        if(session.getStatus().equals("in_progress")){
+        if (session.getStatus().equals("in_progress")) {
             response.setElapsedMinues(session.getElapsedMinutes() != null ? session.getElapsedMinutes() : 0.0);
         }
         return ResponseEntity.ok(response);
     }
 
-    // Phương thức bắt đầu hẹn giờ phỏng vấn cho phiên phỏng vấn 
+    // Phương thức bắt đầu hẹn giờ phỏng vấn cho phiên phỏng vấn
     @PostMapping("/sessions/{sessionId}/start-timer")
     public ResponseEntity<Map<String, Object>> startTimer(@PathVariable Long sessionId) {
         try {
@@ -166,47 +166,114 @@ public class InterviewController {
             }
             // Trả về thời gian bắt đầu
             return ResponseEntity.ok(Map.of(
-                "message", "Timer started",
-                "startedAt", session.getStartedAt().toString()
-            ));
+                    "message", "Timer started",
+                    "startedAt", session.getStartedAt().toString()));
         } catch (Exception e) {
             log.error("Error starting timer: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Phương thức kết thúc phỏng vấn sớm (early completion)
+    @PostMapping("/sessions/{sessionId}/complete")
+    public ResponseEntity<Map<String, Object>> completeInterviewEarly(
+            @PathVariable Long sessionId,
+            @RequestBody(required = false) Map<String, Object> requestBody) {
+        try {
+            log.info("Early completion requested for session {}", sessionId);
+
+            // Đợi tối đa 10 giây để các async evaluations hoàn thành
+            // Do this OUTSIDE of any transaction to avoid rollback issues
+            int maxWaitSeconds = 10;
+            int waitedSeconds = 0;
+
+            // Initial count
+            long answerCount = answerRepository.countBySessionId(sessionId);
+            long feedbackCount = feedbackRepository.findBySessionId(sessionId).size();
+
+            log.info("Session {} has {} answers and {} feedbacks initially", sessionId, answerCount, feedbackCount);
+
+            // Wait loop - no database modifications here
+            while (feedbackCount < answerCount && waitedSeconds < maxWaitSeconds) {
+                log.info("Waiting for pending evaluations... ({}/{}s)", waitedSeconds, maxWaitSeconds);
+                try {
+                    Thread.sleep(1000); // Đợi 1 giây
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Wait interrupted");
+                    break;
+                }
+                waitedSeconds++;
+                // Re-check feedback count
+                feedbackCount = feedbackRepository.findBySessionId(sessionId).size();
+            }
+
+            // Final status
+            if (feedbackCount < answerCount) {
+                log.warn("Timeout waiting for evaluations. Proceeding anyway. ({} feedbacks for {} answers)",
+                        feedbackCount, answerCount);
+            } else {
+                log.info("All evaluations completed. Proceeding to completion.");
+            }
+
+            // NOW update session in a clean transaction (no Thread.sleep mixed in)
+            InterviewSession session = sessionService.getSessionById(sessionId);
+
+            // Cập nhật thời gian elapsed nếu được cung cấp
+            if (requestBody != null && requestBody.containsKey("elapsedSeconds")) {
+                Integer elapsedSeconds = (Integer) requestBody.get("elapsedSeconds");
+                double elapsedMinutes = Math.round((elapsedSeconds / 60.0) * 10.0) / 10.0;
+                session.setElapsedMinutes(elapsedMinutes);
+            }
+
+            // Đánh dấu session là completed
+            session.setStatus("completed");
+            sessionService.updateSession(session);
+
+            log.info("Interview session {} completed early", sessionId);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Interview completed successfully",
+                    "sessionId", sessionId,
+                    "answerCount", answerCount,
+                    "feedbackCount", feedbackCount));
+        } catch (Exception e) {
+            log.error("Error completing interview session {}: {}", sessionId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     // Phương thức kết thúc phỏng vấn và lưu thời gian đã trôi qua
     @PostMapping("/{sessionId}/leave")
     public ResponseEntity<Map<String, Object>> leaveInterview(
-        @PathVariable Long sessionId,
-        @RequestBody Map<String, Object> requestBody) {
+            @PathVariable Long sessionId,
+            @RequestBody Map<String, Object> requestBody) {
         try {
             // Lấy phiên phỏng vấn
             InterviewSession session = sessionService.getSessionById(sessionId);
-            
+
             // Lấy thời gian đã trôi qua từ request
             Integer elapsedSeconds = (Integer) requestBody.get("elapsedSeconds");
-            
+
             // Tính lại thời gian đã trôi qua theo phút với 1 chữ số thập phân
             double elapsedMinutes = elapsedSeconds / 60.0;
             elapsedMinutes = Math.round(elapsedMinutes * 10.0) / 10.0;
-            
+
             // Cập nhật thời gian đã trôi qua cho phiên phỏng vấn
             session.setElapsedMinutes(elapsedMinutes);
             sessionService.updateSession(session);
-    
+
             log.info("Interview session updated with elapsed minutes");
             return ResponseEntity.ok(Map.of(
-                "message", "Interview session updated",
-                "sessionId", sessionId,
-                "elapsedMinutes", elapsedMinutes,
-                "remainingMinutes", session.getDuration() - elapsedMinutes
-            ));
+                    "message", "Interview session updated",
+                    "sessionId", sessionId,
+                    "elapsedMinutes", elapsedMinutes,
+                    "remainingMinutes", session.getDuration() - elapsedMinutes));
         } catch (Exception e) {
             log.error("Error leaving interview session {}: {}", sessionId, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -220,14 +287,14 @@ public class InterviewController {
         message.setQuestionId(question.getId().toString());
         message.setTimestamp(question.getCreatedAt());
         message.setIsSystemMessage(false);
-        
+
         return message;
     }
-    
+
     // Hàm tạo message cho câu trả lời
-    private ChatMessageDTO createAnswerMessage(InterviewAnswer answer, 
-                                               InterviewQuestion question, 
-                                               Long sessionId) {
+    private ChatMessageDTO createAnswerMessage(InterviewAnswer answer,
+            InterviewQuestion question,
+            Long sessionId) {
         ChatMessageDTO message = new ChatMessageDTO();
         message.setId("a-" + answer.getId());
         message.setSessionId(sessionId.toString());
@@ -236,7 +303,7 @@ public class InterviewController {
         message.setQuestionId(question.getId().toString());
         message.setTimestamp(answer.getCreatedAt());
         message.setIsSystemMessage(false);
-        
+
         return message;
     }
 }

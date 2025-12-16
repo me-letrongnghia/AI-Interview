@@ -1,21 +1,3 @@
-"""
-Model Factory
-=============
-Factory pattern for creating and managing model providers.
-Allows easy switching between different AI models.
-
-Usage:
-    # Get default provider
-    provider = get_model_provider()
-    
-    # Get specific provider
-    provider = get_model_provider("qwen")
-    
-    # Or use factory
-    factory = ModelFactory()
-    provider = factory.get_provider("multitask")
-"""
-
 import os
 import logging
 from pathlib import Path
@@ -23,12 +5,14 @@ from typing import Optional, Dict, Type
 
 from .base import BaseModelProvider
 from .qwen_provider import QwenModelProvider
+from .qwen_external_provider import QwenExternalProvider
 from .multitask_provider import MultitaskModelProvider
 
 logger = logging.getLogger(__name__)
 
 # Model type constants
-MODEL_QWEN = "qwen"
+MODEL_QWEN = "qwen-3B"
+MODEL_QWEN_EXTERNAL = "qwen-external"  # Qwen-7B via external API (Colab/ngrok)
 MODEL_MULTITASK = "multitask"
 
 # Default model to use (can be overridden by environment variable)
@@ -36,21 +20,10 @@ DEFAULT_MODEL = os.getenv("AI_MODEL_TYPE", MODEL_QWEN)
 
 
 class ModelFactory:
-    """
-    Factory for creating model providers.
-    
-    Supports:
-    - qwen: Qwen2.5-3B-Instruct (or similar)
-    - multitask: Custom MultitaskJudge Transformer
-    
-    To add a new model:
-    1. Create a new provider class that inherits from BaseModelProvider
-    2. Register it in _providers dictionary
-    """
-    
     # Registry of available providers
     _providers: Dict[str, Type[BaseModelProvider]] = {
         MODEL_QWEN: QwenModelProvider,
+        MODEL_QWEN_EXTERNAL: QwenExternalProvider,
         MODEL_MULTITASK: MultitaskModelProvider
     }
     
@@ -105,6 +78,23 @@ class ModelFactory:
             
         elif model_type == MODEL_MULTITASK:
             provider = MultitaskModelProvider()
+            
+        elif model_type == MODEL_QWEN_EXTERNAL:
+            # Get external API URL from environment
+            from src.core.config import QWEN_EXTERNAL_API_URL, QWEN_EXTERNAL_API_TIMEOUT
+            
+            api_url = kwargs.get("api_url", QWEN_EXTERNAL_API_URL)
+            if not api_url:
+                raise ValueError(
+                    "QWEN_EXTERNAL_API_URL environment variable is required for qwen-external model. "
+                    "Set it to your Colab ngrok URL."
+                )
+            
+            provider = QwenExternalProvider(
+                api_url=api_url,
+                model_name="Qwen-7B-External",
+                timeout=kwargs.get("timeout", QWEN_EXTERNAL_API_TIMEOUT)
+            )
             
         else:
             raise ValueError(f"Unknown model type: {model_type}. Available: {list(self._providers.keys())}")

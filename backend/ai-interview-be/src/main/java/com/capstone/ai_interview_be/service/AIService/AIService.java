@@ -30,7 +30,7 @@ public class AIService {
     // Phương thức tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills,
             String cvText, String jdText) {
-        
+
         // Kiểm tra dịch vụ Unified Model Service (v3 API)
         if (unifiedModelService.isServiceHealthy()) {
             log.info("Using Unified Model Service (v3 API) for first question");
@@ -63,7 +63,7 @@ public class AIService {
         }
     }
 
-    // Phương thức tạo câu hỏi đầu tiên  
+    // Phương thức tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills) {
         return generateFirstQuestion(role, level, skills, null, null);
     }
@@ -90,21 +90,23 @@ public class AIService {
 
         // Kiểm tra dịch vụ Unified Model Service (v3 API)
         if (unifiedModelService.isServiceHealthy()) {
-            log.info("Using Unified Model Service (v3 API) for next question ({}/{})", currentQuestionNumber, totalQuestions);
+            log.info("Using Unified Model Service (v3 API) for next question ({}/{})", currentQuestionNumber,
+                    totalQuestions);
             try {
                 MultitaskGenerateResponse response = unifiedModelService.generateFollowUp(
                         previousQuestion,
                         previousAnswer,
                         historyForAI,
                         sessionRole,
-                        sessionLevel,      
-                        sessionSkill,      
-                        currentQuestionNumber,  
-                        totalQuestions,         
+                        sessionLevel,
+                        sessionSkill,
+                        currentQuestionNumber,
+                        totalQuestions,
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("Next question generated - Type: {}, Model: {}", response.getQuestionType(), response.getModelUsed());
+                    log.info("Next question generated - Type: {}, Model: {}", response.getQuestionType(),
+                            response.getModelUsed());
                     return response.getQuestion();
                 }
             } catch (Exception e) {
@@ -196,19 +198,19 @@ public class AIService {
                         role, // jobDomain
                         level, // Pass level like Gemini
                         0.3);
-                
+
                 if (response != null) {
-                    log.info("EVALUATE success - Overall: {}/10, Model: {}", response.getOverall(), response.getModelUsed());
-                    
-                    String feedback = response.getFeedback() != null && !response.getFeedback().isEmpty()
-                            ? response.getFeedback()
-                            : "No detailed feedback available.";
+                    log.info("EVALUATE success - Overall: {}/10, Model: {}", response.getOverall(),
+                            response.getModelUsed());
+
+                    // Parse and clean feedback - extract only text, remove scores
+                    String feedback = cleanFeedbackText(response.getFeedback());
 
                     String sampleAnswer = response.getImprovedAnswer() != null
                             && !response.getImprovedAnswer().isEmpty()
                                     ? response.getImprovedAnswer()
                                     : null;
-                    
+
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
@@ -229,6 +231,45 @@ public class AIService {
                     .feedback("Unable to generate detailed feedback at this moment.")
                     .sampleAnswer("Please review the question and try to provide more specific details.")
                     .build();
+        }
+    }
+
+    // Helper: Clean feedback text - extract only text feedback, remove JSON scores
+    private String cleanFeedbackText(String feedbackRaw) {
+        if (feedbackRaw == null || feedbackRaw.isEmpty()) {
+            return "No detailed feedback available.";
+        }
+
+        try {
+            // Check if feedback is JSON with scores (e.g., {relevance: X, feedback: [...]})
+            if (feedbackRaw.trim().startsWith("{")) {
+                // Try to parse as JSON
+                com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(feedbackRaw);
+
+                // Extract feedback array if present
+                if (jsonNode.has("feedback")) {
+                    com.fasterxml.jackson.databind.JsonNode feedbackNode = jsonNode.get("feedback");
+
+                    // If feedback is an array, join elements with " | "
+                    if (feedbackNode.isArray()) {
+                        java.util.List<String> feedbackPoints = new java.util.ArrayList<>();
+                        for (com.fasterxml.jackson.databind.JsonNode item : feedbackNode) {
+                            feedbackPoints.add(item.asText());
+                        }
+                        return String.join(" | ", feedbackPoints);
+                    }
+
+                    // If feedback is a string, return it
+                    return feedbackNode.asText();
+                }
+            }
+
+            // If not JSON or no 'feedback' field, return as-is
+            return feedbackRaw;
+
+        } catch (Exception e) {
+            log.warn("Could not parse feedback as JSON, returning raw: {}", e.getMessage());
+            return feedbackRaw;
         }
     }
 
@@ -259,11 +300,16 @@ public class AIService {
         if (unifiedModelService.isServiceHealthy()) {
             log.info("Using Unified Model Service (v3 API) for REPORT - Level: {}, Skills: {}", level, skills);
             try {
+                // Debug: Log first Q&A pair to verify format
+                if (!historyForAI.isEmpty()) {
+                    log.debug("Sample Q&A format: {}", historyForAI.get(0));
+                }
+
                 MultitaskReportResponse response = unifiedModelService.generateReport(
                         historyForAI,
                         role,
-                        level,      // Pass level like Gemini
-                        skills,     // Pass skills like Gemini
+                        level, // Pass level like Gemini
+                        skills, // Pass skills like Gemini
                         candidateInfo,
                         0.5);
 
@@ -271,7 +317,8 @@ public class AIService {
                     String overview = convertScoreToOverview(response.getScore());
                     String recommendations = response.getRecommendations() != null
                             && !response.getRecommendations().isEmpty()
-                                    ? String.join(" ", response.getRecommendations())
+                                    ? response.getRecommendations().stream().map(r -> "• " + r)
+                                            .collect(Collectors.joining("\n"))
                                     : "Continue practicing and improving your technical interview skills.";
 
                     log.info("REPORT success - Score: {}/100, Model: {}", response.getScore(), response.getModelUsed());

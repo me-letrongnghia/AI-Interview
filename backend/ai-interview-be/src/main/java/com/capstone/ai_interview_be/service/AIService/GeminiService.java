@@ -24,8 +24,9 @@ public class GeminiService {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(120); // Tăng timeout cho các request dài
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com"; // Gemini API base URL
     private static final int MAX_RETRIES = 5; // Số lần retry tối đa
-    private static final Duration RETRY_MIN_BACKOFF = Duration.ofSeconds(2); // Thời gian chờ tối thiểu giữa các lần retry
-    private static final Duration RETRY_MAX_BACKOFF = Duration.ofSeconds(30); // Thời gian chờ tối đa giữa các lần retry
+    private static final Duration RETRY_MIN_BACKOFF = Duration.ofSeconds(5); // Thời gian chờ tối thiểu giữa các lần
+                                                                             // retry
+    private static final Duration RETRY_MAX_BACKOFF = Duration.ofSeconds(40); // Thời gian chờ tối đa giữa các lần retry
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
@@ -43,7 +44,8 @@ public class GeminiService {
         log.info("Initialized GeminiService with model: {}", model);
     }
 
-    // Phương thức gọi Gemini API để tạo phản hồi dựa trên systemPrompt và userPrompt
+    // Phương thức gọi Gemini API để tạo phản hồi dựa trên systemPrompt và
+    // userPrompt
     public String generateResponse(String systemPrompt, String userPrompt) {
         try {
             long startTime = System.currentTimeMillis();
@@ -140,28 +142,36 @@ public class GeminiService {
                 ? "general programming"
                 : String.join(", ", skills);
 
-        String systemPrompt = "You are a friendly and professional interviewer conducting a job interview. " +
-                "Output EXACTLY ONE warm-up opening question in " + (language == null ? "English" : language) + ". " +
-                "This is the FIRST question of the interview - a warm-up question about the position and skills.\n\n" +
-                "Rules:\n" +
-                "- Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).\n" +
-                "- Ask about their interest in the " + role + " position OR their experience/interest with the required skills.\n" +
-                "- Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.\n" +
-                "- Keep it open-ended and conversational - this is a warm-up, not a deep technical question.\n" +
-                "- DO NOT ask complex technical implementation questions yet.\n" +
-                "- End with a question mark (?).\n" +
-                "- Do NOT include preamble, explanations, numbering, or multiple questions.\n" +
-                "- Return only the greeting and question.\n\n" +
-                "Example good opening questions:\n" +
-                "- \"Hello! Welcome to the interview for the " + role + " position. What attracted you to this role and these technologies?\"\n" +
-                "- \"Hi there! I see you're interested in working with " + skillsText + ". What got you started with these technologies?\"\n" +
-                "- \"Welcome! Before we dive deeper, I'd love to know - what excites you most about the " + role + " role?\"";
+        String systemPrompt = """
+                You are a friendly and professional interviewer conducting a job interview.
+                Output EXACTLY ONE warm-up opening question in %s.
+                This is the FIRST question of the interview - a warm-up question about the position and skills.
 
-        String userPrompt = String.format(
-                "Role: %s\nLevel: %s\nSkills: %s\n\nGenerate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.",
-                role,
-                level,
-                skillsText);
+                Rules:
+                - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
+                - Ask about their interest in the %s position OR their experience/interest with the required skills.
+                - Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.
+                - Keep it open-ended and conversational - this is a warm-up, not a deep technical question.
+                - DO NOT ask complex technical implementation questions yet.
+                - End with a question mark (?).
+                - Do NOT include preamble, explanations, numbering, or multiple questions.
+                - Return only the greeting and question.
+
+                Example good opening questions:
+                - "Hello! Welcome to the interview for the %s position. What attracted you to this role and these technologies?"
+                - "Hi there! I see you're interested in working with %s. What got you started with these technologies?"
+                - "Welcome! Before we dive deeper, I'd love to know - what excites you most about the %s role?"
+                """
+                .formatted(language == null ? "English" : language, role, role, skillsText, role);
+
+        String userPrompt = """
+                Role: %s
+                Level: %s
+                Skills: %s
+
+                Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.
+                """
+                .formatted(role, level, skillsText);
 
         return generateResponse(systemPrompt, userPrompt);
     }
@@ -172,14 +182,16 @@ public class GeminiService {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null, 0, 0);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại mà không có thông tin tiến trình
+    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại mà không có thông tin
+    // tiến trình
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory) {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer,
                 conversationHistory, 0, 0);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại và thông tin tiến trình
+    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại và thông tin tiến
+    // trình
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory,
             int currentQuestionNumber, int totalQuestions) {
@@ -213,41 +225,62 @@ public class GeminiService {
 
         // Xây dựng quy tắc cụ thể theo level
         String levelSpecificRules = buildLevelSpecificRules(normalizedLevel);
-        
-        String systemPrompt = "You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.\n\n" +
-                "=== CRITICAL REQUIREMENTS ===\n" +
-                "1. You MUST follow the INTERVIEW PHASE STRATEGY below EXACTLY.\n" +
-                "2. You MUST generate questions appropriate for the candidate's level: " + normalizedLevel + "\n" +
-                "3. You MUST match the difficulty specified in the phase strategy.\n" +
-                "4. Output EXACTLY ONE question in " + (language == null ? "English" : language) + ".\n\n" +
-                phaseGuidance + "\n\n" +
-                levelSpecificRules +
-                "=== STRICT RULES ===\n" +
-                "- FOLLOW the phase strategy difficulty level strictly.\n" +
-                "- DO NOT ask questions too hard or too easy for " + normalizedLevel + " level.\n" +
-                "- Review interview history to avoid repeating questions.\n" +
-                "- Build upon the candidate's previous answers.\n" +
-                "- Start with: How, What, Why, When, Which, Describe, Design, or Implement.\n" +
-                "- End with a question mark (?).\n" +
-                "- Return ONLY the question - no preamble, no explanation, no numbering.\n";
+
+        String systemPrompt = """
+                You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.
+
+                === CRITICAL REQUIREMENTS ===
+                1. You MUST follow the INTERVIEW PHASE STRATEGY below EXACTLY.
+                2. You MUST generate questions appropriate for the candidate's level: %s
+                3. You MUST match the difficulty specified in the phase strategy.
+                4. Output EXACTLY ONE question in %s.
+
+                %s
+
+                %s
+
+                === STRICT RULES ===
+                - FOLLOW the phase strategy difficulty level strictly.
+                - DO NOT ask questions too hard or too easy for %s level.
+                - Review interview history to avoid repeating questions.
+                - Build upon the candidate's previous answers if applicable.
+                - Start with: How, What, Why, When, Which, Describe, Design, or Implement.
+                - End with a question mark (?).
+                - Return ONLY the question - no preamble, no explanation, no numbering.
+                """.formatted(normalizedLevel, language == null ? "English" : language, phaseGuidance,
+                levelSpecificRules, normalizedLevel);
 
         String progressInfo = "";
         if (totalQuestions > 0 && currentQuestionNumber > 0) {
-            progressInfo = String.format("\n\n=== INTERVIEW PROGRESS ===\nQuestion: %d of %d (%.0f%% complete)\nPhase guidance above is based on this progress.\n",
-                    currentQuestionNumber, totalQuestions,
-                    (double) currentQuestionNumber / totalQuestions * 100);
+            progressInfo = "\n\n=== INTERVIEW PROGRESS ===\nQuestion: %d of %d (%.0f%% complete)\nPhase guidance above is based on this progress.\n"
+                    .formatted(
+                            currentQuestionNumber, totalQuestions,
+                            (double) currentQuestionNumber / totalQuestions * 100);
         }
 
-        String userPrompt = String.format(
-                "=== CANDIDATE INFO ===\nRole: %s\nLevel: %s (IMPORTANT: Match question difficulty to this level!)\nSkills: %s%s\n\n%s=== CURRENT CONTEXT ===\nPrevious Question: %s\nCandidate's Answer: %s\n\n=== YOUR TASK ===\nGenerate the next interview question following the PHASE STRATEGY above. The question MUST be appropriate for a %s candidate.",
-                role != null ? role : "Unknown Role",
-                normalizedLevel,
-                skillsText,
-                progressInfo,
-                historyContext.toString(),
-                previousQuestion != null ? previousQuestion : "N/A",
-                previousAnswer != null ? previousAnswer : "N/A",
-                normalizedLevel);
+        String userPrompt = """
+                === CANDIDATE INFO ===
+                Role: %s
+                Level: %s (IMPORTANT: Match question difficulty to this level!)
+                Skills: %s%s
+
+                %s
+                === CURRENT CONTEXT ===
+                Previous Question: %s
+                Candidate's Answer: %s
+
+                === YOUR TASK ===
+                Generate the next interview question following the PHASE STRATEGY above. The question MUST be appropriate for a %s candidate.
+                """
+                .formatted(
+                        role != null ? role : "Unknown Role",
+                        normalizedLevel,
+                        skillsText,
+                        progressInfo,
+                        historyContext.toString(),
+                        previousQuestion != null ? previousQuestion : "N/A",
+                        previousAnswer != null ? previousAnswer : "N/A",
+                        normalizedLevel);
 
         return generateResponse(systemPrompt, userPrompt);
     }
@@ -256,27 +289,28 @@ public class GeminiService {
     private String buildPhaseGuidance(int currentQuestionNumber, int totalQuestions, String level) {
         // Nếu không có thông tin về tiến trình, trả về hướng dẫn chung
         if (totalQuestions <= 0 || currentQuestionNumber <= 0) {
-            return "INTERVIEW PHASE: Standard technical question - adjust difficulty based on candidate's level (" + level + ").";
+            return "INTERVIEW PHASE: Standard technical question - adjust difficulty based on candidate's level ("
+                    + level + ").";
         }
 
         // Xác định phase dựa trên thứ tự câu hỏi
         String normalizedLevel = normalizeLevel(level);
         // Tạo hướng dẫn dựa trên phase và level
         StringBuilder guidance = new StringBuilder();
-        guidance.append("=== INTERVIEW PHASE STRATEGY ===\n"); 
+        guidance.append("=== INTERVIEW PHASE STRATEGY ===\n");
         guidance.append(String.format("Current: Question %d of %d\n", currentQuestionNumber, totalQuestions));
         guidance.append(String.format("Candidate Level: %s\n\n", normalizedLevel));
 
         // Xác định phase dựa trên thứ tự câu hỏi cụ thể
         InterviewPhase phase = determinePhase(currentQuestionNumber, totalQuestions);
-        
+
         // Xây dựng hướng dẫn dựa trên phase và level
         buildPhaseAndLevelGuidance(guidance, phase, normalizedLevel);
-        
+
         guidance.append("\n=== END PHASE STRATEGY ===");
         return guidance.toString();
     }
-    
+
     // Hàm xác định phase dựa trên thứ tự câu hỏi
     private String buildLevelSpecificRules(String level) {
         StringBuilder rules = new StringBuilder();
@@ -284,12 +318,15 @@ public class GeminiService {
         if (level.equals("Intern") || level.equals("Fresher")) {
             rules.append("⚠️ CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:\n");
             rules.append("1. DO NOT ask about work experience or past projects - they likely have none\n");
-            rules.append("2. DO NOT ask about frameworks like Hibernate, JPA, Spring Security unless they listed it in skills\n");
+            rules.append(
+                    "2. DO NOT ask about frameworks like Hibernate, JPA, Spring Security unless they listed it in skills\n");
             rules.append("3. FOCUS on fundamental concepts: variables, data types, loops, conditionals, OOP basics\n");
             rules.append("4. Use simple, clear language - avoid complex technical jargon\n");
-            rules.append("5. Ask theoretical questions like 'What is...?', 'Why do we use...?', 'What are the differences between...?'\n");
+            rules.append(
+                    "5. Ask theoretical questions like 'What is...?', 'Why do we use...?', 'What are the differences between...?'\n");
             rules.append("6. For Java: Focus on String, Array, List, basic OOP, basic SQL concepts\n");
-            rules.append("7. MAXIMUM difficulty: Simple implementation questions (NOT architecture or design patterns)\n");
+            rules.append(
+                    "7. MAXIMUM difficulty: Simple implementation questions (NOT architecture or design patterns)\n");
             rules.append("\n");
         } else if (level.equals("Junior")) {
             rules.append("GUIDELINES FOR JUNIOR CANDIDATES:\n");
@@ -299,35 +336,42 @@ public class GeminiService {
             rules.append("4. Avoid complex system design or advanced architectural questions\n");
             rules.append("\n");
         }
-        
+
         return rules.toString();
     }
-    
+
     // Hàm chuẩn hóa level thành các mức cụ thể
     private String normalizeLevel(String level) {
-        if (level == null) return "Intern";
+        if (level == null)
+            return "Intern";
         String l = level.toLowerCase();
-        if (l.contains("intern")) return "Intern";
-        if (l.contains("fresher")) return "Fresher";
-        if (l.contains("junior")) return "Junior";
-        if (l.contains("mid")) return "Mid-level";
-        if (l.contains("senior")) return "Senior";
-        if (l.contains("lead")) return "Lead";
+        if (l.contains("intern"))
+            return "Intern";
+        if (l.contains("fresher"))
+            return "Fresher";
+        if (l.contains("junior"))
+            return "Junior";
+        if (l.contains("mid"))
+            return "Mid-level";
+        if (l.contains("senior"))
+            return "Senior";
+        if (l.contains("lead"))
+            return "Lead";
         return "Intern";
     }
-    
+
     // Hàm xác định phase dựa trên thứ tự câu hỏi
     private void buildPhaseAndLevelGuidance(StringBuilder guidance, InterviewPhase phase, String level) {
         boolean isEntry = level.equals("Intern") || level.equals("Fresher");
         boolean isJunior = level.equals("Junior");
         boolean isMid = level.equals("Mid-level");
         boolean isSenior = level.equals("Senior") || level.equals("Lead") || level.equals("Principal");
-        
+
         switch (phase) {
             case OPENING:
                 guidance.append("Phase: OPENING (Foundational Knowledge)\n");
                 guidance.append("Strategy:\n");
-                
+
                 if (isEntry) {
                     guidance.append("- Ask basic conceptual questions suitable for " + level + "\n");
                     guidance.append("- Focus on fundamental definitions and simple explanations\n");
@@ -363,11 +407,11 @@ public class GeminiService {
                     guidance.append("  * 'Describe your approach to ensuring code quality in a team'\n");
                 }
                 break;
-                
+
             case CORE_TECHNICAL:
                 guidance.append("Phase: CORE TECHNICAL (Practical Skills)\n");
                 guidance.append("Strategy:\n");
-                
+
                 if (isEntry) {
                     guidance.append("- Ask about basic implementations suitable for " + level + "\n");
                     guidance.append("- Focus on simple coding scenarios and basic problem-solving\n");
@@ -402,11 +446,11 @@ public class GeminiService {
                     guidance.append("  * 'How would you handle cross-service transactions?'\n");
                 }
                 break;
-                
+
             case DEEP_DIVE:
                 guidance.append("Phase: DEEP DIVE (Advanced Understanding)\n");
                 guidance.append("Strategy:\n");
-                
+
                 if (isEntry) {
                     guidance.append("- Go slightly deeper but remain accessible for " + level + "\n");
                     guidance.append("- Ask about understanding of why things work\n");
@@ -441,11 +485,11 @@ public class GeminiService {
                     guidance.append("  * 'How would you migrate a monolith to microservices safely?'\n");
                 }
                 break;
-                
+
             case CHALLENGING:
                 guidance.append("Phase: CHALLENGING (Problem Solving & Design)\n");
                 guidance.append("Strategy:\n");
-                
+
                 if (isEntry) {
                     guidance.append("- Present simple problem-solving scenarios for " + level + "\n");
                     guidance.append("- Focus on logical thinking rather than complex systems\n");
@@ -480,7 +524,7 @@ public class GeminiService {
                     guidance.append("  * 'Design a system to handle 1M concurrent WebSocket connections'\n");
                 }
                 break;
-                
+
             case WRAP_UP:
                 guidance.append("Phase: WRAP-UP (Soft Skills & Growth)\n");
                 guidance.append("Strategy:\n");
@@ -488,7 +532,7 @@ public class GeminiService {
                 guidance.append("- Give candidate opportunity to showcase strengths\n");
                 guidance.append("- End on a positive, conversational note\n");
                 guidance.append("- Difficulty: COMFORTABLE (no trick questions)\n");
-                
+
                 if (isEntry) {
                     guidance.append("- Examples for " + level + ":\n");
                     guidance.append("  * 'How do you approach learning new technologies?'\n");
@@ -513,16 +557,16 @@ public class GeminiService {
                 break;
         }
     }
-    
+
     // Hàm định nghĩa các phase trong buổi phỏng vấn
     private enum InterviewPhase {
-        OPENING,        // Câu hỏi cơ bản, warm-up
+        OPENING, // Câu hỏi cơ bản, warm-up
         CORE_TECHNICAL, // Kỹ thuật thực hành
-        DEEP_DIVE,      // Đi sâu vào chi tiết
-        CHALLENGING,    // Thử thách, system design
-        WRAP_UP         // Kết thúc, soft skills
+        DEEP_DIVE, // Đi sâu vào chi tiết
+        CHALLENGING, // Thử thách, system design
+        WRAP_UP // Kết thúc, soft skills
     }
-    
+
     // Hàm xác định phase dựa trên thứ tự câu hỏi
     private InterviewPhase determinePhase(int currentQuestion, int totalQuestions) {
         // Phân bổ câu hỏi theo tỷ lệ:
@@ -531,36 +575,49 @@ public class GeminiService {
         // - DEEP_DIVE: ~25% tiếp theo
         // - CHALLENGING: ~15% tiếp theo
         // - WRAP_UP: ~10% cuối (ít nhất 1 câu cuối)
-        
+
         if (totalQuestions <= 5) {
             // Với 4-5 câu: Opening -> Core -> Deep -> Wrap-up
-            if (currentQuestion == 1) return InterviewPhase.OPENING;
-            if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
-            if (currentQuestion == 2) return InterviewPhase.CORE_TECHNICAL;
-            if (currentQuestion <= totalQuestions - 1) return InterviewPhase.DEEP_DIVE;
+            if (currentQuestion == 1)
+                return InterviewPhase.OPENING;
+            if (currentQuestion == totalQuestions)
+                return InterviewPhase.WRAP_UP;
+            if (currentQuestion == 2)
+                return InterviewPhase.CORE_TECHNICAL;
+            if (currentQuestion <= totalQuestions - 1)
+                return InterviewPhase.DEEP_DIVE;
             return InterviewPhase.CORE_TECHNICAL;
         }
-        
+
         if (totalQuestions <= 10) {
-            // Với 6-10 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) -> Wrap(cuối)
-            if (currentQuestion == 1) return InterviewPhase.OPENING;
-            if (currentQuestion == totalQuestions) return InterviewPhase.WRAP_UP;
-            if (currentQuestion <= 3) return InterviewPhase.CORE_TECHNICAL;
-            if (currentQuestion <= 5) return InterviewPhase.DEEP_DIVE;
+            // Với 6-10 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) ->
+            // Wrap(cuối)
+            if (currentQuestion == 1)
+                return InterviewPhase.OPENING;
+            if (currentQuestion == totalQuestions)
+                return InterviewPhase.WRAP_UP;
+            if (currentQuestion <= 3)
+                return InterviewPhase.CORE_TECHNICAL;
+            if (currentQuestion <= 5)
+                return InterviewPhase.DEEP_DIVE;
             return InterviewPhase.CHALLENGING;
         }
-        
+
         // Với 9+ câu: phân bổ đầy đủ theo tỷ lệ
         int openingEnd = Math.max(1, (int) Math.ceil(totalQuestions * 0.20));
         int coreEnd = openingEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.30));
         int deepEnd = coreEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.25));
         int challengeEnd = deepEnd + Math.max(1, (int) Math.ceil(totalQuestions * 0.15));
         // Wrap-up: câu cuối cùng
-        
-        if (currentQuestion <= openingEnd) return InterviewPhase.OPENING;
-        if (currentQuestion <= coreEnd) return InterviewPhase.CORE_TECHNICAL;
-        if (currentQuestion <= deepEnd) return InterviewPhase.DEEP_DIVE;
-        if (currentQuestion < totalQuestions) return InterviewPhase.CHALLENGING;
+
+        if (currentQuestion <= openingEnd)
+            return InterviewPhase.OPENING;
+        if (currentQuestion <= coreEnd)
+            return InterviewPhase.CORE_TECHNICAL;
+        if (currentQuestion <= deepEnd)
+            return InterviewPhase.DEEP_DIVE;
+        if (currentQuestion < totalQuestions)
+            return InterviewPhase.CHALLENGING;
         return InterviewPhase.WRAP_UP;
     }
 
@@ -572,7 +629,7 @@ public class GeminiService {
         if (cvText != null && cvText.length() > MAX_CONTENT_LENGTH) {
             truncatedText = cvText.substring(0, MAX_CONTENT_LENGTH);
         }
-        
+
         String systemPrompt = "You are CV-Data-Extractor, an expert at extracting structured data from IT CVs. " +
                 "Analyze the CV carefully and extract the following information:\n\n" +
                 "1. Role: Based on the candidate's experience, projects, and skills, determine the most suitable IT role from: "
@@ -625,9 +682,10 @@ public class GeminiService {
     // Phương thức tạo phản hồi đánh giá câu trả lời của ứng viên
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
 
-        String systemPrompt = "You are a precise and analytical evaluator. Always respond with valid JSON only. " +
-                "Use proper markdown formatting in your feedback including **bold** for emphasis, " +
-                "`code` for technical terms, and ``` for code blocks. Use line breaks for better readability.";
+        String systemPrompt = """
+                You are a precise and analytical evaluator. Always respond with valid JSON only.
+                Use proper markdown formatting in your feedback including **bold** for emphasis, `code` for technical terms, and ``` for code blocks. Use line breaks for better readability.
+                """;
 
         String userPrompt = String.format(
                 """
@@ -683,12 +741,13 @@ public class GeminiService {
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
-            
+
             // Kiểm tra nếu response không phải JSON hợp lệ
             if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
                 log.warn("Gemini API returned error message instead of JSON: {}", jsonResponse);
                 return AnswerFeedbackData.builder()
-                        .feedback("Unable to generate detailed feedback at this moment due to high demand. Please try again later.")
+                        .feedback(
+                                "Unable to generate detailed feedback at this moment due to high demand. Please try again later.")
                         .sampleAnswer("Feedback generation is temporarily unavailable.")
                         .build();
             }
@@ -735,109 +794,89 @@ public class GeminiService {
 
         String skillsText = (skills == null || skills.isEmpty()) ? "General" : String.join(", ", skills);
 
-        String systemPrompt = "You are a comprehensive interview evaluator. Always respond with valid JSON only. " +
-                "Use proper markdown formatting including **bold** for emphasis, " +
-                "`code` for technical terms, and proper line breaks for readability.";
+        String systemPrompt = """
+                You are a comprehensive interview evaluator. Always respond with valid JSON only.
+                Use proper markdown formatting including **bold** for emphasis, `code` for technical terms, and proper line breaks for readability.
+                """;
 
-        String userPrompt = String.format(
+        String userPrompt = """
+                You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
+
+                CANDIDATE PROFILE:
+                - Position Applied: %s
+                - Experience Level: %s
+                - Technical Skills Focus: %s
+                - Total Questions Answered: %d
+
+                COMPLETE INTERVIEW TRANSCRIPT:
+                %s
+
+                EVALUATION FRAMEWORK:
+                1. OVERVIEW RATING:
+                   Evaluate the candidate's overall interview performance and assign ONE of these ratings:
+                   - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
+                   - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
+                   - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
+                   - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
+                   - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
+
+                2. ASSESSMENT:
+                   Provide a comprehensive 4-6 sentence analysis covering:
+                   - Overall performance summary
+                   - Technical competency evaluation
+                   - Communication effectiveness
+                   - Suitability for the role and level
+                   - Key observations from the interview flow
+
+                3. STRENGTHS (List 3-5 specific strengths):
+                   Identify concrete positive aspects with examples
+
+                4. WEAKNESSES (List 2-4 areas for improvement):
+                   Identify specific gaps or areas needing development
+
+                5. RECOMMENDATIONS:
+                   Provide actionable 3-5 sentence guidance
+
+                IMPORTANT SCORING CRITERIA:
+                - 90-100: Outstanding, exceeds expectations, deep understanding
+                - 70-89: Strong performance, solid knowledge, good communication
+                - 50-69: Average, meets basic expectations, some gaps
+                - 30-49: Below average, limited knowledge
+                - <30: Poor, insufficient knowledge
+
+                Provide detailed feedback in JSON format:
+                {
+                    "overview": "<EXCELLENT | GOOD | AVERAGE | BELOW AVERAGE | POOR>",
+                    "assessment": "<Detailed 4-6 sentence textual analysis of the candidate's performance. DO NOT put a single rating word here. Write a full paragraph analyzing their technical depth, communication, and fit for the %s level.>",
+                    "strengths": ["strength 1 with specific example", "strength 2 with specific example", ...],
+                    "weaknesses": ["weakness 1 with specific area to improve", "weakness 2 with specific area to improve", ...],
+                    "recommendations": "• First recommendation...\\n• Second recommendation...\\n• Third recommendation..."
+                }
+
+                CRITICAL:
+                - The 'overview' field MUST be EXACTLY one of: EXCELLENT, GOOD, AVERAGE, BELOW AVERAGE, or POOR
+                - The 'assessment' field MUST be a detailed paragraph (4-6 sentences), NOT a rating word.
+                - Score strictly based on actual performance vs. level expectations.
                 """
-                           You are a senior technical interviewer conducting a comprehensive performance review of a candidate's complete interview.
-
-                           CANDIDATE PROFILE:
-                           - Position Applied: %s
-                           - Experience Level: %s
-                           - Technical Skills Focus: %s
-                           - Total Questions Answered: %d
-
-                           COMPLETE INTERVIEW TRANSCRIPT:
-                                    %s
-
-                                    EVALUATION FRAMEWORK:
-
-                                    1. OVERVIEW RATING:
-                                       Evaluate the candidate's overall interview performance and assign ONE of these ratings:
-                                       - "EXCELLENT": Outstanding performance, exceeds expectations for the level, demonstrates expert knowledge
-                                       - "GOOD": Strong performance, meets or slightly exceeds expectations, solid understanding
-                                       - "AVERAGE": Adequate performance, meets basic expectations, some gaps but acceptable
-                                       - "BELOW AVERAGE": Weak performance, falls short of expectations, significant gaps
-                                       - "POOR": Very weak performance, major gaps in knowledge, does not meet minimum requirements
-
-
-                                    2. ASSESSMENT:
-                                       Provide a comprehensive 4-6 sentence analysis covering:
-                                       - Overall performance summary
-                                       - Technical competency evaluation
-                                       - Communication effectiveness
-                                       - Suitability for the role and level
-                                       - Key observations from the interview flow
-                                       - Use **bold** for key points and `backticks` for technical terms
-
-                                    3. STRENGTHS (List 3-5 specific strengths):
-                                       Identify concrete positive aspects with examples
-                                       - Format as clear bullet points
-                                       - Use **bold** for key strengths
-                                       - Use `code` for technical terms
-
-                                    4. WEAKNESSES (List 2-4 areas for improvement):
-                                       Identify specific gaps or areas needing development
-                                       - Format as clear bullet points
-                                       - Be constructive and specific
-
-                                    5. RECOMMENDATIONS:
-                                       Provide actionable 3-5 sentence guidance
-                                       - Use proper formatting for readability
-                                       - Include specific, actionable advice
-
-                                   IMPORTANT SCORING CRITERIA:
-                                   - EXCELLENT: 90%%+ correct answers, deep technical understanding, excellent communication
-                                   - GOOD: 70-89%% correct answers, solid technical knowledge, good communication
-                                   - AVERAGE: 50-69%% correct answers, basic understanding, adequate communication
-                                   - BELOW AVERAGE: 30-49%% correct answers, limited knowledge, poor communication
-                                   - POOR: <30%% correct answers, insufficient knowledge, very weak responses
-
-                                   FORMATTING GUIDELINES:
-                                   - Use **bold** to highlight important points
-                                   - Use `backticks` for technical terms
-                                   - Use line breaks (\\n) between paragraphs
-                                   - Format lists clearly with proper spacing
-                                   - Make the feedback easy to read and scan
-
-                                    Provide detailed feedback in JSON format:
-                                    {
-                                        "overview": "GOOD",
-                                        "assessment": "Throughout the interview, the candidate demonstrated...",
-                                        "strengths": [
-                                            "**Specific strength** with example from interview",
-                                            "**Another specific technical strength**",
-                                            "**Communication or approach strength**"
-                                        ],
-                                        "weaknesses": [
-                                            "Specific gap with example",
-                                            "Another area needing improvement"
-                                        ],
-                                        "recommendations": "To advance in your career and improve your interview performance, focus on..."
-                                    }
-
-                                    CRITICAL: The 'overview' field MUST be EXACTLY one of: EXCELLENT, GOOD, AVERAGE, BELOW AVERAGE, or POOR
-                                   Score strictly based on actual performance vs. level expectations.
-                        """,
-                role, level, skillsText, totalQuestionsAnswered, conversationSummary.toString());
+                .formatted(role, level, skillsText, totalQuestionsAnswered, conversationSummary.toString(), level);
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
-            
+
             // Kiểm tra nếu response không phải JSON hợp lệ
             if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
                 log.warn("Gemini API returned error message for overall feedback: {}", jsonResponse);
                 return OverallFeedbackData.builder()
                         .overview("AVERAGE")
-                        .assessment("Unable to generate detailed assessment due to high demand. Please try again later.")
+                        .assessment(
+                                "Unable to generate detailed assessment due to high demand. Please try again later.")
                         .strengths(java.util.Arrays.asList("Interview completed"))
                         .weaknesses(java.util.Arrays.asList("Detailed feedback temporarily unavailable"))
-                        .recommendations("Please try viewing the feedback again later when the AI service is available.")
+                        .recommendations(
+                                "Please try viewing the feedback again later when the AI service is available.")
                         .build();
             }
-            
+
             String cleanedJson = cleanJsonResponse(jsonResponse);
             OverallFeedbackData feedbackData = objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
 
@@ -908,22 +947,8 @@ public class GeminiService {
 
         String formatted = content;
 
-        // Remove bold markdown (**text** or __text__) - keep only the text
-        formatted = formatted.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
-        formatted = formatted.replaceAll("__([^_]+)__", "$1");
-
-        // Remove italic markdown (*text* or _text_) but be careful not to affect bullet
-        // points
-        // Only remove italic at word boundaries
-        formatted = formatted.replaceAll("(?<!\\*)\\*(?!\\*)([^*]+?)\\*(?!\\*)", "$1");
-        formatted = formatted.replaceAll("(?<!_)_(?!_)([^_]+?)_(?!_)", "$1");
-
-        // Handle code blocks - remove ``` markers but keep the code with proper spacing
-        formatted = formatted.replaceAll("```\\w*\\n", "\n\n");
-        formatted = formatted.replaceAll("```", "\n\n");
-
-        // Remove inline code backticks - keep only the text
-        formatted = formatted.replaceAll("`([^`]+)`", "$1");
+        // PRESERVE markdown style for frontend rendering
+        // We only perform basic cleanup like ensuring proper spacing
 
         // Format lists - ensure proper spacing and clean bullet points
         formatted = formatted.replaceAll("\\n\\s*[-*]\\s+", "\n\n• ");

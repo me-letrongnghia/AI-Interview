@@ -24,6 +24,10 @@ export const ApiInterviews = {
   startTimer: (sessionId) =>
     Https.post(`/api/interviews/sessions/${sessionId}/start-timer`),
 
+  // Complete interview early (before all questions answered)
+  completeSession: (sessionId, body) =>
+    Https.post(`/api/interviews/sessions/${sessionId}/complete`, body),
+
   // Legacy methods for backward compatibility
   Post_Interview: (body) => Https.post("/api/interviews/sessions", body),
 

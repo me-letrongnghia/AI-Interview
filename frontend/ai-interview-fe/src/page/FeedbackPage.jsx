@@ -116,7 +116,7 @@ export default function FeedbackPage() {
   // Helper: Parse assessment - handle JSON string or plain text
   const parseAssessment = (assessment) => {
     if (!assessment || assessment === "-") return null;
-    
+
     // Try to parse as JSON if it looks like JSON
     if (typeof assessment === 'string' && assessment.trim().startsWith('{')) {
       try {
@@ -131,10 +131,10 @@ export default function FeedbackPage() {
   // Helper: Render markdown bold (**text**) as actual bold - each point on new line
   const renderMarkdownText = (text) => {
     if (!text) return "-";
-    
+
     // Split by | for multiple feedback points
     const parts = text.split(' | ').filter(p => p.trim());
-    
+
     return (
       <ul className="space-y-2">
         {parts.map((part, idx) => {
@@ -145,7 +145,7 @@ export default function FeedbackPage() {
             }
             return segment;
           });
-          
+
           return (
             <li key={idx} className="flex items-start gap-2">
               <span className="text-green-600 mt-0.5">•</span>
@@ -228,7 +228,7 @@ export default function FeedbackPage() {
     ) {
       try {
         const response = await ApiPractice.deletePracticeSession(practiceId);
-        console.log("Practice session deleted successfully:", practiceId);
+
         toast.success(
           response.message || "Practice session deleted successfully"
         );
@@ -254,9 +254,7 @@ export default function FeedbackPage() {
         const res = await FeedbackApi.Get_Feedback(sessionId);
         setData(res);
 
-        // Debug: Check isPractice value
-        console.log("Session Info:", res.sessionInfo);
-        console.log("isPractice:", res.sessionInfo?.isPractice);
+
 
         // Only fetch practice sessions if this is NOT a practice session
         if (res.sessionInfo && res.sessionInfo.isPractice !== true) {
@@ -534,8 +532,8 @@ export default function FeedbackPage() {
                 )}
               </div>
 
-              {/* Right: Overall Score */}
-              {/* <div
+              {/* {Right: Overall Score} */}
+              {<div
                 className={`${overviewStyle.bg} rounded-xl p-6 border ${overviewStyle.border} text-center min-w-[160px]`}
               >
                 <div
@@ -547,7 +545,7 @@ export default function FeedbackPage() {
                 <p className={`text-2xl font-bold ${overviewStyle.text}`}>
                   {overallFeedback?.overview || "AVERAGE"}
                 </p>
-              </div> */}
+              </div>}
             </div>
 
             {/* Action Buttons */}
@@ -582,31 +580,20 @@ export default function FeedbackPage() {
           <div className='bg-white rounded-xl p-6 shadow-sm border border-gray-200'>
             <h2 className='text-xl font-bold text-gray-900 mb-4'>Summary</h2>
 
-            {/* Display overview badge and assessment text */}
+            {/* Display assessment text - overview is already shown in Overall Score section */}
             {(() => {
-              const parsed = parseAssessment(overallFeedback?.assessment);
-              if (parsed && parsed.overview) {
-                // It's a JSON object with structured data
-                const style = getOverviewStyle(parsed.overview);
-                return (
-                  <div className='mb-6'>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${style.badge}`}>
-                      {parsed.overview}
-                    </span>
-                    {parsed.assessment && parsed.assessment !== "null" && (
-                      <p className='text-gray-700 leading-relaxed'>{parsed.assessment}</p>
-                    )}
-                  </div>
-                );
-              } else if (parsed && parsed.text) {
-                // It's plain text
-                return (
-                  <p className='text-gray-700 mb-6 leading-relaxed'>
-                    {parsed.text}
-                  </p>
-                );
+              const assessmentText = overallFeedback?.assessment;
+              if (!assessmentText || assessmentText === "-") {
+                return <p className='text-gray-700 mb-6 leading-relaxed'>-</p>;
               }
-              return <p className='text-gray-700 mb-6 leading-relaxed'>-</p>;
+
+              // Just display the assessment text - no need to parse for overview
+              // The overview badge is already displayed in the "Overall Score" section on the right
+              return (
+                <p className='text-gray-700 mb-6 leading-relaxed'>
+                  {assessmentText}
+                </p>
+              );
             })()}
 
             <div className='grid md:grid-cols-2 gap-6 border-t border-gray-200 pt-6'>
@@ -661,7 +648,7 @@ export default function FeedbackPage() {
                     <h3 className='font-semibold text-gray-900 mb-1'>
                       Recommendations
                     </h3>
-                    <p className='text-sm text-gray-700'>
+                    <p className='text-sm text-gray-700 whitespace-pre-line'>
                       {overallFeedback.recommendations}
                     </p>
                   </div>
@@ -688,9 +675,8 @@ export default function FeedbackPage() {
                     </h2>
                     <p className='text-sm text-gray-500'>
                       {practiceSessions.length > 0
-                        ? `${practiceSessions.length} practice attempt${
-                            practiceSessions.length > 1 ? "s" : ""
-                          }`
+                        ? `${practiceSessions.length} practice attempt${practiceSessions.length > 1 ? "s" : ""
+                        }`
                         : "No practice attempts yet"}
                     </p>
                   </div>
@@ -760,7 +746,7 @@ export default function FeedbackPage() {
                               </div>
 
                               {practice.status === "completed" &&
-                              practice.feedbackOverview ? (
+                                practice.feedbackOverview ? (
                                 <>
                                   <div
                                     className={`inline-block px-4 py-2 rounded-lg border-[1.2px] border-red-200 font-bold text-lg mb-4 ${practiceStyle.badge}`}
@@ -922,10 +908,8 @@ export default function FeedbackPage() {
                               <p className='text-xs font-medium text-blue-700 mb-2'>
                                 Improved Answer
                               </p>
-                              <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
-                                <p className='text-sm text-gray-800 whitespace-pre-line '>
-                                  {item.sampleAnswer}
-                                </p>
+                              <div className='bg-blue-50 rounded-lg p-3 border border-blue-200 text-sm text-gray-800'>
+                                {renderMarkdownText(item.sampleAnswer)}
                               </div>
                             </div>
                           )}
@@ -959,11 +943,10 @@ export default function FeedbackPage() {
                             <button
                               key={pageNumber}
                               onClick={() => goToPage(pageNumber)}
-                              className={`w-10 h-10 rounded-lg font-medium ${
-                                currentPage === pageNumber
-                                  ? "bg-blue-600 text-white"
-                                  : "text-gray-700 hover:bg-gray-100"
-                              }`}
+                              className={`w-10 h-10 rounded-lg font-medium ${currentPage === pageNumber
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-700 hover:bg-gray-100"
+                                }`}
                             >
                               {pageNumber}
                             </button>

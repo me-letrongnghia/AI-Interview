@@ -7,6 +7,7 @@ Allows easy switching between models with consistent interface.
 
 from .base import BaseModelProvider, ModelResponse
 from .qwen_provider import QwenModelProvider
+from .qwen_external_provider import QwenExternalProvider
 from .multitask_provider import MultitaskModelProvider
 from .model_factory import (
     ModelFactory, 
@@ -19,6 +20,7 @@ __all__ = [
     "BaseModelProvider",
     "ModelResponse", 
     "QwenModelProvider",
+    "QwenExternalProvider",
     "MultitaskModelProvider",
     "ModelFactory",
     "get_model_provider",

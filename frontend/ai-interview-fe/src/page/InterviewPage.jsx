@@ -53,7 +53,7 @@ const VideoStream = memo(({ streamRef, muted }) => {
     // Cleanup function - clear video element on unmount
     return () => {
       if (videoElement) {
-        console.log("🎥 Clearing VideoStream on unmount");
+
         videoElement.pause();
         videoElement.srcObject = null;
         videoElement.load();
@@ -202,8 +202,60 @@ const InterviewUI = memo(
     userProfile,
     pandaImage,
     interviewConfig,
+    evaluationCountdown,
   }) => (
     <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden'>
+      {/* Evaluation Countdown Overlay */}
+      {evaluationCountdown !== null && (
+        <div className='absolute inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center'>
+          <div className='bg-white rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4'>
+            <div className='mb-6'>
+              <div className='w-20 h-20 mx-auto mb-4 relative'>
+                <svg className='w-20 h-20 transform -rotate-90'>
+                  <circle
+                    cx='40'
+                    cy='40'
+                    r='36'
+                    stroke='#e5e7eb'
+                    strokeWidth='6'
+                    fill='none'
+                  />
+                  <circle
+                    cx='40'
+                    cy='40'
+                    r='36'
+                    stroke='#10b981'
+                    strokeWidth='6'
+                    fill='none'
+                    strokeDasharray={36 * 2 * Math.PI}
+                    strokeDashoffset={36 * 2 * Math.PI * (1 - evaluationCountdown / 30)}
+                    strokeLinecap='round'
+                    className='transition-all duration-1000'
+                  />
+                </svg>
+                <span className='absolute inset-0 flex items-center justify-center text-2xl font-bold text-emerald-600'>
+                  {evaluationCountdown}
+                </span>
+              </div>
+              <h2 className='text-xl font-bold text-gray-800 mb-2'>
+                Evaluating Your Answers
+              </h2>
+              <p className='text-gray-600'>
+                Please wait while our AI analyzes your responses...
+              </p>
+            </div>
+            <div className='w-full bg-gray-200 rounded-full h-2'>
+              <div
+                className='bg-emerald-500 h-2 rounded-full transition-all duration-1000'
+                style={{ width: `${((30 - evaluationCountdown) / 30) * 100}%` }}
+              />
+            </div>
+            <p className='mt-3 text-sm text-gray-500'>
+              Redirecting to feedback page in {evaluationCountdown}s
+            </p>
+          </div>
+        </div>
+      )}
       <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
         {/* Main Video Area */}
         <div className='flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white'>
@@ -297,18 +349,16 @@ const InterviewUI = memo(
                 <button
                   onClick={handleMicClick}
                   disabled={typingMessageId && !isRecording}
-                  className={`px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-                    isRecording
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-green-500 hover:bg-green-600"
-                  }`}
+                  className={`px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${isRecording
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-green-500 hover:bg-green-600"
+                    }`}
                   title={isRecording ? "Stop recording" : "Voice input"}
                 >
                   <Mic
                     size={20}
-                    className={`text-white ${
-                      isRecording ? "animate-pulse" : ""
-                    }`}
+                    className={`text-white ${isRecording ? "animate-pulse" : ""
+                      }`}
                   />
                   <span className='text-white font-semibold text-sm'>
                     Voice Input
@@ -364,7 +414,7 @@ const InterviewUI = memo(
                         (m) => m.type === "ai" && !m.isSystemMessage
                       ).length /
                         interviewConfig.maxQuestions) *
-                        100,
+                      100,
                       100
                     )}%`,
                   }}
@@ -419,9 +469,8 @@ const InterviewUI = memo(
             {chatHistory.map((chat, index) => (
               <div
                 key={chat.id || index}
-                className={`flex ${
-                  chat.type === "user" ? "justify-end" : "justify-start"
-                } animate-fadeIn`}
+                className={`flex ${chat.type === "user" ? "justify-end" : "justify-start"
+                  } animate-fadeIn`}
               >
                 {chat.type === "ai" ? (
                   // AI Message - Simple & Clean
@@ -500,8 +549,8 @@ const InterviewUI = memo(
                                 "https://ui-avatars.com/api/?name=" +
                                 encodeURIComponent(
                                   userProfile?.fullName ||
-                                    userProfile?.name ||
-                                    "User"
+                                  userProfile?.name ||
+                                  "User"
                                 ) +
                                 "&background=22c55e&color=fff";
                             }}
@@ -666,6 +715,7 @@ export default function InterviewInterface() {
   const isLeavingRef = useRef(false); // Flag to prevent multiple leave calls
   const [showInitialLoading, setShowInitialLoading] = useState(true); // Initial loading state
   const timerStartTimeRef = useRef(null); // Track timer start time for elapsed calculation
+  const [evaluationCountdown, setEvaluationCountdown] = useState(null); // Countdown for final evaluation
 
   // Interview config based on level - wait for API response before setting
   const [interviewConfig, setInterviewConfig] = useState(null);
@@ -674,17 +724,13 @@ export default function InterviewInterface() {
 
   // CRITICAL: Centralized media cleanup function - SYNCHRONOUS
   const stopAllMediaTracks = useCallback(() => {
-    console.log("🛑 [CLEANUP] Starting media cleanup...");
-
     // Step 1: Clear video element FIRST (most important!)
     const videoElement = document.getElementById("user-camera-video");
     if (videoElement) {
-      console.log("🎥 [CLEANUP] Clearing video element");
       try {
         videoElement.pause();
         videoElement.srcObject = null;
         videoElement.load(); // Force clear
-        console.log("✅ [CLEANUP] Video element cleared");
       } catch (err) {
         console.warn("⚠️ [CLEANUP] Error clearing video element:", err);
       }
@@ -693,38 +739,22 @@ export default function InterviewInterface() {
     // Step 2: Stop all media tracks
     if (streamRef.current) {
       const tracks = streamRef.current.getTracks();
-      console.log(`🔴 [CLEANUP] Stopping ${tracks.length} media tracks...`);
 
       tracks.forEach((track) => {
         try {
-          const kind = track.kind;
-          const label = track.label;
-          const readyState = track.readyState;
-
-          console.log(
-            `   → Stopping ${kind} track: ${label} (state: ${readyState})`
-          );
-
           track.enabled = false;
           track.stop();
-
-          console.log(`   ✅ ${kind} track stopped`);
         } catch (err) {
           console.warn(`   ⚠️ Error stopping ${track.kind}:`, err);
         }
       });
 
       streamRef.current = null;
-      console.log("✅ [CLEANUP] All media tracks stopped, streamRef cleared");
-    } else {
-      console.log("ℹ️ [CLEANUP] No stream to clean up");
     }
 
     // Step 3: Update UI state
     setIsCameraOn(false);
     setIsMicOn(false);
-
-    console.log("✅ [CLEANUP] Media cleanup completed");
   }, []);
 
   const handleToggleCamera = useCallback(() => {
@@ -767,7 +797,6 @@ export default function InterviewInterface() {
   // ensure media tracks are stopped on unload (close/refresh) - ONLY when leaving permanently
   useEffect(() => {
     const onBeforeUnload = () => {
-      console.log("🚪 [EVENT] beforeunload - stopping media");
       stopAllMediaTracks();
 
       // 🎯 Calculate and save elapsed time when user closes browser
@@ -777,11 +806,7 @@ export default function InterviewInterface() {
           (now - timerStartTimeRef.current) / 1000
         );
 
-        console.log(
-          `⏱️ Browser closing - Elapsed time: ${elapsedSeconds}s (${Math.floor(
-            elapsedSeconds / 60
-          )}m ${elapsedSeconds % 60}s)`
-        );
+
 
         // Use notifyUserLeaving with sendBeacon for reliable delivery
         notifyUserLeaving(sessionId, "User closed browser", elapsedSeconds);
@@ -792,7 +817,6 @@ export default function InterviewInterface() {
     };
 
     const onPageHide = () => {
-      console.log("🚪 [EVENT] pagehide - stopping media");
       stopAllMediaTracks();
     };
 
@@ -800,11 +824,10 @@ export default function InterviewInterface() {
     window.addEventListener("beforeunload", onBeforeUnload);
     window.addEventListener("pagehide", onPageHide);
 
-    console.log("✅ Media cleanup listeners registered");
+
 
     // cleanup on unmount (covers react-router navigation)
     return () => {
-      console.log("🔄 [UNMOUNT] Component unmounting - cleaning up");
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("pagehide", onPageHide);
 
@@ -818,11 +841,7 @@ export default function InterviewInterface() {
           (now - timerStartTimeRef.current) / 1000
         );
 
-        console.log(
-          `🔄 Route change detected - Elapsed time: ${elapsedSeconds}s (${Math.floor(
-            elapsedSeconds / 60
-          )}m ${elapsedSeconds % 60}s)`
-        );
+
 
         // Use notifyUserLeaving to save time before navigating away
         notifyUserLeaving(sessionId, "User navigated away", elapsedSeconds);
@@ -862,12 +881,10 @@ export default function InterviewInterface() {
   const handleLeaveRoom = useCallback(async () => {
     // Prevent multiple calls
     if (isLeavingRef.current) {
-      console.log("⚠️ Already leaving, ignoring duplicate call");
       return;
     }
 
     isLeavingRef.current = true;
-    console.log("🚪 Leaving room - setting flag");
 
     const userChoice = await confirmToastWithOptions(
       "What would you like to do?"
@@ -882,7 +899,6 @@ export default function InterviewInterface() {
 
     // Handle home option
     if (userChoice === "home") {
-      console.log("🏠 [LEAVE] Going home - cleaning up");
 
       // Stop speech
       stopSpeaking();
@@ -921,24 +937,54 @@ export default function InterviewInterface() {
     }
 
     // Stop media stream using centralized function
-    console.log("📝 [LEAVE] Going to feedback - cleaning up");
 
     // Execute cleanup and navigation
     (async () => {
-      // Stop all media tracks using centralized function
-      stopAllMediaTracks();
+      try {
+        // Stop all media tracks using centralized function
+        stopAllMediaTracks();
 
-      // Disconnect socket
-      disconnectSocket();
+        // Disconnect socket
+        disconnectSocket();
 
-      // Show notification
-      toast.info("Generating feedback...", { autoClose: 2000 });
+        // Show loading notification
+        toast.info("Completing interview and evaluating answers...", { autoClose: false });
+        setIsLoading(true);
 
-      // Wait longer before navigation to ensure browser releases camera
-      setTimeout(() => {
-        console.log("🚀 Navigating to feedback page");
-        navigate(`/feedback/${sessionId}`);
-      }, 500);
+        // Calculate elapsed time
+        const now = Date.now();
+        const elapsedSeconds = timerStartTimeRef.current
+          ? Math.floor((now - timerStartTimeRef.current) / 1000)
+          : 0;
+
+        try {
+          const response = await ApiInterviews.completeSession(sessionId, {
+            elapsedSeconds
+          });
+          toast.dismiss(); // Dismiss loading toast
+          toast.success("Interview completed! Generating report...", { autoClose: 2000 });
+        } catch (error) {
+          console.error("❌ Completion endpoint failed:", error);
+          toast.dismiss();
+          toast.warn("Report generation may be incomplete", { autoClose: 2000 });
+          // Continue to feedback page anyway
+        }
+
+        setIsLoading(false);
+
+        // Wait a moment for toasts before navigation
+        setTimeout(() => {
+          navigate(`/feedback/${sessionId}`);
+        }, 500);
+      } catch (error) {
+        console.error("❌ Error during leave:", error);
+        toast.dismiss();
+        toast.error("An error occurred. Navigating to feedback...");
+        setIsLoading(false);
+        setTimeout(() => {
+          navigate(`/feedback/${sessionId}`);
+        }, 1000);
+      }
     })();
   }, [
     navigate,
@@ -974,7 +1020,6 @@ export default function InterviewInterface() {
       disconnectSocket();
 
       setTimeout(() => {
-        console.log("🚀 Auto-navigating to feedback page (time's up)");
         navigate(`/feedback/${sessionId}`);
       }, 2000);
     }, [
@@ -1046,28 +1091,23 @@ export default function InterviewInterface() {
   // WebSocket message handler
   const handleSocketMessage = useCallback(
     (msg) => {
-      console.log("🎯 Handling socket message:", msg);
 
       if (!msg) {
         console.warn("⚠️ Received empty message");
         return;
       }
 
-      const messageId = `${msg.type}-${
-        msg.timestamp || Date.now()
-      }-${JSON.stringify(msg).substring(0, 50)}`;
+      const messageId = `${msg.type}-${msg.timestamp || Date.now()
+        }-${JSON.stringify(msg).substring(0, 50)}`;
 
       if (processedMessagesRef.current.has(messageId)) {
-        console.log("⏭️ Message already processed, skipping:", messageId);
         return;
       }
 
       processedMessagesRef.current.add(messageId);
-      console.log("✅ Processing new message:", { type: msg.type, messageId });
 
       switch (msg.type) {
         case "question":
-          console.log("❓ Received new question:", msg.nextQuestion);
           if (msg.nextQuestion) {
             const q = msg.nextQuestion;
             setCurrentQuestionId(q.questionId);
@@ -1089,7 +1129,7 @@ export default function InterviewInterface() {
 
         case "end": {
           setCurrentQuestionId(null);
-          const endMessage = "Interview completed. Thank you!";
+          const endMessage = "Interview completed! Evaluating your answers...";
           setChatHistory((prev) => [
             ...prev,
             {
@@ -1101,30 +1141,35 @@ export default function InterviewInterface() {
             },
           ]);
           setTypingMessageId(messageId);
-          // Speak immediately, typing animation runs in parallel
           speak(endMessage);
           setIsLoading(false);
 
-          // Auto navigate to feedback after end message - NO dialog
-          setTimeout(() => {
-            console.log(
-              "🚀 Auto-navigating to feedback page (interview ended by system)"
-            );
-            stopSpeaking();
-            setIsRunning(false);
+          // Start 30-second countdown for AI evaluation to complete
+          const EVALUATION_WAIT_SECONDS = 30;
+          setEvaluationCountdown(EVALUATION_WAIT_SECONDS);
 
-            // Stop recording if active
-            if (isRecording) {
-              setIsRecording(false);
-              stopListening();
+          let countdown = EVALUATION_WAIT_SECONDS;
+          const countdownInterval = setInterval(() => {
+            countdown--;
+            setEvaluationCountdown(countdown);
+
+            if (countdown <= 0) {
+              clearInterval(countdownInterval);
+              console.log("🚀 Countdown complete - navigating to feedback page");
+
+              stopSpeaking();
+              setIsRunning(false);
+
+              if (isRecording) {
+                setIsRecording(false);
+                stopListening();
+              }
+
+              stopAllMediaTracks();
+              disconnectSocket();
+              navigate(`/feedback/${sessionId}`);
             }
-
-            // Stop media tracks using centralized function
-            stopAllMediaTracks();
-
-            disconnectSocket();
-            navigate(`/feedback/${sessionId}`);
-          }, 3000);
+          }, 1000);
           break;
         }
 
@@ -1170,12 +1215,13 @@ export default function InterviewInterface() {
                 interviewConfig &&
                 aiQuestionCount >= interviewConfig.maxQuestions
               ) {
-                toast.warning(
-                  `Reached maximum ${interviewConfig.maxQuestions} questions! Ending interview...`
+                // Just show notification - backend will send "end" message 
+                // which triggers the proper countdown
+                toast.success(
+                  `You've completed all ${interviewConfig.maxQuestions} questions! Generating feedback...`
                 );
-                setTimeout(() => {
-                  handleLeaveRoom();
-                }, 3000);
+                // DO NOT call handleLeaveRoom() here - it would bypass the countdown
+                // The backend's "end" message handler (case "end") will handle navigation
               }
 
               return newHistory;
@@ -1341,9 +1387,8 @@ export default function InterviewInterface() {
               let lastQuestionId = null;
 
               apiData.data.forEach((item, index) => {
-                const messageId = `history-${
-                  item.id || item.questionId || index
-                }`;
+                const messageId = `history-${item.id || item.questionId || index
+                  }`;
                 const messageType = item.type || "ai";
                 const messageContent = item.content;
 
@@ -1369,7 +1414,6 @@ export default function InterviewInterface() {
 
               if (lastQuestionId) {
                 setCurrentQuestionId(lastQuestionId);
-                console.log("✅ Restored to question ID:", lastQuestionId);
               }
 
               // ✅ Speak the LAST message asynchronously (non-blocking)
@@ -1389,9 +1433,8 @@ export default function InterviewInterface() {
             ) {
               // ✅ HAS SINGLE QUESTION - Load immediately
               const firstItem = apiData.data[0];
-              const messageId = `history-${
-                firstItem.id || firstItem.questionId || 0
-              }`;
+              const messageId = `history-${firstItem.id || firstItem.questionId || 0
+                }`;
 
               const chatHistory = [
                 {
@@ -1446,8 +1489,6 @@ export default function InterviewInterface() {
 
                 // ✅ Speak asynchronously
                 setTimeout(() => speak(questionData.content), 100);
-
-                console.log("✅ First question loaded:", qId);
               } else {
                 console.error(
                   "❌ Invalid question data structure:",
@@ -1548,9 +1589,8 @@ export default function InterviewInterface() {
 
         const congratsMessage = {
           type: "ai",
-          text: `🎉 Congratulations! You've successfully completed all ${
-            interviewConfig?.maxQuestions || 0
-          } questions. Thank you for your participation. Generating your feedback now...`,
+          text: `🎉 Congratulations! You've successfully completed all ${interviewConfig?.maxQuestions || 0
+            } questions. Thank you for your participation. Generating your feedback now...`,
           time: formatTime(new Date()),
           id: `congrats-${Date.now()}`,
           isSystemMessage: true, // NEW: Mark as system message to exclude from count
@@ -1563,34 +1603,16 @@ export default function InterviewInterface() {
           speak(congratsMessage.text);
         }, 500);
 
-        // Show toast
+        // Show toast - backend will send "end" message which triggers 30s countdown
         toast.success(
-          `You've completed all ${
-            interviewConfig?.maxQuestions || 0
+          `You've completed all ${interviewConfig?.maxQuestions || 0
           } questions! Generating feedback...`,
           { autoClose: 3000 }
         );
 
-        // Auto navigate to feedback after 3 seconds - NO dialog
-        setTimeout(() => {
-          console.log(
-            "🚀 Auto-navigating to feedback page (completed all questions)"
-          );
-          stopSpeaking();
-          setIsRunning(false);
-
-          // Stop recording if active
-          if (isRecording) {
-            setIsRecording(false);
-            stopListening();
-          }
-
-          // Stop media tracks using centralized function
-          stopAllMediaTracks();
-
-          disconnectSocket();
-          navigate(`/feedback/${sessionId}`);
-        }, 3000);
+        // DO NOT navigate here - let backend's "end" message trigger proper 30s countdown
+        // The sendMessage/WebSocket handler will receive "end" message from backend
+        // which starts the evaluation countdown in handleSocketMessage case "end"
 
         return finalHistory;
       }
@@ -1707,8 +1729,7 @@ export default function InterviewInterface() {
         stream.getTracks().forEach((track) => {
           track.onended = () => {
             toast.error(
-              `${
-                track.kind === "video" ? "Camera" : "Microphone"
+              `${track.kind === "video" ? "Camera" : "Microphone"
               } connection was lost. Please refresh the page.`
             );
           };
@@ -1813,6 +1834,7 @@ export default function InterviewInterface() {
       isCameraOn={isCameraOn}
       isMicOn={isMicOn}
       interviewConfig={interviewConfig}
+      evaluationCountdown={evaluationCountdown}
     />
   );
 }

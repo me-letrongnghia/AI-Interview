@@ -463,6 +463,9 @@ def create_app() -> FastAPI:
         """Generate interview report"""
         global _active_provider
         
+        # Debug: log request for troubleshooting
+        logger.debug(f"[REPORT] Request received: {request.dict()}")
+        
         if not _active_provider or not _active_provider.is_loaded():
             _active_provider = get_model_provider(auto_load=True)
         
