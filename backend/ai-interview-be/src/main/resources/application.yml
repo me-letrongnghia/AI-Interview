@@ -38,6 +38,10 @@ spring:
       max-request-size: 5MB
 
 # Gemini AI Configuration
+groq:
+  api-key: ${GROQ_API_KEY}
+  model: ${GROQ_MODEL:llama3-70b-8192}
+  
 gemini:
   api-key: ${GEMINI_API_KEY}
   model: ${GEMINI_MODEL}

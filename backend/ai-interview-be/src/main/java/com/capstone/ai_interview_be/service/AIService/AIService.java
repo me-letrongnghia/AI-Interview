@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
@@ -24,7 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIService {
 
     private final UnifiedModelService unifiedModelService;
-    private final GeminiService geminiService;
+    // private final GeminiService geminiService;
+    private final GroqService groqService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Phương thức tạo câu hỏi đầu tiên
@@ -54,9 +56,9 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini for first question");
+        log.warn("AI Model Service unavailable, using Groq for first question");
         try {
-            return geminiService.generateFirstQuestion(role, skills, "English", level);
+            return groqService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
             log.error("Gemini failed");
             return "Sorry, AI is currently unavailable to generate questions.";
@@ -115,9 +117,9 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini fallback");
+        log.warn("AI Model Service unavailable, using Groq fallback");
         try {
-            return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+            return groqService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                     previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
@@ -145,15 +147,15 @@ public class AIService {
     // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public DataScanResponse extractData(String Text) {
         try {
-            String jsonResponse = geminiService.generateData(Text);
+            String jsonResponse = groqService.generateData(Text);
             // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                log.warn("Empty Gemini response");
+                log.warn("Empty Groq response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             // Kiểm tra lỗi trong phản hồi
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
-                log.error("Gemini error: {}", jsonResponse);
+                log.error("Groq error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             // Làm sạch phản hồi để lấy JSON đúng định dạng
@@ -222,9 +224,9 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini for answer feedback");
+        log.warn("AI Model Service unavailable, using Groq for answer feedback");
         try {
-            return geminiService.generateAnswerFeedback(question, answer, role, level);
+            return groqService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
             log.error("Answer feedback error: {}", e.getMessage());
             return AnswerFeedbackData.builder()
@@ -337,11 +339,11 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.info("Using Gemini fallback for overall feedback");
+        log.info("Using Groq fallback for overall feedback");
         try {
-            return geminiService.generateOverallFeedback(conversation, role, level, skills);
+            return groqService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
-            log.error("Gemini failed, using hardcoded fallback: {}", e.getMessage());
+            log.error("Groq failed, using hardcoded fallback: {}", e.getMessage());
             return OverallFeedbackData.builder()
                     .overview("AVERAGE")
                     .assessment("Thank you for completing the interview. Your performance showed potential. "
