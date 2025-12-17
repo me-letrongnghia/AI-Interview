@@ -26,8 +26,10 @@ class ModelFactory:
             return ModelFactory._create_llama_model()
         elif model_type == "qwen-3b":
             return ModelFactory._create_qwen_model()
+        elif model_type == "qwen-4b":
+            return ModelFactory._create_qwen_4b_model()
         else:
-            available_models = ["multitask", "llama-1b", "qwen-3b"]
+            available_models = ["multitask", "llama-1b", "qwen-3b", "qwen-4b"]
             raise ValueError(
                 f"Unknown model type: '{model_type}'. "
                 f"Available: {', '.join(available_models)}"
@@ -67,9 +69,21 @@ class ModelFactory:
             raise ImportError("Qwen dependencies not available")
     
     @staticmethod
+    def _create_qwen_4b_model() -> BaseModelManager:
+        """Tạo Qwen-4B model"""
+        try:
+            from src.services.model_loader import Qwen4BModelManager
+            logger.info("[ModelFactory] Creating Qwen-4B model")
+            return Qwen4BModelManager()
+        except ImportError as e:
+            logger.error(f"[ModelFactory] Failed to import: {e}")
+            raise ImportError("Qwen-4B dependencies not available")
+
+    
+    @staticmethod
     def get_available_models():
         """Danh sách models có sẵn"""
-        return ["multitask", "llama-1b", "qwen-3b"]
+        return ["multitask", "llama-1b", "qwen-3b", "qwen-4b"]
     
     @staticmethod
     def get_model_description(model_type: str) -> str:
@@ -77,6 +91,7 @@ class ModelFactory:
         descriptions = {
             "multitask": "Custom Transformer (71M params) - Fast, specialized for interviews",
             "llama-1b": "Meta Llama 3.2 (1.2B params) - General-purpose, good quality",
-            "qwen-3b": "Qwen 2.5 (3B params) - High quality, requires more VRAM"
+            "qwen-3b": "Qwen 2.5 (3B params) - High quality, requires more VRAM",
+            "qwen-4b": "Qwen 2.5 (4B params) - Higher quality, requires more VRAM"
         }
         return descriptions.get(model_type.lower(), "Unknown model")

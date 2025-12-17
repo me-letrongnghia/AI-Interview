@@ -30,14 +30,7 @@ public class AIService {
     private final GroqService groqService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ========================================================================
-    // REACTIVE METHODS - Return Mono<String> for non-blocking execution
-    // ========================================================================
-
-    /**
-     * Generate first question - REACTIVE VERSION
-     * Returns Mono<String> for non-blocking concurrent execution
-     */
+    // Generate first question -
     public Mono<String> generateFirstQuestionReactive(String role, String level, List<String> skills,
             String cvText, String jdText) {
 
