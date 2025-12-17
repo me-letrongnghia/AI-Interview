@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -71,10 +72,21 @@ public class AIService {
                 .onErrorReturn("Sorry, AI is currently unavailable to generate questions.");
     }
 
-    // Phương thức tạo câu hỏi đầu tiên - BLOCKING (backward compatibility)
+    // Phương thức tạo câu hỏi đầu tiên
     public String generateFirstQuestion(String role, String level, List<String> skills,
             String cvText, String jdText) {
-        return generateFirstQuestionReactive(role, level, skills, cvText, jdText).block();
+        try {
+            return generateFirstQuestionReactive(role, level, skills, cvText, jdText).block();
+        } catch (Exception e) {
+            // trả về câu hỏi đầu tiên của groq
+            log.error("Reactive chain failed during block(), using direct Groq fallback: {}", e.getMessage());
+            try {
+                return groqService.generateFirstQuestion(role, skills, "English", level);
+            } catch (Exception groqError) {
+                log.error("Groq fallback also failed: {}", groqError.getMessage());
+                return "Sorry, AI is currently unavailable to generate questions.";
+            }
+        }
     }
 
     // Phương thức tạo câu hỏi đầu tiên
@@ -129,7 +141,7 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini fallback");
+        log.warn("AI Model Service unavailable, using Groq fallback");
         try {
             return groqService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                     previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
@@ -162,12 +174,12 @@ public class AIService {
             String jsonResponse = groqService.generateData(Text);
             // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                log.warn("Empty Gemini response");
+                log.warn("Empty Groq response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             // Kiểm tra lỗi trong phản hồi
             if (jsonResponse.contains("Sorry") || jsonResponse.contains("error")) {
-                log.error("Gemini error: {}", jsonResponse);
+                log.error("Groq error: {}", jsonResponse);
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             // Làm sạch phản hồi để lấy JSON đúng định dạng
@@ -242,7 +254,7 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini for answer feedback");
+        log.warn("AI Model Service unavailable, using Groq for answer feedback");
         try {
             return groqService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
@@ -357,11 +369,11 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.info("Using Gemini fallback for overall feedback");
+        log.info("Using Groq fallback for overall feedback");
         try {
             return groqService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
-            log.error("Gemini failed, using hardcoded fallback: {}", e.getMessage());
+            log.error("Groq failed, using hardcoded fallback: {}", e.getMessage());
             return OverallFeedbackData.builder()
                     .overview("AVERAGE")
                     .assessment("Thank you for completing the interview. Your performance showed potential. "

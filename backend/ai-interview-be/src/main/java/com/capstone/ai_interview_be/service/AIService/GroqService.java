@@ -140,6 +140,7 @@ public class GroqService {
                 Output EXACTLY ONE warm-up opening question in %s.
                 This is the FIRST question of the interview - a warm-up question about the position and skills.
 
+<<<<<<< HEAD
                 === CRITICAL RULES ===
                 - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
                 - Ask about their INTEREST, PASSION, or JOURNEY with the %s role OR the required skills.
@@ -170,6 +171,24 @@ public class GroqService {
                 - "Hi! Thanks for joining us today. What interests you most about working as a %s?"
                 """
                 .formatted(language == null ? "English" : language, role, role, skillsText, role, role);
+=======
+                Rules:
+                - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
+                - Ask about their interest in the %s position OR their experience/interest with the required skills.
+                - Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.
+                - Keep it open-ended and conversational - this is a warm-up, not a deep technical question.
+                - DO NOT ask complex technical implementation questions yet.
+                - End with a question mark (?).
+                - Do NOT include preamble, explanations, numbering, or multiple questions.
+                - Return only the greeting and question.
+
+                Example good opening questions:
+                - "Hello! Welcome to the interview for the %s position. What attracted you to this role and these technologies?"
+                - "Hi there! I see you're interested in working with %s. What got you started with these technologies?"
+                - "Welcome! Before we dive deeper, I'd love to know - what excites you most about the %s role?"
+                """
+                .formatted(language == null ? "English" : language, role, role, skillsText, role);
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
 
         String userPrompt = """
                 Role: %s
@@ -498,12 +517,17 @@ public class GroqService {
 
         String userPrompt = String.format(
                 """
+<<<<<<< HEAD
                         You are an expert technical interviewer evaluating a candidate's answer with STRICT scoring standards.
+=======
+                        You are an expert technical interviewer evaluating a candidate's answer.
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
 
                         Position: %s (%s level)
                         Question: %s
                         Candidate's Answer: %s
 
+<<<<<<< HEAD
                         === CRITICAL SCORING RULES ===
                         1. **INSUFFICIENT ANSWERS** (Score: 0-2):
                            - "I don't know" or similar non-answers
@@ -531,6 +555,12 @@ public class GroqService {
                             "overall": <0-10>,
                             "feedback": "Your answer demonstrates... [Be specific. If 'i don't know', state clearly it shows no knowledge]",
                             "sampleAnswer": "A strong answer would include... [comprehensive model answer]"
+=======
+                        Provide detailed feedback in JSON format:
+                        {
+                            "feedback": "Your answer demonstrates... [3-5 sentences with specific observations, use markdown formatting]",
+                            "sampleAnswer": "A strong answer would include... [comprehensive model answer with proper formatting]"
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
                         }
                         """,
                 role, level, question, answer);
@@ -542,6 +572,7 @@ public class GroqService {
                 return AnswerFeedbackData.builder()
                         .feedback("Unable to generate detailed feedback at this moment.")
                         .sampleAnswer("Feedback generation is temporarily unavailable.")
+<<<<<<< HEAD
                         .overall(5) // Default fallback score
                         .relevance(5)
                         .completeness(5)
@@ -574,20 +605,31 @@ public class GroqService {
                 AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
                 return feedbackData;
             }
+=======
+                        .build();
+            }
+            String cleanedJson = cleanJsonResponse(jsonResponse);
+            AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
+            return feedbackData;
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
             return AnswerFeedbackData.builder()
                     .feedback("Unable to generate detailed feedback at this moment.")
                     .sampleAnswer("Please review the question and try to provide more specific details.")
+<<<<<<< HEAD
                     .overall(5)
                     .relevance(5)
                     .completeness(5)
                     .accuracy(5)
                     .clarity(5)
+=======
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
                     .build();
         }
     }
 
+<<<<<<< HEAD
     // Helper method to parse score from Object (could be Integer or Double)
     private Integer parseScore(Object scoreObj) {
         if (scoreObj == null)
@@ -606,6 +648,8 @@ public class GroqService {
         return 5;
     }
 
+=======
+>>>>>>> d71cb7b3274e30ab1f6cd729401ecf25b56f99a0
     public OverallFeedbackData generateOverallFeedback(List<ConversationEntry> conversation, String role,
             String level, List<String> skills) {
 
