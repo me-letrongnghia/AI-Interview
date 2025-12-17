@@ -14,4 +14,11 @@ public class AnswerFeedbackData {
     private String feedback;
 
     private String sampleAnswer;
+
+    // Scores from AI evaluation (0-10 scale from model)
+    private Integer relevance;
+    private Integer completeness;
+    private Integer accuracy;
+    private Integer clarity;
+    private Integer overall;
 }

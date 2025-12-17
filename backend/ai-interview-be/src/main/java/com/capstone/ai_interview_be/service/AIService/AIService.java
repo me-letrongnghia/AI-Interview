@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import com.capstone.ai_interview_be.dto.response.AnswerFeedbackData;
 import com.capstone.ai_interview_be.dto.response.DataScanResponse;
@@ -24,43 +25,56 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIService {
 
     private final UnifiedModelService unifiedModelService;
-    private final GeminiService geminiService;
+    // private final GeminiService geminiService;
+    private final GroqService groqService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Phương thức tạo câu hỏi đầu tiên
-    public String generateFirstQuestion(String role, String level, List<String> skills,
+    // ========================================================================
+    // REACTIVE METHODS - Return Mono<String> for non-blocking execution
+    // ========================================================================
+
+    /**
+     * Generate first question - REACTIVE VERSION
+     * Returns Mono<String> for non-blocking concurrent execution
+     */
+    public Mono<String> generateFirstQuestionReactive(String role, String level, List<String> skills,
             String cvText, String jdText) {
 
-        // Kiểm tra dịch vụ Unified Model Service (v3 API)
+        // Try Unified Model Service (v3 API) first - reactive
         if (unifiedModelService.isServiceHealthy()) {
             log.info("Using Unified Model Service (v3 API) for first question");
-            try {
-                MultitaskGenerateResponse response = unifiedModelService.generateFirstQuestion(
-                        role,
-                        skills,
-                        level,
-                        "English",
-                        cvText,
-                        jdText,
-                        0.7);
-
-                if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                    log.info("First question generated using model: {}", response.getModelUsed());
-                    return response.getQuestion();
-                }
-            } catch (Exception e) {
-                log.error("Unified Model Service failed: {}", e.getMessage());
-            }
+            return unifiedModelService.generateFirstQuestion(
+                    role, skills, level, "English", cvText, jdText, 0.7)
+                    .filter(response -> response != null
+                            && response.getQuestion() != null
+                            && !response.getQuestion().isEmpty())
+                    .map(response -> {
+                        log.info("First question generated using model: {}", response.getModelUsed());
+                        return response.getQuestion();
+                    })
+                    .switchIfEmpty(Mono.defer(() -> {
+                        // Fallback to Groq if empty response
+                        log.warn("Unified Model returned empty, using Groq fallback");
+                        return Mono
+                                .fromCallable(() -> groqService.generateFirstQuestion(role, skills, "English", level));
+                    }))
+                    .onErrorResume(error -> {
+                        log.error("Unified Model Service failed: {}", error.getMessage());
+                        return Mono
+                                .fromCallable(() -> groqService.generateFirstQuestion(role, skills, "English", level));
+                    });
         }
 
-        // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini for first question");
-        try {
-            return geminiService.generateFirstQuestion(role, skills, "English", level);
-        } catch (Exception e) {
-            log.error("Gemini failed");
-            return "Sorry, AI is currently unavailable to generate questions.";
-        }
+        // Direct fallback: Groq
+        log.warn("AI Model Service unavailable, using Groq for first question");
+        return Mono.fromCallable(() -> groqService.generateFirstQuestion(role, skills, "English", level))
+                .onErrorReturn("Sorry, AI is currently unavailable to generate questions.");
+    }
+
+    // Phương thức tạo câu hỏi đầu tiên - BLOCKING (backward compatibility)
+    public String generateFirstQuestion(String role, String level, List<String> skills,
+            String cvText, String jdText) {
+        return generateFirstQuestionReactive(role, level, skills, cvText, jdText).block();
     }
 
     // Phương thức tạo câu hỏi đầu tiên
@@ -102,7 +116,7 @@ public class AIService {
                         sessionSkill,
                         currentQuestionNumber,
                         totalQuestions,
-                        0.7);
+                        0.7).block(); // Added .block() for backward compatibility
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
                     log.info("Next question generated - Type: {}, Model: {}", response.getQuestionType(),
@@ -117,7 +131,7 @@ public class AIService {
         // Fallback: Gemini
         log.warn("AI Model Service unavailable, using Gemini fallback");
         try {
-            return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+            return groqService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                     previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
@@ -145,7 +159,7 @@ public class AIService {
     // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public DataScanResponse extractData(String Text) {
         try {
-            String jsonResponse = geminiService.generateData(Text);
+            String jsonResponse = groqService.generateData(Text);
             // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
                 log.warn("Empty Gemini response");
@@ -197,7 +211,7 @@ public class AIService {
                         null, // context
                         role, // jobDomain
                         level, // Pass level like Gemini
-                        0.3);
+                        0.3).block(); // Added .block() for backward compatibility
 
                 if (response != null) {
                     log.info("EVALUATE success - Overall: {}/10, Model: {}", response.getOverall(),
@@ -214,6 +228,12 @@ public class AIService {
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
+                            // Add real scores from AI (0-10 scale)
+                            .relevance(response.getRelevance())
+                            .completeness(response.getCompleteness())
+                            .accuracy(response.getAccuracy())
+                            .clarity(response.getClarity())
+                            .overall(response.getOverall())
                             .build();
                 }
             } catch (Exception e) {
@@ -224,7 +244,7 @@ public class AIService {
         // Fallback: Gemini
         log.warn("AI Model Service unavailable, using Gemini for answer feedback");
         try {
-            return geminiService.generateAnswerFeedback(question, answer, role, level);
+            return groqService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
             log.error("Answer feedback error: {}", e.getMessage());
             return AnswerFeedbackData.builder()
@@ -311,7 +331,7 @@ public class AIService {
                         level, // Pass level like Gemini
                         skills, // Pass skills like Gemini
                         candidateInfo,
-                        0.5);
+                        0.5).block(); // Added .block() for backward compatibility
 
                 if (response != null && response.getOverallAssessment() != null) {
                     String overview = convertScoreToOverview(response.getScore());
@@ -339,7 +359,7 @@ public class AIService {
         // Fallback: Gemini
         log.info("Using Gemini fallback for overall feedback");
         try {
-            return geminiService.generateOverallFeedback(conversation, role, level, skills);
+            return groqService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
             log.error("Gemini failed, using hardcoded fallback: {}", e.getMessage());
             return OverallFeedbackData.builder()

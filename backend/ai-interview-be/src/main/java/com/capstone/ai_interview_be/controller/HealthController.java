@@ -16,7 +16,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HealthController {
     private final UnifiedModelService unifiedModelService;
-    
+
     // Phương thức kiểm tra trạng thái chung của hệ thống
     @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
@@ -24,7 +24,7 @@ public class HealthController {
         health.put("status", "UP");
         health.put("service", "AI Interview Backend");
         health.put("timestamp", System.currentTimeMillis());
-        
+
         return ResponseEntity.ok(health);
     }
 
@@ -32,16 +32,16 @@ public class HealthController {
     @GetMapping("/ai")
     public ResponseEntity<Map<String, Object>> aiHealthCheck() {
         Map<String, Object> health = new HashMap<>();
-        
+
         boolean isHealthy = unifiedModelService.isServiceHealthy();
-        Map<String, Object> modelInfo = unifiedModelService.getModelInfo();
-        
+        Map<String, Object> modelInfo = unifiedModelService.getModelInfo().block(); // Added .block() for backward
+                                                                                    // compatibility
+
         health.put("status", isHealthy ? "UP" : "DOWN");
         health.put("service", "Unified AI Model Service");
         health.put("model_info", modelInfo);
         health.put("timestamp", System.currentTimeMillis());
-        
+
         return ResponseEntity.ok(health);
     }
 }
-

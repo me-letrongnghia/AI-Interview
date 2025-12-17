@@ -1,6 +1,7 @@
 """
-AI Interview - Multitask Judge Service
-Chỉ sử dụng Multitask Judge model (Custom Transformer - 400K samples)
+AI Interview - Flexible Model Service
+Supports multiple AI models: MultitaskJudge, Llama-1B, Qwen-3B
+Switch models easily via environment variable AI_MODEL_TYPE
 """
 import sys
 from pathlib import Path
@@ -17,10 +18,10 @@ from src.core.config import (
     API_TITLE, API_DESCRIPTION, API_VERSION,
     CORS_ORIGINS, CORS_ALLOW_CREDENTIALS, 
     CORS_ALLOW_METHODS, CORS_ALLOW_HEADERS,
-    HOST, PORT, MULTITASK_JUDGE_MODEL_PATH
+    HOST, PORT, AI_MODEL_TYPE
 )
-from src.services.model_loader import multitask_judge_manager
-from src.services.multitask_evaluator import multitask_evaluator
+from src.services.model_factory import ModelFactory
+from src.services.multitask_evaluator import MultitaskEvaluator
 from src.models.schemas import (
     MultitaskGenerateFirstRequest,
     MultitaskEvaluateRequest,
@@ -35,37 +36,54 @@ from src.middleware import MetricsMiddleware
 
 logger = logging.getLogger(__name__)
 
+# Global model manager and evaluator
+model_manager = None
+evaluator = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load Multitask Judge model on startup, cleanup on shutdown"""
+    """Load AI model on startup (based on AI_MODEL_TYPE), cleanup on shutdown"""
+    global model_manager, evaluator
+    
     logger.info("="*60)
-    logger.info("AI Interview - Multitask Judge Service")
+    logger.info("AI Interview - Flexible Model Service")
     logger.info("="*60)
     
-    # Startup - Load Multitask Judge model
+    # Startup - Create and load model based on configuration
     try:
-        logger.info("[Startup] Loading Multitask Judge model...")
-        multitask_judge_manager.load()
-        logger.info("[Startup] Model loaded successfully!")
+        logger.info(f"[Startup] Creating model: {AI_MODEL_TYPE}")
+        model_manager = ModelFactory.create_model(AI_MODEL_TYPE)
+        
+        logger.info(f"[Startup] Loading {AI_MODEL_TYPE} model...")
+        model_manager.load()
+        
+        # Create evaluator with the loaded model
+        evaluator = MultitaskEvaluator(model_manager)
+        
+        model_info = model_manager.get_model_info()
+        logger.info(f"[Startup] Model loaded successfully: {model_info['model_name']}")
+        logger.info(f"[Startup] Device: {model_info['device']}")
     except Exception as e:
         logger.error(f"[Startup] Failed to load model: {e}")
+        raise
     
     yield
     
     # Shutdown - Cleanup
     logger.info("[Shutdown] Cleaning up...")
-    multitask_judge_manager.cleanup()
+    if model_manager:
+        model_manager.cleanup()
     logger.info("[Shutdown] Done!")
 
 
 def create_app() -> FastAPI:
-    """Create FastAPI application with only Multitask endpoints"""
+    """Create FastAPI application with flexible model support"""
     
     app = FastAPI(
-        title=f"{API_TITLE} - Multitask Judge",
-        description=f"{API_DESCRIPTION} - Custom Transformer (400K samples, 3 tasks)",
-        version="2.0.0",
+        title=f"{API_TITLE} - Flexible Model Service",
+        description=f"{API_DESCRIPTION} - Supports multiple AI models (configurable via env)",
+        version="3.0.0",
         lifespan=lifespan
     )
     
@@ -87,17 +105,16 @@ def create_app() -> FastAPI:
     
     @app.get("/")
     async def root():
-        """Endpoint gốc"""
+        """Endpoint gốc - Hiển thị thông tin model đang sử dụng"""
+        model_info = model_manager.get_model_info() if model_manager and model_manager.is_loaded() else {}
+        
         return {
-            "service": "AI Interview - Multitask Judge Service",
-            "version": "2.0.0",
+            "service": "AI Interview - Flexible Model Service",
+            "version": "3.0.0",
             "status": "running",
-            "model": {
-                "path": str(MULTITASK_JUDGE_MODEL_PATH),
-                "type": "Custom Transformer",
-                "training_samples": "400K",
-                "tasks": ["GENERATE", "EVALUATE", "REPORT"]
-            },
+            "current_model": AI_MODEL_TYPE,
+            "model": model_info,
+            "available_models": ModelFactory.get_available_models(),
             "endpoints": {
                 "health": "/api/v2/multitask/health",
                 "load": "/api/v2/multitask/load",
@@ -114,37 +131,45 @@ def create_app() -> FastAPI:
     
     @app.get("/api/v2/multitask/health", response_model=MultitaskHealthResponse)
     async def health_check():
-        """Kiểm tra trạng thái Multitask Judge model"""
-        is_loaded = multitask_judge_manager.is_loaded()
+        """Kiểm tra trạng thái AI model (bất kể model nào đang được dùng)"""
+        is_loaded = model_manager.is_loaded() if model_manager else False
+        model_info = model_manager.get_model_info() if is_loaded else {}
+        
         return MultitaskHealthResponse(
             status="healthy" if is_loaded else "unhealthy",
             model_loaded=is_loaded,
-            model_path=str(MULTITASK_JUDGE_MODEL_PATH),
-            vocab_size=multitask_judge_manager.vocab_size if is_loaded else 11555,
+            model_path=str(model_info.get("model_name", "Unknown")),
+            vocab_size=model_info.get("vocab_size", 0),
             architecture={
-                "d_model": multitask_judge_manager.d_model,
-                "nhead": multitask_judge_manager.nhead,
-                "num_layers": multitask_judge_manager.num_layers
+                "d_model": model_info.get("d_model", 0),
+                "nhead": model_info.get("nhead", 0),
+                "num_layers": model_info.get("num_layers", 0)
             },
-            device=multitask_judge_manager.get_device() if is_loaded else "not_loaded"
+            device=model_manager.get_device() if model_manager else "not_loaded"
         )
     
     @app.post("/api/v2/multitask/load")
     async def load_model():
-        """Load Multitask Judge model vào memory"""
+        """Load AI model vào memory (nếu chưa load)"""
         try:
-            if multitask_judge_manager.is_loaded():
+            if not model_manager:
+                raise HTTPException(status_code=500, detail="Model manager not initialized")
+            
+            if model_manager.is_loaded():
                 return {"status": "already_loaded", "message": "Model đã được load"}
             
             start_time = time.time()
-            multitask_judge_manager.load()
+            model_manager.load()
             load_time = time.time() - start_time
+            
+            model_info = model_manager.get_model_info()
             
             return {
                 "status": "success",
                 "message": "Model đã load thành công",
+                "model": model_info["model_name"],
                 "load_time": round(load_time, 2),
-                "device": multitask_judge_manager.get_device()
+                "device": model_manager.get_device()
             }
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
@@ -161,10 +186,10 @@ def create_app() -> FastAPI:
             logger.info(f"[GENERATE_FIRST] Role: {request.role}, Level: {request.level}")
             start_time = time.time()
             
-            if not multitask_judge_manager.is_loaded():
-                multitask_judge_manager.load()
+            if not model_manager or not model_manager.is_loaded():
+                raise HTTPException(status_code=503, detail="Model not loaded")
             
-            result = multitask_evaluator.generate_first_question(
+            result = evaluator.generate_first_question(
                 role=request.role,
                 skills=request.skills,
                 level=request.level,
@@ -177,12 +202,14 @@ def create_app() -> FastAPI:
             generation_time = time.time() - start_time
             logger.info(f"[GENERATE_FIRST] Complete in {generation_time:.2f}s")
             
+            model_info = model_manager.get_model_info()
+            
             return MultitaskGenerateResponse(
                 question=result.question,
                 question_type=result.question_type,
                 difficulty=result.difficulty,
                 generation_time=round(generation_time, 2),
-                model_used="MultitaskJudge"
+                model_used=model_info["model_name"]
             )
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
@@ -199,10 +226,10 @@ def create_app() -> FastAPI:
             logger.info(f"[EVALUATE] Q: {request.question[:50]}...")
             start_time = time.time()
             
-            if not multitask_judge_manager.is_loaded():
-                multitask_judge_manager.load()
+            if not model_manager or not model_manager.is_loaded():
+                raise HTTPException(status_code=503, detail="Model not loaded")
             
-            result = multitask_evaluator.evaluate_answer(
+            result = evaluator.evaluate_answer(
                 question=request.question,
                 answer=request.answer,
                 context=request.context,
@@ -213,6 +240,8 @@ def create_app() -> FastAPI:
             generation_time = time.time() - start_time
             logger.info(f"[EVALUATE] Complete in {generation_time:.2f}s - Overall: {result.overall}/10")
             
+            model_info = model_manager.get_model_info()
+            
             return MultitaskEvaluateResponse(
                 relevance=result.relevance,
                 completeness=result.completeness,
@@ -222,7 +251,7 @@ def create_app() -> FastAPI:
                 feedback=result.feedback,
                 improved_answer=result.improved_answer,
                 generation_time=round(generation_time, 2),
-                model_used="MultitaskJudge"
+                model_used=model_info["model_name"]
             )
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
@@ -239,10 +268,10 @@ def create_app() -> FastAPI:
             logger.info(f"[GENERATE] Previous Q: {request.question[:50]}...")
             start_time = time.time()
             
-            if not multitask_judge_manager.is_loaded():
-                multitask_judge_manager.load()
+            if not model_manager or not model_manager.is_loaded():
+                raise HTTPException(status_code=503, detail="Model not loaded")
             
-            result = multitask_evaluator.generate_followup(
+            result = evaluator.generate_followup(
                 question=request.question,
                 answer=request.answer,
                 interview_history=request.interview_history,
@@ -254,12 +283,14 @@ def create_app() -> FastAPI:
             generation_time = time.time() - start_time
             logger.info(f"[GENERATE] Complete in {generation_time:.2f}s")
             
+            model_info = model_manager.get_model_info()
+            
             return MultitaskGenerateResponse(
                 question=result.question,
                 question_type=result.question_type,
                 difficulty=result.difficulty,
                 generation_time=round(generation_time, 2),
-                model_used="MultitaskJudge"
+                model_used=model_info["model_name"]
             )
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
@@ -276,10 +307,10 @@ def create_app() -> FastAPI:
             logger.info(f"[REPORT] {len(request.interview_history)} Q&A pairs")
             start_time = time.time()
             
-            if not multitask_judge_manager.is_loaded():
-                multitask_judge_manager.load()
+            if not model_manager or not model_manager.is_loaded():
+                raise HTTPException(status_code=503, detail="Model not loaded")
             
-            result = multitask_evaluator.generate_report(
+            result = evaluator.generate_report(
                 interview_history=request.interview_history,
                 job_domain=request.job_domain,
                 candidate_info=request.candidate_info,
@@ -289,6 +320,8 @@ def create_app() -> FastAPI:
             generation_time = time.time() - start_time
             logger.info(f"[REPORT] Complete in {generation_time:.2f}s - Score: {result.score}/100")
             
+            model_info = model_manager.get_model_info()
+            
             return MultitaskReportResponse(
                 overall_assessment=result.overall_assessment,
                 strengths=result.strengths,
@@ -296,11 +329,45 @@ def create_app() -> FastAPI:
                 recommendations=result.recommendations,
                 score=result.score,
                 generation_time=round(generation_time, 2),
-                model_used="MultitaskJudge"
+                model_used=model_info["model_name"]
             )
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+    
+    # ========================================================================
+    # API V3 ENDPOINTS (Aliases for backward compatibility)
+    # ========================================================================
+    
+    @app.get("/api/v3/health", response_model=MultitaskHealthResponse)
+    async def health_check_v3():
+        """Health check - v3 endpoint (alias for v2)"""
+        return await health_check()
+    
+    @app.post("/api/v3/load")
+    async def load_model_v3():
+        """Load model - v3 endpoint (alias for v2)"""
+        return await load_model()
+    
+    @app.post("/api/v3/generate-first", response_model=MultitaskGenerateResponse)
+    async def generate_first_question_v3(request: MultitaskGenerateFirstRequest):
+        """Generate first question - v3 endpoint (alias for v2)"""
+        return await generate_first_question(request)
+    
+    @app.post("/api/v3/evaluate", response_model=MultitaskEvaluateResponse)
+    async def evaluate_answer_v3(request: MultitaskEvaluateRequest):
+        """Evaluate answer - v3 endpoint (alias for v2)"""
+        return await evaluate_answer(request)
+    
+    @app.post("/api/v3/generate", response_model=MultitaskGenerateResponse)
+    async def generate_followup_v3(request: MultitaskGenerateRequest):
+        """Generate follow-up - v3 endpoint (alias for v2)"""
+        return await generate_followup(request)
+    
+    @app.post("/api/v3/report", response_model=MultitaskReportResponse)
+    async def generate_report_v3(request: MultitaskReportRequest):
+        """Generate report - v3 endpoint (alias for v2)"""
+        return await generate_report(request)
     
     return app
 

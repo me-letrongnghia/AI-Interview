@@ -46,14 +46,18 @@ public class FileParserService {
 
     // Hàm kiểm tra định dạng DOCX
     private boolean isDOCX(String name, String type) {
-        return (type != null && type.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) || name.endsWith(".docx");
+        return (type != null && type.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                || name.endsWith(".docx");
     }
 
     // Kiểm tra tính hợp lệ của tệp
     private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new IllegalArgumentException("File cannot be null or empty");
-        if (file.getOriginalFilename() == null) throw new IllegalArgumentException("File name cannot be null");
-        if (file.getSize() > MAX_FILE_SIZE) throw new IllegalArgumentException("File size exceeds 10MB");
+        if (file == null || file.isEmpty())
+            throw new IllegalArgumentException("File cannot be null or empty");
+        if (file.getOriginalFilename() == null)
+            throw new IllegalArgumentException("File name cannot be null");
+        if (file.getSize() > MAX_FILE_SIZE)
+            throw new IllegalArgumentException("File size exceeds 10MB");
     }
 
     // Hàm phân tích tệp PDF
@@ -100,7 +104,7 @@ public class FileParserService {
         tesseract.setLanguage("eng");
 
         String[] paths = {
-                "C:\\Program Files\\Tesseract-OCR\\tessdata",
+                "D:\\\\Code\\\\NCKH\\\\AI-Interview\\\\backend\\\\ai-interview-be\\\\src\\\\main\\\\resources\\\\Tesseract-OCR\\\\tessdata",
                 System.getenv("TESSDATA_PREFIX"),
                 "/usr/share/tesseract-ocr/5/tessdata",
                 "/usr/share/tessdata",
@@ -122,7 +126,7 @@ public class FileParserService {
     // Hàm phân tích tệp DOCX
     private String parseDOCX(MultipartFile file) throws IOException {
         try (XWPFDocument doc = new XWPFDocument(file.getInputStream());
-             XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {
+                XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {
             String text = extractor.getText().trim();
             log.debug("Extracted text from DOCX ({} chars)", text.length());
             return text;

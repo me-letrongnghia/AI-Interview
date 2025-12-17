@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
@@ -131,8 +132,15 @@ public class UnifiedModelService {
         }
     }
 
-    // Phương thức tạo câu hỏi đầu tiên (với đầy đủ tham số như Gemini)
-    public MultitaskGenerateResponse generateFirstQuestion(
+    // ========================================================================
+    // REACTIVE METHODS - Return Mono<> instead of blocking
+    // ========================================================================
+
+    /**
+     * Generate first question - REACTIVE VERSION
+     * Returns Mono for non-blocking execution
+     */
+    public Mono<MultitaskGenerateResponse> generateFirstQuestion(
             String role,
             List<String> skills,
             String level,
@@ -143,46 +151,45 @@ public class UnifiedModelService {
 
         String endpoint = getEndpoint(V3_GENERATE_FIRST_ENDPOINT, V2_GENERATE_FIRST_ENDPOINT);
 
-        try {
-            log.info("Generating first question - Role: {}, Level: {}", role, level);
+        log.info("Generating first question - Role: {}, Level: {}", role, level);
 
-            MultitaskGenerateFirstRequest request = MultitaskGenerateFirstRequest.builder()
-                    .role(role != null ? role : "Developer")
-                    .skills(skills != null ? skills : List.of())
-                    .level(level)
-                    .language(language != null ? language : "English")
-                    .cvContext(cvContext)
-                    .jdContext(jdContext)
-                    .temperature(temperature != null ? temperature : 0.7)
-                    .build();
+        MultitaskGenerateFirstRequest request = MultitaskGenerateFirstRequest.builder()
+                .role(role != null ? role : "Developer")
+                .skills(skills != null ? skills : List.of())
+                .level(level)
+                .language(language != null ? language : "English")
+                .cvContext(cvContext)
+                .jdContext(jdContext)
+                .temperature(temperature != null ? temperature : 0.7)
+                .build();
 
-            MultitaskGenerateResponse response = webClient.post()
-                    .uri(serviceBaseUrl + endpoint)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(MultitaskGenerateResponse.class)
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .block();
-
-            if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
-                log.info("GENERATE_FIRST success - Model: {}", response.getModelUsed());
-                return response;
-            }
-
-            log.warn("GENERATE_FIRST returned null or empty question");
-            return null;
-
-        } catch (WebClientResponseException e) {
-            log.error("GENERATE_FIRST HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.error("GENERATE_FIRST error: {}", e.getMessage());
-            return null;
-        }
+        return webClient.post()
+                .uri(serviceBaseUrl + endpoint)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(MultitaskGenerateResponse.class)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .doOnSuccess(response -> {
+                    if (response != null && response.getQuestion() != null) {
+                        log.info("GENERATE_FIRST success - Model: {}", response.getModelUsed());
+                    }
+                })
+                .doOnError(error -> {
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException e = (WebClientResponseException) error;
+                        log.error("GENERATE_FIRST HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
+                    } else {
+                        log.error("GENERATE_FIRST error: {}", error.getMessage());
+                    }
+                })
+                .onErrorResume(error -> Mono.empty()); // Return empty on error for fallback handling
     }
 
-    // Phương thức đánh giá câu trả lời của ứng viên (với đầy đủ tham số như Gemini)
-    public MultitaskEvaluateResponse evaluateAnswer(
+    /**
+     * Evaluate answer - REACTIVE VERSION
+     * Returns Mono for non-blocking execution
+     */
+    public Mono<MultitaskEvaluateResponse> evaluateAnswer(
             String question,
             String answer,
             String context,
@@ -192,46 +199,44 @@ public class UnifiedModelService {
 
         String endpoint = getEndpoint(V3_EVALUATE_ENDPOINT, V2_EVALUATE_ENDPOINT);
 
-        try {
-            log.info("Evaluating answer - Domain: {}, Level: {}", jobDomain, level);
+        log.info("Evaluating answer - Domain: {}, Level: {}", jobDomain, level);
 
-            MultitaskEvaluateRequest request = MultitaskEvaluateRequest.builder()
-                    .question(question != null ? question : "")
-                    .answer(answer != null ? answer : "")
-                    .context(context)
-                    .jobDomain(jobDomain)
-                    .level(level != null ? level : "mid-level")
-                    .temperature(temperature != null ? temperature : 0.3)
-                    .build();
+        MultitaskEvaluateRequest request = MultitaskEvaluateRequest.builder()
+                .question(question != null ? question : "")
+                .answer(answer != null ? answer : "")
+                .context(context)
+                .jobDomain(jobDomain)
+                .level(level != null ? level : "mid-level")
+                .temperature(temperature != null ? temperature : 0.3)
+                .build();
 
-            MultitaskEvaluateResponse response = webClient.post()
-                    .uri(serviceBaseUrl + endpoint)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(MultitaskEvaluateResponse.class)
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .block();
-
-            if (response != null) {
-                log.info("EVALUATE success - Overall: {}/10, Model: {}",
-                        response.getOverall(), response.getModelUsed());
-                return response;
-            }
-
-            log.warn("EVALUATE returned null");
-            return null;
-
-        } catch (WebClientResponseException e) {
-            log.error("EVALUATE HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.error("EVALUATE error: {}", e.getMessage());
-            return null;
-        }
+        return webClient.post()
+                .uri(serviceBaseUrl + endpoint)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(MultitaskEvaluateResponse.class)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .doOnSuccess(response -> {
+                    if (response != null) {
+                        log.info("EVALUATE success - Overall: {}/10, Model: {}",
+                                response.getOverall(), response.getModelUsed());
+                    }
+                })
+                .doOnError(error -> {
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException e = (WebClientResponseException) error;
+                        log.error("EVALUATE HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
+                    } else {
+                        log.error("EVALUATE error: {}", error.getMessage());
+                    }
+                })
+                .onErrorResume(error -> Mono.empty());
     }
 
-    // Phương thức đánh giá câu trả lời của ứng viên (đơn giản - tương thích ngược)
-    public MultitaskEvaluateResponse evaluateAnswer(
+    /**
+     * Evaluate answer - Simplified version (backward compatibility)
+     */
+    public Mono<MultitaskEvaluateResponse> evaluateAnswer(
             String question,
             String answer,
             String context,
@@ -240,8 +245,11 @@ public class UnifiedModelService {
         return evaluateAnswer(question, answer, context, jobDomain, "mid-level", temperature);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo (với đầy đủ tham số như Gemini)
-    public MultitaskGenerateResponse generateFollowUp(
+    /**
+     * Generate follow-up question - REACTIVE VERSION
+     * Returns Mono for non-blocking execution
+     */
+    public Mono<MultitaskGenerateResponse> generateFollowUp(
             String question,
             String answer,
             List<Map<String, String>> interviewHistory,
@@ -254,65 +262,65 @@ public class UnifiedModelService {
 
         String endpoint = getEndpoint(V3_GENERATE_ENDPOINT, V2_GENERATE_ENDPOINT);
 
-        try {
-            log.info("Generating follow-up - Domain: {}, Level: {}, Q: {}/{}",
-                    jobDomain, level, currentQuestionNumber, totalQuestions);
+        log.info("Generating follow-up - Domain: {}, Level: {}, Q: {}/{}",
+                jobDomain, level, currentQuestionNumber, totalQuestions);
 
-            MultitaskGenerateRequest request = MultitaskGenerateRequest.builder()
-                    .question(question != null ? question : "")
-                    .answer(answer != null ? answer : "")
-                    .interviewHistory(interviewHistory)
-                    .jobDomain(jobDomain)
-                    .level(level != null ? level : "mid-level")
-                    .skills(skills)
-                    .currentQuestionNumber(currentQuestionNumber)
-                    .totalQuestions(totalQuestions)
-                    .language("English")
-                    .temperature(temperature != null ? temperature : 0.7)
-                    .build();
+        MultitaskGenerateRequest request = MultitaskGenerateRequest.builder()
+                .question(question != null ? question : "")
+                .answer(answer != null ? answer : "")
+                .interviewHistory(interviewHistory)
+                .jobDomain(jobDomain)
+                .level(level != null ? level : "mid-level")
+                .skills(skills)
+                .currentQuestionNumber(currentQuestionNumber)
+                .totalQuestions(totalQuestions)
+                .language("English")
+                .temperature(temperature != null ? temperature : 0.7)
+                .build();
 
-            MultitaskGenerateResponse response = webClient.post()
-                    .uri(serviceBaseUrl + endpoint)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(MultitaskGenerateResponse.class)
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .block();
-
-            if (response != null && response.getQuestion() != null) {
-                log.info("GENERATE success - Type: {}, Model: {}",
-                        response.getQuestionType(), response.getModelUsed());
-                return response;
-            }
-
-            log.warn("GENERATE returned null");
-            return null;
-
-        } catch (WebClientResponseException e) {
-            log.error("GENERATE HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.error("GENERATE error: {}", e.getMessage());
-            return null;
-        }
+        return webClient.post()
+                .uri(serviceBaseUrl + endpoint)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(MultitaskGenerateResponse.class)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .doOnSuccess(response -> {
+                    if (response != null && response.getQuestion() != null) {
+                        log.info("GENERATE success - Type: {}, Model: {}",
+                                response.getQuestionType(), response.getModelUsed());
+                    }
+                })
+                .doOnError(error -> {
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException e = (WebClientResponseException) error;
+                        log.error("GENERATE HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
+                    } else {
+                        log.error("GENERATE error: {}", error.getMessage());
+                    }
+                })
+                .onErrorResume(error -> Mono.empty());
     }
 
-    // Phương thức tạo câu hỏi tiếp theo (đơn giản - tương thích ngược)
-    public MultitaskGenerateResponse generateFollowUp(
+    /**
+     * Generate follow-up - Simplified version (backward compatibility)
+     */
+    public Mono<MultitaskGenerateResponse> generateFollowUp(
             String question,
             String answer,
             List<Map<String, String>> interviewHistory,
             String jobDomain,
             String difficulty,
             Double temperature) {
-        // Call full version with defaults
         return generateFollowUp(
                 question, answer, interviewHistory,
                 jobDomain, "mid-level", null, 0, 0, temperature);
     }
 
-    // Phương thức tạo báo cáo phỏng vấn (với đầy đủ tham số như Gemini)
-    public MultitaskReportResponse generateReport(
+    /**
+     * Generate report - REACTIVE VERSION
+     * Returns Mono for non-blocking execution
+     */
+    public Mono<MultitaskReportResponse> generateReport(
             List<Map<String, String>> interviewHistory,
             String jobDomain,
             String level,
@@ -322,74 +330,62 @@ public class UnifiedModelService {
 
         String endpoint = getEndpoint(V3_REPORT_ENDPOINT, V2_REPORT_ENDPOINT);
 
-        try {
-            // Filter out Q&A pairs with null or blank answers to prevent 422 validation
-            // errors
-            List<Map<String, String>> validHistory = interviewHistory;
-            if (interviewHistory != null) {
-                validHistory = interviewHistory.stream()
-                        .filter(item -> {
-                            String answer = item.get("answer");
-                            return answer != null && !answer.isBlank();
-                        })
-                        .collect(java.util.stream.Collectors.toList());
+        // Filter out Q&A pairs with null or blank answers
+        List<Map<String, String>> validHistory = interviewHistory;
+        if (interviewHistory != null) {
+            validHistory = interviewHistory.stream()
+                    .filter(item -> {
+                        String answerValue = item.get("answer");
+                        return answerValue != null && !answerValue.isBlank();
+                    })
+                    .collect(java.util.stream.Collectors.toList());
 
-                if (validHistory.size() < interviewHistory.size()) {
-                    log.info("Filtered out {} Q&A pairs with null/blank answers ({} valid pairs remaining)",
-                            interviewHistory.size() - validHistory.size(), validHistory.size());
-                }
+            if (validHistory.size() < interviewHistory.size()) {
+                log.info("Filtered out {} Q&A pairs with null/blank answers ({} valid pairs remaining)",
+                        interviewHistory.size() - validHistory.size(), validHistory.size());
             }
-
-            log.info("Generating report - {} Q&A pairs, Level: {}, Skills: {}",
-                    validHistory != null ? validHistory.size() : 0,
-                    level, skills != null ? skills.size() : 0);
-
-            MultitaskReportRequest request = MultitaskReportRequest.builder()
-                    .interviewHistory(validHistory)
-                    .jobDomain(jobDomain)
-                    .level(level != null ? level : "mid-level")
-                    .skills(skills != null ? skills : List.of())
-                    .candidateInfo(candidateInfo)
-                    .temperature(temperature != null ? temperature : 0.5)
-                    .build();
-
-            // Debug: Log request body to identify 422 error cause
-            try {
-                var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                String requestJson = objectMapper.writeValueAsString(request);
-                log.debug("REPORT Request Body: {}", requestJson);
-            } catch (Exception e) {
-                log.warn("Could not serialize request for logging", e);
-            }
-
-            MultitaskReportResponse response = webClient.post()
-                    .uri(serviceBaseUrl + endpoint)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(MultitaskReportResponse.class)
-                    .timeout(Duration.ofSeconds(90))
-                    .block();
-
-            if (response != null) {
-                log.info("REPORT success - Score: {}/100, Model: {}",
-                        response.getScore(), response.getModelUsed());
-                return response;
-            }
-
-            log.warn("REPORT returned null");
-            return null;
-
-        } catch (WebClientResponseException e) {
-            log.error("REPORT HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.error("REPORT error: {}", e.getMessage());
-            return null;
         }
+
+        log.info("Generating report - {} Q&A pairs, Level: {}, Skills: {}",
+                validHistory != null ? validHistory.size() : 0,
+                level, skills != null ? skills.size() : 0);
+
+        MultitaskReportRequest request = MultitaskReportRequest.builder()
+                .interviewHistory(validHistory)
+                .jobDomain(jobDomain)
+                .level(level != null ? level : "mid-level")
+                .skills(skills != null ? skills : List.of())
+                .candidateInfo(candidateInfo)
+                .temperature(temperature != null ? temperature : 0.5)
+                .build();
+
+        return webClient.post()
+                .uri(serviceBaseUrl + endpoint)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(MultitaskReportResponse.class)
+                .timeout(Duration.ofSeconds(90))
+                .doOnSuccess(response -> {
+                    if (response != null) {
+                        log.info("REPORT success - Score: {}/100, Model: {}",
+                                response.getScore(), response.getModelUsed());
+                    }
+                })
+                .doOnError(error -> {
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException e = (WebClientResponseException) error;
+                        log.error("REPORT HTTP error: {} - {}", e.getStatusCode(), e.getMessage());
+                    } else {
+                        log.error("REPORT error: {}", error.getMessage());
+                    }
+                })
+                .onErrorResume(error -> Mono.empty());
     }
 
-    // Phương thức tạo báo cáo phỏng vấn (đơn giản - tương thích ngược)
-    public MultitaskReportResponse generateReport(
+    /**
+     * Generate report - Simplified version (backward compatibility)
+     */
+    public Mono<MultitaskReportResponse> generateReport(
             List<Map<String, String>> interviewHistory,
             String jobDomain,
             String candidateInfo,
@@ -397,21 +393,20 @@ public class UnifiedModelService {
         return generateReport(interviewHistory, jobDomain, "mid-level", List.of(), candidateInfo, temperature);
     }
 
-    // Phương thức lấy thông tin mô hình AI
+    /**
+     * Get model info - REACTIVE VERSION
+     * Returns Mono for non-blocking execution
+     */
     @SuppressWarnings("unchecked")
-    public Map<String, Object> getModelInfo() {
+    public Mono<Map<String, Object>> getModelInfo() {
         String healthEndpoint = getEndpoint(V3_HEALTH_ENDPOINT, V2_HEALTH_ENDPOINT);
 
-        try {
-            return webClient.get()
-                    .uri(serviceBaseUrl + healthEndpoint)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(5))
-                    .block();
-        } catch (Exception e) {
-            log.error("Failed to get model info: {}", e.getMessage());
-            return Map.of("status", "unavailable", "error", e.getMessage());
-        }
+        return webClient.get()
+                .uri(serviceBaseUrl + healthEndpoint)
+                .retrieve()
+                .bodyToMono((Class<Map<String, Object>>) (Class<?>) Map.class)
+                .timeout(Duration.ofSeconds(5))
+                .doOnError(error -> log.error("Failed to get model info: {}", error.getMessage()))
+                .onErrorReturn(Map.of("status", "unavailable", "error", "Service unavailable"));
     }
 }

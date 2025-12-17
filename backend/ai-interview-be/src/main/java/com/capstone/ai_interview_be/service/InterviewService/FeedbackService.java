@@ -42,7 +42,7 @@ public class FeedbackService {
     private final jakarta.persistence.EntityManager entityManager;
 
     // Phương thức tạo feedback cho buổi phỏng vấn
-    @Transactional
+    @Transactional(noRollbackFor = Exception.class)
     public InterviewFeedbackResponse generateSessionFeedback(Long sessionId) {
         log.info("Generating feedback for session: {}", sessionId);
 
@@ -215,7 +215,7 @@ public class FeedbackService {
     }
 
     // Phương thức lấy feedback cho buổi phỏng vấn
-    @Transactional
+    @Transactional(noRollbackFor = Exception.class)
     public InterviewFeedbackResponse getSessionFeedback(Long sessionId) {
         log.info("Getting existing feedback for session: {}", sessionId);
 

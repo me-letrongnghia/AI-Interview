@@ -1,8 +1,13 @@
 """
 Multitask Judge Evaluator Service
 =================================
-Service sử dụng Multitask Judge model (trained on 400K samples)
-để thực hiện 3 tác vụ:
+Service layer for AI Interview using flexible model system.
+Supports multiple AI models through dependency injection:
+    - MultitaskJudge: Custom Transformer (71M params)
+    - Llama-1B: Meta Llama 3.2 (1.2B params)
+    - Qwen-3B: Qwen 2.5 (3B params)
+
+Implements 3 tasks:
     - GENERATE: Sinh câu hỏi follow-up
     - EVALUATE: Đánh giá câu trả lời với JSON scores
     - REPORT: Tạo báo cáo tổng quan
@@ -20,7 +25,7 @@ from typing import Dict, Any, Optional, List, Set
 from dataclasses import dataclass, field
 from collections import defaultdict
 
-from src.services.model_loader import multitask_judge_manager
+from src.services.base_model import BaseModelManager
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +186,9 @@ class ReportResult:
 
 class MultitaskEvaluator:
     """
-    Multitask Evaluator sử dụng custom trained Transformer model
+    Evaluator service that works with any AI model implementing BaseModelManager.
+    
+    Supports flexible model switching through dependency injection.
     """
     
     # Task prefixes
@@ -189,8 +196,14 @@ class MultitaskEvaluator:
     TASK_EVALUATE = "[TASK:EVALUATE]"
     TASK_REPORT = "[TASK:REPORT]"
     
-    def __init__(self):
-        self.manager = multitask_judge_manager
+    def __init__(self, model_manager: BaseModelManager):
+        """
+        Initialize evaluator with a model manager.
+        
+        Args:
+            model_manager: Instance of BaseModelManager (MultitaskJudge, Llama, Qwen, etc.)
+        """
+        self.manager = model_manager
     
     def is_ready(self) -> bool:
         """Kiểm tra model đã sẵn sàng chưa"""
@@ -1684,7 +1697,3 @@ class MultitaskEvaluator:
                 scores[key] = self._clamp_score(match.group(1))
         
         return scores
-
-
-# Global instance
-multitask_evaluator = MultitaskEvaluator()

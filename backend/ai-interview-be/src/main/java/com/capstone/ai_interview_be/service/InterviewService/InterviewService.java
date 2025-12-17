@@ -39,7 +39,7 @@ public class InterviewService {
         private final AnswerEvaluationService answerEvaluationService;
 
         // Phương thức để xử lý câu trả lời và tạo câu hỏi tiếp theo
-        @Transactional
+        @Transactional(noRollbackFor = Exception.class)
         public ProcessAnswerResponse processAnswerAndGenerateNext(Long sessionId, AnswerMessage answerMessage) {
                 // Kiểm tra session có tồn tại không
                 InterviewSession session = sessionRepository.findById(sessionId)
@@ -297,7 +297,7 @@ public class InterviewService {
         }
 
         // Phương thức để xử lý câu trả lời cuối cùng mà không tạo câu hỏi tiếp theo
-        @Transactional
+        @Transactional(noRollbackFor = Exception.class)
         public void processLastAnswer(Long sessionId, AnswerMessage answerMessage) {
                 log.info("Processing last answer for session");
                 // Kiểm tra session có tồn tại không

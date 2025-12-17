@@ -16,25 +16,42 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent.parent
 
 # ==================== MODEL PATHS ====================
-# Multitask Judge Model (GENERATE, EVALUATE, REPORT) - Custom Transformer 400K samples
+# Multitask Judge Model - Custom Transformer (GENERATE, EVALUATE, REPORT)
+# Trained on 400K interview samples, 71M parameters
 MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Multi_model")))
 
-# Qwen Model - Fine-tuned Qwen2.5-3B-Instruct 
-QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
+# Llama-1B Model - Meta Llama 3.2 1B
+# General-purpose decoder-only model, 1.2B parameters
+LLAMA_1B_MODEL_PATH = Path(os.getenv("LLAMA_1B_MODEL_PATH", str(BASE_DIR / "model" / "Llama-1B")))
+
+# Qwen-3B Model - Qwen 2.5 3B Instruct
+# High-quality instruction-following model, 3B parameters
+QWEN_3B_MODEL_PATH = Path(os.getenv("QWEN_3B_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
 
 # ==================== MODEL SELECTION ====================
-# Available: "qwen-3B", "qwen-external", "multitask"
-# - qwen-3B: Qwen2.5-3B-Instruct local (default)
-# - qwen-external: Qwen-7B via external API (Colab/ngrok)
-# - multitask: Custom Transformer (legacy)
-AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen-3B")
+# Choose which model to use by setting AI_MODEL_TYPE
+# Available options:
+#   - "multitask": Custom Transformer (71M params, fast, specialized for interviews)
+#   - "llama-1b": Meta Llama 3.2 (1.2B params, general-purpose, good quality)
+#   - "qwen-3b": Qwen 2.5 (3B params, high quality, needs more VRAM)
+#
+# To switch models, just change this value in .env and restart the service!
+AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "multitask")
 
-# Qwen-specific settings
-QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # Use 4-bit quantization (saves VRAM)
-QWEN_MAX_SEQ_LENGTH = int(os.getenv("QWEN_MAX_SEQ_LENGTH", "2048"))
+# ==================== LLAMA-1B SETTINGS ====================
+# Settings for Llama-1B model
+LLAMA_USE_4BIT = os.getenv("LLAMA_USE_4BIT", "true").lower() == "true"  # 4-bit quantization (saves VRAM)
+LLAMA_MAX_SEQ_LENGTH = int(os.getenv("LLAMA_MAX_SEQ_LENGTH", "4096"))  # Max context length
+LLAMA_DEVICE_MAP = os.getenv("LLAMA_DEVICE_MAP", "auto")  # "auto", "cuda", "cpu"
+
+# ==================== QWEN-3B SETTINGS ====================
+# Settings for Qwen-3B model
+QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # 4-bit quantization (saves VRAM)
+QWEN_MAX_SEQ_LENGTH = int(os.getenv("QWEN_MAX_SEQ_LENGTH", "2048"))  # Max context length
+QWEN_DEVICE_MAP = os.getenv("QWEN_DEVICE_MAP", "auto")  # "auto", "cuda", "cpu"
 
 # ==================== QWEN EXTERNAL API CONFIG ====================
-# Use external Qwen-7B API (Colab/Cloud deployment with ngrok)
+# Use external Qwen-7B API (Colab/Cloud deployment with ngrok) - LEGACY
 QWEN_EXTERNAL_API_URL = os.getenv("QWEN_EXTERNAL_API_URL", None) 
 QWEN_EXTERNAL_API_TIMEOUT = int(os.getenv("QWEN_EXTERNAL_API_TIMEOUT", "120"))
 
