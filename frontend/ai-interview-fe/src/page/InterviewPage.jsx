@@ -1146,30 +1146,78 @@ export default function InterviewInterface() {
 
           // Start 30-second countdown for AI evaluation to complete
           const EVALUATION_WAIT_SECONDS = 30;
+          const POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
           setEvaluationCountdown(EVALUATION_WAIT_SECONDS);
 
           let countdown = EVALUATION_WAIT_SECONDS;
-          const countdownInterval = setInterval(() => {
+          let countdownInterval = null;
+          let pollInterval = null;
+
+          // Function to navigate to feedback page
+          const navigateToFeedback = () => {
+            if (countdownInterval) clearInterval(countdownInterval);
+            if (pollInterval) clearInterval(pollInterval);
+
+            console.log("✅ Navigating to feedback page");
+            stopSpeaking();
+            setIsRunning(false);
+
+            if (isRecording) {
+              setIsRecording(false);
+              stopListening();
+            }
+
+            stopAllMediaTracks();
+            disconnectSocket();
+            navigate(`/feedback/${sessionId}`);
+          };
+
+          // Countdown interval (fallback)
+          countdownInterval = setInterval(() => {
             countdown--;
             setEvaluationCountdown(countdown);
 
             if (countdown <= 0) {
-              clearInterval(countdownInterval);
               console.log("🚀 Countdown complete - navigating to feedback page");
-
-              stopSpeaking();
-              setIsRunning(false);
-
-              if (isRecording) {
-                setIsRecording(false);
-                stopListening();
-              }
-
-              stopAllMediaTracks();
-              disconnectSocket();
-              navigate(`/feedback/${sessionId}`);
+              navigateToFeedback();
             }
           }, 1000);
+
+          // Polling interval to check evaluation status
+          pollInterval = setInterval(async () => {
+            try {
+              console.log("🔍 Checking evaluation status...");
+
+              // Get token from localStorage
+              const token = localStorage.getItem("access_token");
+
+              const response = await fetch(
+                `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/feedback/sessions/${sessionId}/status`,
+                {
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                  }
+                }
+              );
+
+              if (response.ok) {
+                const status = await response.json();
+                console.log("📊 Evaluation status:", status);
+
+                if (status.ready) {
+                  console.log("✅ Evaluation complete! Navigating to feedback...");
+                  navigateToFeedback();
+                }
+              } else {
+                console.warn(`⚠️ Status check  failed: ${response.status}`);
+              }
+            } catch (error) {
+              console.warn("⚠️ Error checking evaluation status:", error);
+              // Continue with fallback countdown
+            }
+          }, POLL_INTERVAL_MS);
+
           break;
         }
 

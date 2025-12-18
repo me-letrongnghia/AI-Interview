@@ -16,16 +16,16 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/feedback")
 @RequiredArgsConstructor
 public class FeedbackController {
-    
+
     private final FeedbackService feedbackService;
-    
-    //  phương thức tạo feedback cho buổi phỏng vấn
+
+    // phương thức tạo feedback cho buổi phỏng vấn
     @PostMapping("/sessions/{sessionId}/generate")
     public ResponseEntity<InterviewFeedbackResponse> generateFeedback(@PathVariable Long sessionId) {
         InterviewFeedbackResponse feedback = feedbackService.generateSessionFeedback(sessionId);
         return ResponseEntity.ok(feedback);
     }
-    
+
     // phương thức lấy feedback cho buổi phỏng vấn, nếu không có thì tự động tạo
     @GetMapping("/sessions/{sessionId}")
     public ResponseEntity<InterviewFeedbackResponse> getFeedback(@PathVariable Long sessionId) {
@@ -41,5 +41,12 @@ public class FeedbackController {
             }
             throw e;
         }
+    }
+
+    // phương thức kiểm tra trạng thái feedback (đã sẵn sàng chưa)
+    @GetMapping("/sessions/{sessionId}/status")
+    public ResponseEntity<java.util.Map<String, Object>> getFeedbackStatus(@PathVariable Long sessionId) {
+        java.util.Map<String, Object> status = feedbackService.checkFeedbackStatus(sessionId);
+        return ResponseEntity.ok(status);
     }
 }
