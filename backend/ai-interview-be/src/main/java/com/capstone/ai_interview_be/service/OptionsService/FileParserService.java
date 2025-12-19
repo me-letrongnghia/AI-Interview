@@ -100,7 +100,7 @@ public class FileParserService {
         tesseract.setLanguage("eng");
 
         String[] paths = {
-                "C:\\Program Files\\Tesseract-OCR\\tessdata",
+                "C:\\Users\\DAT\\Tesseract-OCR\\tessdata",
                 System.getenv("TESSDATA_PREFIX"),
                 "/usr/share/tesseract-ocr/5/tessdata",
                 "/usr/share/tessdata",

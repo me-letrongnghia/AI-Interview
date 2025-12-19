@@ -24,7 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIService {
 
     private final UnifiedModelService unifiedModelService;
-    private final GeminiService geminiService;
+    // private final GeminiService geminiService;
+    private final GroqService groqService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Phương thức tạo câu hỏi đầu tiên
@@ -56,7 +57,7 @@ public class AIService {
         // Fallback: Gemini
         log.warn("AI Model Service unavailable, using Gemini for first question");
         try {
-            return geminiService.generateFirstQuestion(role, skills, "English", level);
+            return groqService.generateFirstQuestion(role, skills, "English", level);
         } catch (Exception e) {
             log.error("Gemini failed");
             return "Sorry, AI is currently unavailable to generate questions.";
@@ -115,9 +116,9 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini fallback");
+        log.warn("AI Model Service unavailable, using Groq fallback");
         try {
-            return geminiService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
+            return groqService.generateNextQuestion(sessionRole, sessionSkill, sessionLanguage, sessionLevel,
                     previousQuestion, previousAnswer, conversationHistory, currentQuestionNumber, totalQuestions);
         } catch (Exception e) {
             log.error("Next question error: {}", e.getMessage());
@@ -145,10 +146,10 @@ public class AIService {
     // Phương thức trích xuất dữ liệu từ văn bản CV sử dụng Gemini
     public DataScanResponse extractData(String Text) {
         try {
-            String jsonResponse = geminiService.generateData(Text);
+            String jsonResponse = groqService.generateData(Text);
             // Kiểm tra phản hồi rỗng
             if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                log.warn("Empty Gemini response");
+                log.warn("Empty Groq response");
                 return new DataScanResponse("null", "null", Arrays.asList(), "en");
             }
             // Kiểm tra lỗi trong phản hồi
@@ -222,9 +223,9 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.warn("AI Model Service unavailable, using Gemini for answer feedback");
+        log.warn("AI Model Service unavailable, using Groq for answer feedback");
         try {
-            return geminiService.generateAnswerFeedback(question, answer, role, level);
+            return groqService.generateAnswerFeedback(question, answer, role, level);
         } catch (Exception e) {
             log.error("Answer feedback error: {}", e.getMessage());
             return AnswerFeedbackData.builder()
@@ -337,11 +338,11 @@ public class AIService {
         }
 
         // Fallback: Gemini
-        log.info("Using Gemini fallback for overall feedback");
+        log.info("Using Groq fallback for overall feedback");
         try {
-            return geminiService.generateOverallFeedback(conversation, role, level, skills);
+            return groqService.generateOverallFeedback(conversation, role, level, skills);
         } catch (Exception e) {
-            log.error("Gemini failed, using hardcoded fallback: {}", e.getMessage());
+            log.error("Groq failed, using hardcoded fallback: {}", e.getMessage());
             return OverallFeedbackData.builder()
                     .overview("AVERAGE")
                     .assessment("Thank you for completing the interview. Your performance showed potential. "

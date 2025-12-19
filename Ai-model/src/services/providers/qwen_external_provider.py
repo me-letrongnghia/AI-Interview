@@ -329,41 +329,61 @@ class QwenExternalProvider(BaseModelProvider):
         
         text = text.strip()
         
-        # Remove any | A: ... part first (answer section)
-        text = re.sub(r'\s*\|\s*A:.*$', '', text, flags=re.IGNORECASE | re.DOTALL)
+        # First, handle pipe-separated format: "greeting | Q: question | A: answer"
+        # Extract only the question part between | Q: and either | A: or end of string
+        pipe_q_match = re.search(r'\|\s*Q:\s*([^|]+?)(?:\s*\||$)', text, flags=re.IGNORECASE)
+        if pipe_q_match:
+            # Found "| Q: ..." pattern, extract just that part
+            text = pipe_q_match.group(1).strip()
+        else:
+            # No "| Q:" pattern, just remove "| A:" part if exists
+            text = re.sub(r'\s*\|\s*A:.*$', '', text, flags=re.IGNORECASE | re.DOTALL)
+            # Remove any remaining trailing pipes
+            text = re.sub(r'\s*\|\s*$', '', text)
         
-        # Remove training format metadata like "| Competency: ..." or "(Category: ...)"
-        metadata_patterns = [
-            r'\s*\|\s*Competency:\s*[^|]*$',
-            r'\s*\|\s*Category:\s*[^|]*$',
-            r'\s*\|\s*Type:\s*[^|]*$',
-            r'\s*\|\s*Difficulty:\s*[^|]*$',
-            r'\s*\|\s*Level:\s*[^|]*$',
-            r'\s*\|\s*Skill:\s*[^|]*$',
-            r'\s*\(Competency:\s*[^)]*\)\s*$',
-            r'\s*\(Category:\s*[^)]*\)\s*$',
-            r'\s*\[Competency:\s*[^\]]*\]\s*$',
-        ]
-        for pattern in metadata_patterns:
-            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-        
-        # Remove common prefixes
+        # Remove common prefixes like "Question:", "Here's the question:", etc.
         prefixes_to_remove = [
             r'^Question:\s*',
             r'^Here\'?s?\s+(?:the\s+)?(?:a\s+)?(?:an\s+)?question:\s*',
+            r'^(?:The\s+)?(?:First\s+|Next\s+|Follow-?up\s+)?Question:\s*',
             r'^Q:\s*',
-            r'^Sure[,!]?\s*',
+            r'^Sure[,!]?\s*(?:here\'?s?\s+)?(?:the\s+)?(?:a\s+)?(?:question)?:?\s*',
+            r'^Okay[,!]?\s*',
+            r'^Alright[,!]?\s*',
         ]
         for pattern in prefixes_to_remove:
             text = re.sub(pattern, '', text, flags=re.IGNORECASE)
         
-        # Extract up to the LAST "?" to get the complete question
+        # Extract up to the FIRST "?" to avoid capturing multiple sentences
+        # But first check if there are multiple questions
         if '?' in text:
-            last_q_mark = text.rfind('?')
-            text = text[:last_q_mark + 1]
+            # Split by ? and take the first complete question
+            parts = text.split('?')
+            if len(parts) > 0:
+                text = parts[0].strip() + '?'
         
+        # Remove trailing metadata like "(Competency: ...)" or "[Category: ...]"
+        # But do this BEFORE we add back the ?, so we don't remove the question mark
+        metadata_patterns = [
+            r'\s*\((?:Competency|Category|Type|Difficulty|Level|Skill|Score):\s*[^)]*\)\s*',
+            r'\s*\[(?:Competency|Category|Type|Difficulty|Level|Skill|Score):\s*[^\]]*\]\s*',
+        ]
+        for pattern in metadata_patterns:
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+        
+        # Remove any leading/trailing quotes
         text = text.strip('"\'')
-        return text.strip()
+        text = text.strip()
+        
+        # Ensure question ends with ? if it looks like a question
+        if text and not text.endswith('?'):
+            # Check if it's actually a question (starts with question words)
+            question_starters = ['how', 'what', 'why', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'should', 'do', 'does', 'is', 'are', 'describe', 'explain', 'tell']
+            first_word = text.split()[0].lower() if text.split() else ''
+            if first_word in question_starters:
+                text += '?'
+        
+        return text
             
     def generate_followup_question(
         self,

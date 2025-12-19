@@ -58,7 +58,15 @@ class ModelFactory:
         Returns:
             BaseModelProvider instance
         """
-        model_type = (model_type or DEFAULT_MODEL).lower()
+        model_type = model_type or DEFAULT_MODEL
+        
+        # Normalize model type for case-insensitive comparison
+        if model_type.lower() in ["qwen", "qwen-3b"]:
+            model_type = MODEL_QWEN
+        elif model_type.lower() == "qwen-external":
+            model_type = MODEL_QWEN_EXTERNAL
+        elif model_type.lower() == "multitask":
+            model_type = MODEL_MULTITASK
         
         # Return cached instance if available
         if not force_new and model_type in self._instances:

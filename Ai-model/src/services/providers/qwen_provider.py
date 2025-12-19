@@ -56,6 +56,12 @@ PROMPT_TEMPLATES = {
 Output EXACTLY ONE warm-up opening question in {language}.
 This is the FIRST question of the interview - a warm-up question about the position and skills.
 
+CRITICAL OUTPUT FORMAT:
+- Return ONLY the greeting and question text - nothing else
+- DO NOT use formats like "| Q: question" or "Question: text"
+- DO NOT add metadata like (Type: ...) or [Category: ...]
+- Just output the plain question text directly
+
 Rules:
 - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
 - Ask about their interest in the {role} position OR their experience/interest with the required skills.
@@ -75,6 +81,7 @@ Example good opening questions:
 Level: {level}
 Skills: {skills}
 
+
 Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.""",
 
     # System prompt for generating follow-up question
@@ -89,6 +96,13 @@ Generate a warm-up opening question that asks about their interest in this posit
 {phase_guidance}
 
 {level_specific_rules}
+
+=== STRICT OUTPUT FORMAT ===
+- Return ONLY the question text - nothing else
+- DO NOT use formats like "| Q: question" or "Question: text"
+- DO NOT add metadata like (Type: ...) or [Category: ...]
+- DO NOT add prefixes like "Here's the question:" or "Q:"
+- Just output the plain question text directly
 
 === STRICT RULES ===
 - FOLLOW the phase strategy difficulty level strictly.
@@ -119,48 +133,57 @@ Generate the next interview question following the PHASE STRATEGY above. The que
     "evaluate_system": """You are a precise and analytical evaluator. Always respond with valid JSON only.
 Use proper markdown formatting in your feedback including **bold** for emphasis, `code` for technical terms, and ``` for code blocks. Use line breaks for better readability.""",
 
-    "evaluate_user": """You are an expert technical interviewer evaluating a candidate's answer with precise scoring standards.
+    "evaluate_user": """You are an expert technical interviewer evaluating a candidate's answer with STRICT scoring standards.
 
 Position: {role} ({level} level)
 Question: {question}
 Candidate's Answer: {answer}
 
+CRITICAL SCORING RULES:
+AUTOMATIC LOW SCORES for these answers:
+- "I don't know": ALL scores ≤ 2/10, overall = 0-1
+- "I'm not sure": ALL scores ≤ 3/10, overall = 0-2
+- Vague/generic answers without specifics: ALL scores ≤ 4/10
+- No technical details when expected: Accuracy and Completeness ≤ 3/10
+- Off-topic responses: Relevance ≤ 2/10
+
 LEVEL-SPECIFIC EXPECTATIONS:
 - Intern: Basic understanding, can explain fundamental concepts
-- Fresher: Solid foundation, some practical knowledge
+- Fresher: Solid foundation, some practical knowledge  
 - Junior: Good understanding, practical experience, can explain implementation
 - Mid-level: Deep knowledge, best practices, design patterns, trade-offs
 - Senior: Expert level, architectural decisions, optimization, mentoring ability
+
+STRICT SCORING CRITERIA:
+- Relevance: Does answer directly address the question? (0=off-topic, 10=perfectly relevant)
+- Completeness: Covers all important aspects? (0=missing everything, 10=comprehensive)
+- Accuracy: Technically correct information? (0=wrong facts, 10=perfect accuracy)
+- Clarity: Clear, well-structured communication? (0=confusing, 10=crystal clear)
+- Overall: Holistic assessment for {level} level (0=completely inadequate, 10=exceptional)
+
+BE HARSH with incomplete or generic answers. A {level} candidate should demonstrate appropriate technical depth.
 
 FORMATTING GUIDELINES:
 - Use **bold** to highlight important concepts or key points
 - Use `backticks` for technical terms, variables, or short code snippets
 - Use ``` for multi-line code blocks with language identifier
 - Use line breaks between paragraphs for readability
-- Use - or * for bullet points when listing items
 
 FEEDBACK REQUIREMENTS:
-- Be specific and constructive
-- Mention what was done well
-- Point out specific areas for improvement
-- Reference technical concepts where applicable
-- Keep professional and encouraging tone
-
-SAMPLE ANSWER REQUIREMENTS:
-- Provide a comprehensive model answer
-- Include technical details appropriate for the level
-- Show best practices and proper terminology
-- Demonstrate the depth expected for the position
+- Be specific and constructive but HONEST about poor performance
+- Clearly state what was missing or inadequate
+- For "I don't know" answers, emphasize knowledge gaps seriously
+- Reference technical concepts that should have been mentioned
 
 Provide detailed evaluation in JSON format:
 {{
     "relevance": <0-10>,
-    "completeness": <0-10>,
+    "completeness": <0-10>, 
     "accuracy": <0-10>,
     "clarity": <0-10>,
     "overall": <0-10>,
-    "feedback": "Your answer demonstrates... [Write 3-5 detailed sentences. Be specific about what they said right/wrong]",
-    "improved_answer": "A strong answer would include... [Write a comprehensive model answer with technical depth]"
+    "feedback": "Your answer demonstrates... [Be specific about inadequacies. For 'I don't know' answers, clearly state this shows significant knowledge gaps]",
+    "improved_answer": "A strong {level} answer would include... [Write a comprehensive model answer with technical depth]"
 }}""",
 
     # System prompt for generating report
@@ -307,7 +330,7 @@ def build_level_specific_rules(level: str) -> str:
     rules = f"=== LEVEL-SPECIFIC RULES FOR {level.upper()} ===\n"
     
     if level in ("Intern", "Fresher"):
-        rules += """⚠️ CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:
+        rules += """ CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:
 1. DO NOT ask about work experience or past projects - they likely have none
 2. DO NOT ask about frameworks like Hibernate, JPA, Spring Security unless they listed it in skills
 3. FOCUS on fundamental concepts: variables, data types, loops, conditionals, OOP basics
@@ -819,12 +842,17 @@ class QwenModelProvider(BaseModelProvider):
         
         text = text.strip()
         
-        # Remove any | A: ... part first (answer section)
-        text = re.sub(r'\s*\|\s*A:.*$', '', text, flags=re.IGNORECASE | re.DOTALL)
-        
-        # If there's "| Q:" pattern, remove the "| Q:" but keep the content
-        # "Part1 | Q: Part2" -> "Part1 Part2"
-        text = re.sub(r'\s*\|\s*Q:\s*', ' ', text, flags=re.IGNORECASE)
+        # First, handle pipe-separated format: "greeting | Q: question | A: answer"
+        # Extract only the question part between | Q: and either | A: or end of string
+        pipe_q_match = re.search(r'\|\s*Q:\s*([^|]+?)(?:\s*\||$)', text, flags=re.IGNORECASE)
+        if pipe_q_match:
+            # Found "| Q: ..." pattern, extract just that part
+            text = pipe_q_match.group(1).strip()
+        else:
+            # No "| Q:" pattern, just remove "| A:" part if exists
+            text = re.sub(r'\s*\|\s*A:.*$', '', text, flags=re.IGNORECASE | re.DOTALL)
+            # Remove any remaining trailing pipes
+            text = re.sub(r'\s*\|\s*$', '', text)
         
         # Remove common prefixes like "Question:", "Here's the question:", etc.
         prefixes_to_remove = [
@@ -839,18 +867,19 @@ class QwenModelProvider(BaseModelProvider):
         for pattern in prefixes_to_remove:
             text = re.sub(pattern, '', text, flags=re.IGNORECASE)
         
-        # Extract up to the LAST "?" to get the complete question
+        # Extract up to the FIRST "?" to avoid capturing multiple sentences
+        # But first check if there are multiple questions
         if '?' in text:
-            last_q_mark = text.rfind('?')
-            text = text[:last_q_mark + 1]
-        
-        # Remove any remaining pipe-separated content
-        text = re.sub(r'\s*\|.*$', '', text)
+            # Split by ? and take the first complete question
+            parts = text.split('?')
+            if len(parts) > 0:
+                text = parts[0].strip() + '?'
         
         # Remove trailing metadata like "(Competency: ...)" or "[Category: ...]"
+        # But do this BEFORE we add back the ?, so we don't remove the question mark
         metadata_patterns = [
-            r'\s*\((?:Competency|Category|Type|Difficulty|Level|Skill):\s*[^)]*\)\s*$',
-            r'\s*\[(?:Competency|Category|Type|Difficulty|Level|Skill):\s*[^\]]*\]\s*$',
+            r'\s*\((?:Competency|Category|Type|Difficulty|Level|Skill|Score):\s*[^)]*\)\s*',
+            r'\s*\[(?:Competency|Category|Type|Difficulty|Level|Skill|Score):\s*[^\]]*\]\s*',
         ]
         for pattern in metadata_patterns:
             text = re.sub(pattern, '', text, flags=re.IGNORECASE)
@@ -858,6 +887,14 @@ class QwenModelProvider(BaseModelProvider):
         # Remove any leading/trailing quotes
         text = text.strip('"\'')
         text = text.strip()
+        
+        # Ensure question ends with ? if it looks like a question
+        if text and not text.endswith('?'):
+            # Check if it's actually a question (starts with question words)
+            question_starters = ['how', 'what', 'why', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'should', 'do', 'does', 'is', 'are', 'describe', 'explain', 'tell']
+            first_word = text.split()[0].lower() if text.split() else ''
+            if first_word in question_starters:
+                text += '?'
         
         return text
 
@@ -896,14 +933,46 @@ class QwenModelProvider(BaseModelProvider):
         # Parse JSON response
         result = self._parse_json_response(response.content)
         
+        # Check for poor quality answers and enforce strict scoring
+        answer_lower = answer.lower().strip()
+        is_poor_answer = (
+            "i don't know" in answer_lower or
+            "i'm not sure" in answer_lower or
+            "no idea" in answer_lower or
+            len(answer.strip()) < 10 or  # Very short answers
+            answer_lower in ["no", "yes", "maybe", "not sure"]
+        )
+        
         # Extract scores with defaults
+        feedback_raw = result.get("feedback", "No feedback available.")
+        # Handle case where feedback might be a list
+        if isinstance(feedback_raw, list):
+            feedback = " ".join(str(item) for item in feedback_raw)
+        else:
+            feedback = str(feedback_raw)
+        
+        # Get base scores
+        relevance = min(10, max(0, int(result.get("relevance", 5))))
+        completeness = min(10, max(0, int(result.get("completeness", 5))))
+        accuracy = min(10, max(0, int(result.get("accuracy", 5))))
+        clarity = min(10, max(0, int(result.get("clarity", 5))))
+        overall = min(10, max(0, int(result.get("overall", 5))))
+        
+        # Enforce strict scoring for poor answers
+        if is_poor_answer:
+            relevance = min(relevance, 2)
+            completeness = min(completeness, 1)
+            accuracy = min(accuracy, 2)
+            clarity = min(clarity, 3)
+            overall = min(overall, 1)
+            
         return EvaluationResult(
-            relevance=min(10, max(0, int(result.get("relevance", 5)))),
-            completeness=min(10, max(0, int(result.get("completeness", 5)))),
-            accuracy=min(10, max(0, int(result.get("accuracy", 5)))),
-            clarity=min(10, max(0, int(result.get("clarity", 5)))),
-            overall=min(10, max(0, int(result.get("overall", 5)))),
-            feedback=result.get("feedback", "No feedback available."),
+            relevance=relevance,
+            completeness=completeness,
+            accuracy=accuracy,
+            clarity=clarity,
+            overall=overall,
+            feedback=feedback,
             improved_answer=result.get("improved_answer")
         )
     
@@ -911,7 +980,7 @@ class QwenModelProvider(BaseModelProvider):
         self,
         role: str,
         skills: List[str],
-        level: str = "Mid-level",
+        level: str,
         language: str = "English",
         cv_context: Optional[str] = None,
         jd_context: Optional[str] = None,
@@ -924,29 +993,52 @@ class QwenModelProvider(BaseModelProvider):
         # Format skills text (same as Gemini)
         skills_text = ", ".join(skills) if skills else "general programming"
         
+        # Prepare context guidance and information
+        context_guidance = ""
+        context_info = ""
+        
+        if cv_context or jd_context:
+            context_guidance = """CONTEXT INFORMATION AVAILABLE:
+You have access to the candidate's CV and/or job description. Use this information to tailor your question appropriately."""
+            
+            context_parts = []
+            if cv_context:
+                context_parts.append(f"CV Context: {cv_context[:1500]}...")  # Limit length
+            if jd_context:
+                context_parts.append(f"Job Description: {jd_context[:1500]}...")  # Limit length
+            context_info = "\n\n".join(context_parts)
+        else:
+            context_guidance = "No additional context available. Focus on general role and skills discussion."
+        
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
             role=role,
-            skills=skills_text
+            skills=skills_text,
+            context_guidance=context_guidance
         )
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,
             level=level if level else "Intern",
-            skills=skills_text
+            skills=skills_text,
+            context_info=context_info
         )
         
         response = self.generate(
             prompt=user_prompt,
             system_prompt=system_prompt,
-            max_tokens=100,  # Short response - just greeting + question
+            max_tokens=150,  # Increased for full greeting + question
             temperature=0.5,  # Lower temperature for more consistent output
-            stop_at_question_mark=True  # Stop after first "?"
+            stop_at_question_mark=False  # Don't stop at ?, let model finish naturally
         )
         
         question = response.content.strip()
         
         # Clean up the response - remove common prefixes/suffixes
         question = self._clean_question_response(question)
+        
+        # Log for debugging
+        logger.debug(f"[generate_first_question] Raw response: {response.content[:200]}")
+        logger.debug(f"[generate_first_question] Cleaned question: {question}")
         
         # Ensure question ends with ?
         if not question.endswith("?"):
@@ -1023,15 +1115,20 @@ Phase guidance above is based on this progress.
         response = self.generate(
             prompt=user_prompt,
             system_prompt=system_prompt,
-            max_tokens=80,  # Only need 1 question
+            max_tokens=120,  # Increased for complete question
             temperature=0.5,  # Lower for more focused output
-            stop_at_question_mark=True  # Stop after first "?"
+            stop_at_question_mark=False  # Don't stop at ?, let model finish naturally
         )
         
         question = response.content.strip()
         
+        # Log for debugging
+        logger.debug(f"[generate_followup] Raw response: {response.content[:200]}")
+        
         # Clean up the response - remove common prefixes/suffixes
         question = self._clean_question_response(question)
+        
+        logger.debug(f"[generate_followup] Cleaned question: {question}")
         
         # Determine question type and difficulty based on phase
         phase = determine_phase(current_question_number, total_questions) if total_questions > 0 else InterviewPhase.CORE_TECHNICAL

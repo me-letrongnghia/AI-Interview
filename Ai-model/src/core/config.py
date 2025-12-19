@@ -35,7 +35,7 @@ QWEN_MAX_SEQ_LENGTH = int(os.getenv("QWEN_MAX_SEQ_LENGTH", "2048"))
 
 # ==================== QWEN EXTERNAL API CONFIG ====================
 # Use external Qwen-7B API (Colab/Cloud deployment with ngrok)
-QWEN_EXTERNAL_API_URL = os.getenv("QWEN_EXTERNAL_API_URL", None) 
+QWEN_EXTERNAL_API_URL = os.getenv("QWEN_EXTERNAL_API_URL", "https://unnaove-clarita-nutant.ngrok-free.dev") 
 QWEN_EXTERNAL_API_TIMEOUT = int(os.getenv("QWEN_EXTERNAL_API_TIMEOUT", "120"))
 
 # ==================== THIẾT LẬP API ====================

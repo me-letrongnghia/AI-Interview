@@ -149,6 +149,8 @@ class HealthResponse(BaseModel):
     model_type: str
     device: str
     available_models: List[str]
+    
+    model_config = {"protected_namespaces": ()}
 
 
 # =============================================================================

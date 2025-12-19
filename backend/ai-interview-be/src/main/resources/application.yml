@@ -13,11 +13,11 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    open-in-view: false  # Disable to prevent lazy loading issues
-  
+    open-in-view: false # Disable to prevent lazy loading issues
+
   jackson:
     serialization:
-      fail-on-empty-beans: false  # Prevent errors on empty beans
+      fail-on-empty-beans: false # Prevent errors on empty beans
 
   mail:
     host: smtp.gmail.com
@@ -42,20 +42,23 @@ gemini:
   api-key: ${GEMINI_API_KEY}
   model: ${GEMINI_MODEL}
 
+groq:
+  api-key: ${GROQ_API_KEY}
+  model: ${GROQ_MODEL:llama3-70b-8192}
 # GenQ Service Configuration (DEPRECATED - now using Multitask v2)
 genq:
   service:
     url: ${GENQ_SERVICE_URL:http://localhost:8000}
     timeout: ${GENQ_SERVICE_TIMEOUT:60}
-    enabled: ${GENQ_SERVICE_ENABLED:false}  # Disabled - using Multitask v2
+    enabled: ${GENQ_SERVICE_ENABLED:false} # Disabled - using Multitask v2
     max-tokens: ${GENQ_MAX_TOKENS:80}
     temperature: ${GENQ_TEMPERATURE:0.7}
 
 # Judge Service Configuration (Multitask v2 - Custom Transformer 400K samples)
 judge:
   service:
-    url: ${JUDGE_SERVICE_URL:http://localhost:8000}  # Same port as AI service
-    timeout: ${JUDGE_SERVICE_TIMEOUT:90}  # Increased for REPORT task
+    url: ${JUDGE_SERVICE_URL:http://localhost:8000} # Same port as AI service
+    timeout: ${JUDGE_SERVICE_TIMEOUT:90} # Increased for REPORT task
     enabled: ${JUDGE_SERVICE_ENABLED:true}
 
 # JWT Configuration
