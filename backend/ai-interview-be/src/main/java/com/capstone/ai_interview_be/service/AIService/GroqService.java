@@ -350,32 +350,34 @@ public class GroqService {
                     guidance.append("- Focus on fundamental definitions and simple explanations\n");
                     guidance.append("- Help build confidence with accessible questions\n");
                     guidance.append("- Difficulty: VERY EASY\n");
-                    guidance.append("- Examples:\n");
+                    guidance.append("- Examples for " + level + ":\n");
                     guidance.append("  * 'What is a variable in programming?'\n");
                     guidance.append("  * 'Can you explain what HTML and CSS are used for?'\n");
-                    guidance.append("  * 'What's the difference between a class and an object?'\n");
+                    guidance.append("  * 'What is the difference between frontend and backend?'\n");
                 } else if (isJunior) {
                     guidance.append("- Ask foundational questions appropriate for Junior level\n");
                     guidance.append("- Focus on core concepts and common terminology\n");
-                    guidance.append("- Can include some practical applications\n");
                     guidance.append("- Difficulty: EASY\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'What are the benefits of using frameworks like Spring Boot?'\n");
-                    guidance.append("  * 'How do you handle exceptions in Java?'\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'What is OOP and can you name its main principles?'\n");
+                    guidance.append("  * 'Explain the difference between GET and POST requests'\n");
+                    guidance.append("  * 'What is a REST API?'\n");
                 } else if (isMid) {
-                    guidance.append("- Ask conceptual questions with depth and practical implications\n");
-                    guidance.append("- Test understanding of design principles and best practices\n");
+                    guidance.append("- Ask conceptual questions with some depth for Mid-level\n");
+                    guidance.append("- Expect clear explanations with examples\n");
                     guidance.append("- Difficulty: EASY-MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'What are SOLID principles and how do you apply them?'\n");
-                    guidance.append("  * 'Explain the difference between composition and inheritance'\n");
-                } else { // Senior
-                    guidance.append("- Ask strategic and architectural questions\n");
-                    guidance.append("- Test leadership and mentoring understanding\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'Explain SOLID principles and why they matter'\n");
+                    guidance.append("  * 'What are the differences between SQL and NoSQL databases?'\n");
+                    guidance.append("  * 'Describe the MVC pattern and its benefits'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask conceptual questions expecting expert-level answers\n");
+                    guidance.append("- Expect deep understanding with real-world context\n");
                     guidance.append("- Difficulty: MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How do you ensure code quality in a large team?'\n");
-                    guidance.append("  * 'What's your approach to technical debt management?'\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you explain microservices vs monolith trade-offs?'\n");
+                    guidance.append("  * 'What architectural patterns have you found most valuable?'\n");
+                    guidance.append("  * 'Describe your approach to ensuring code quality in a team'\n");
                 }
                 break;
 
@@ -384,32 +386,36 @@ public class GroqService {
                 guidance.append("Strategy:\n");
                 if (isEntry) {
                     guidance.append("- Ask about basic implementations suitable for " + level + "\n");
-                    guidance.append("- Focus on simple coding concepts and basic syntax\n");
+                    guidance.append("- Focus on simple coding scenarios and basic problem-solving\n");
                     guidance.append("- Difficulty: EASY\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you create a simple loop in Java?'\n");
-                    guidance.append("  * 'What's the basic syntax for an if-else statement?'\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you create a simple function to add two numbers?'\n");
+                    guidance.append("  * 'Describe how you would build a basic to-do list'\n");
+                    guidance.append("  * 'What steps would you take to debug a simple error?'\n");
                 } else if (isJunior) {
                     guidance.append("- Ask about practical implementations for Junior level\n");
-                    guidance.append("- Focus on common frameworks and tools\n");
+                    guidance.append("- Focus on common development tasks and patterns\n");
                     guidance.append("- Difficulty: MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you implement a REST API endpoint?'\n");
-                    guidance.append("  * 'Explain how you'd connect to a database using JPA'\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'How would you implement user authentication?'\n");
+                    guidance.append("  * 'Describe how you would handle form validation'\n");
+                    guidance.append("  * 'Walk me through creating a CRUD API endpoint'\n");
                 } else if (isMid) {
-                    guidance.append("- Ask about real-world implementations and trade-offs\n");
-                    guidance.append("- Test problem-solving with practical scenarios\n");
+                    guidance.append("- Ask about real-world implementations for Mid-level\n");
+                    guidance.append("- Expect knowledge of best practices and common patterns\n");
                     guidance.append("- Difficulty: MEDIUM-HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you optimize a slow database query?'\n");
-                    guidance.append("  * 'Design a caching strategy for a high-traffic application'\n");
-                } else { // Senior
-                    guidance.append("- Ask about complex system implementations\n");
-                    guidance.append("- Test architectural decision-making\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'How would you implement caching in your application?'\n");
+                    guidance.append("  * 'Describe your approach to handling database transactions'\n");
+                    guidance.append("  * 'How would you design an API versioning strategy?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask about complex implementations for " + level + "\n");
+                    guidance.append("- Expect architectural thinking and trade-off analysis\n");
                     guidance.append("- Difficulty: HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you design a scalable microservices architecture?'\n");
-                    guidance.append("  * 'What's your approach to handling distributed transactions?'\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you design a distributed caching system?'\n");
+                    guidance.append("  * 'Describe your approach to implementing event sourcing'\n");
+                    guidance.append("  * 'How would you handle cross-service transactions?'\n");
                 }
                 break;
 
@@ -417,26 +423,37 @@ public class GroqService {
                 guidance.append("Phase: DEEP DIVE (Advanced Understanding)\n");
                 guidance.append("Strategy:\n");
                 if (isEntry) {
-                    guidance.append("- Test deeper understanding of basic concepts\n");
-                    guidance.append("- Focus on 'why' questions to check comprehension\n");
-                    guidance.append("- Difficulty: MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'Why do we use interfaces in programming?'\n");
-                    guidance.append("  * 'What happens when you call a method in Java?'\n");
+                    guidance.append("- Go slightly deeper but remain accessible for " + level + "\n");
+                    guidance.append("- Ask about understanding of why things work\n");
+                    guidance.append("- Difficulty: EASY-MEDIUM\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'Why do we use version control like Git?'\n");
+                    guidance.append("  * 'What happens when you type a URL in the browser?'\n");
+                    guidance.append("  * 'Why is it important to write clean code?'\n");
                 } else if (isJunior) {
-                    guidance.append("- Test depth of technical knowledge\n");
-                    guidance.append("- Explore edge cases and error scenarios\n");
-                    guidance.append("- Difficulty: MEDIUM-HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'What happens if your REST API receives invalid data?'\n");
-                    guidance.append("  * 'How would you handle concurrent access to shared data?'\n");
-                } else {
-                    guidance.append("- Test deep technical understanding and system thinking\n");
-                    guidance.append("- Explore complex scenarios and edge cases\n");
+                    guidance.append("- Ask about trade-offs and deeper understanding for Junior\n");
+                    guidance.append("- Test problem-solving with moderately complex scenarios\n");
+                    guidance.append("- Difficulty: MEDIUM\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'What are the trade-offs between using SQL vs NoSQL here?'\n");
+                    guidance.append("  * 'How would you optimize a slow database query?'\n");
+                    guidance.append("  * 'What would you do if your API is getting rate limited?'\n");
+                } else if (isMid) {
+                    guidance.append("- Ask about optimization and architectural decisions for Mid-level\n");
+                    guidance.append("- Test ability to analyze trade-offs and edge cases\n");
                     guidance.append("- Difficulty: HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you ensure data consistency across multiple services?'\n");
-                    guidance.append("  * 'What are the trade-offs between different architectural patterns?'\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'How would you handle 10x traffic increase?'\n");
+                    guidance.append("  * 'What strategies would you use to ensure data consistency?'\n");
+                    guidance.append("  * 'How would you debug a production performance issue?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Ask about complex architectural decisions for " + level + "\n");
+                    guidance.append("- Test strategic thinking and system-wide optimization\n");
+                    guidance.append("- Difficulty: VERY HARD\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you design for 99.99% uptime?'\n");
+                    guidance.append("  * 'Describe your approach to managing technical debt at scale'\n");
+                    guidance.append("  * 'How would you migrate a monolith to microservices safely?'\n");
                 }
                 break;
 
@@ -444,60 +461,79 @@ public class GroqService {
                 guidance.append("Phase: CHALLENGING (Problem Solving & Design)\n");
                 guidance.append("Strategy:\n");
                 if (isEntry) {
-                    guidance.append("- Present simple algorithmic problems\n");
-                    guidance.append("- Test basic logical thinking\n");
-                    guidance.append("- Difficulty: MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'How would you find the largest number in an array?'\n");
-                    guidance.append("  * 'Write a simple function to reverse a string'\n");
+                    guidance.append("- Present simple problem-solving scenarios for " + level + "\n");
+                    guidance.append("- Focus on logical thinking rather than complex systems\n");
+                    guidance.append("- Difficulty: MEDIUM (challenging but achievable)\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How would you approach building a simple calculator app?'\n");
+                    guidance.append("  * 'What would you do if you encountered a bug you cannot solve?'\n");
+                    guidance.append("  * 'How would you organize files in a small project?'\n");
                 } else if (isJunior) {
-                    guidance.append("- Present practical coding challenges\n");
-                    guidance.append("- Test problem-solving approach\n");
+                    guidance.append("- Present moderately complex scenarios for Junior\n");
+                    guidance.append("- Test ability to think through problems systematically\n");
                     guidance.append("- Difficulty: MEDIUM-HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'Design a system to track user login sessions'\n");
-                    guidance.append("  * 'How would you implement a simple rate limiter?'\n");
-                } else {
-                    guidance.append("- Present complex system design challenges\n");
-                    guidance.append("- Test strategic thinking and trade-off analysis\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'Design a basic notification system for a web app'\n");
+                    guidance.append("  * 'How would you handle file uploads securely?'\n");
+                    guidance.append("  * 'What would you do if two users edit the same data?'\n");
+                } else if (isMid) {
+                    guidance.append("- Present system design questions for Mid-level\n");
+                    guidance.append("- Test architectural thinking and scalability awareness\n");
+                    guidance.append("- Difficulty: HARD\n");
+                    guidance.append("- Examples for Mid-level:\n");
+                    guidance.append("  * 'Design a URL shortener service'\n");
+                    guidance.append("  * 'How would you implement a rate limiter?'\n");
+                    guidance.append("  * 'Design a basic chat application architecture'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Present complex system design for " + level + "\n");
+                    guidance.append("- Test leadership in technical decision-making\n");
                     guidance.append("- Difficulty: VERY HARD\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'Design a distributed chat system like WhatsApp'\n");
-                    guidance.append("  * 'How would you build a recommendation engine?'\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'Design a distributed file storage system like S3'\n");
+                    guidance.append("  * 'How would you architect a real-time bidding platform?'\n");
+                    guidance.append("  * 'Design a system to handle 1M concurrent WebSocket connections'\n");
                 }
                 break;
 
             case WRAP_UP:
                 guidance.append("Phase: WRAP-UP (Soft Skills & Growth)\n");
                 guidance.append("Strategy:\n");
+                guidance.append("- Ask about learning approach, teamwork, and career goals\n");
+                guidance.append("- Give candidate opportunity to showcase strengths\n");
+                guidance.append("- End on a positive, conversational note\n");
+                guidance.append("- Difficulty: COMFORTABLE (no trick questions)\n");
+
                 if (isEntry) {
-                    guidance.append("- Ask about learning goals and career aspirations\n");
-                    guidance.append("- Focus on growth mindset and curiosity\n");
-                    guidance.append("- Difficulty: EASY\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'What programming concept would you like to learn next?'\n");
-                    guidance.append("  * 'How do you stay updated with new technologies?'\n");
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How do you approach learning new technologies?'\n");
+                    guidance.append("  * 'What project are you most proud of and why?'\n");
+                    guidance.append("  * 'Where do you see yourself growing in the next year?'\n");
                 } else if (isJunior) {
-                    guidance.append("- Ask about professional development and challenges\n");
-                    guidance.append("- Test problem-solving approach and learning ability\n");
-                    guidance.append("- Difficulty: EASY-MEDIUM\n");
-                    guidance.append("- Examples:\n");
-                    guidance.append("  * 'Tell me about a challenging bug you've fixed'\n");
-                    guidance.append("  * 'How do you approach learning new frameworks?'\n");
-                } else {
-                    guidance.append("- Ask about leadership, mentoring, and strategic thinking\n");
-                    guidance.append("- Test communication and team management skills\n");
-                    guidance.append("- Difficulty: MEDIUM\n");
-                    guidance.append("- Examples:\n");
+                    guidance.append("- Examples for Junior:\n");
+                    guidance.append("  * 'How do you handle feedback on your code?'\n");
+                    guidance.append("  * 'Describe a challenging bug you solved and what you learned'\n");
+                    guidance.append("  * 'How do you stay updated with new technologies?'\n");
+                } else if (isMid) {
+                    guidance.append("- Examples for Mid-level:\n");
                     guidance.append("  * 'How do you mentor junior developers?'\n");
                     guidance.append("  * 'Describe a time you had to make a difficult technical decision'\n");
+                    guidance.append("  * 'How do you balance technical debt with new features?'\n");
+                } else { // Senior/Lead
+                    guidance.append("- Examples for " + level + ":\n");
+                    guidance.append("  * 'How do you drive technical vision in a team?'\n");
+                    guidance.append("  * 'Describe your approach to building high-performing teams'\n");
+                    guidance.append("  * 'How do you handle disagreements on architectural decisions?'\n");
                 }
                 break;
         }
     }
 
     private enum InterviewPhase {
-        OPENING, CORE_TECHNICAL, DEEP_DIVE, CHALLENGING, WRAP_UP
+        OPENING, // Câu hỏi cơ bản, warm-up
+        CORE_TECHNICAL, // Kỹ thuật thực hành
+        DEEP_DIVE, // Đi sâu vào chi tiết
+        CHALLENGING, // Thử thách, system design
+        WRAP_UP // Kết thúc, soft skills
     }
 
     private InterviewPhase determinePhase(int currentQuestion, int totalQuestions) {
@@ -509,6 +545,7 @@ public class GroqService {
         // - WRAP_UP: ~10% cuối (ít nhất 1 câu cuối)
 
         if (totalQuestions <= 5) {
+            // Với 4-5 câu: Opening -> Core -> Deep -> Wrap-up
             if (currentQuestion == 1)
                 return InterviewPhase.OPENING;
             if (currentQuestion == totalQuestions)
@@ -521,6 +558,8 @@ public class GroqService {
         }
 
         if (totalQuestions <= 10) {
+            // Với 6-10 câu: Opening(1) -> Core(2-3) -> Deep(4-5) -> Challenge(6-7) ->
+            // Wrap(cuối)
             if (currentQuestion == 1)
                 return InterviewPhase.OPENING;
             if (currentQuestion == totalQuestions)
@@ -551,7 +590,7 @@ public class GroqService {
     }
 
     public String generateData(String cvText) {
-        final int MAX_CONTENT_LENGTH = 8000; // Match Gemini's context window
+        final int MAX_CONTENT_LENGTH = 8000;
         // Làm tròn nội dung nếu quá dài
         String truncatedText = cvText;
         if (cvText != null && cvText.length() > MAX_CONTENT_LENGTH) {
@@ -669,14 +708,27 @@ public class GroqService {
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
 
+            // Kiểm tra nếu response không phải JSON hợp lệ
             if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
+                log.warn("Groq API returned error message instead of JSON: {}", jsonResponse);
                 return AnswerFeedbackData.builder()
-                        .feedback("Unable to generate detailed feedback at this moment.")
+                        .feedback(
+                                "Unable to generate detailed feedback at this moment due to high demand. Please try again later.")
                         .sampleAnswer("Feedback generation is temporarily unavailable.")
                         .build();
             }
+            // Thực hiện làm sạch JSON response để tránh lỗi phân tích cú pháp
             String cleanedJson = cleanJsonResponse(jsonResponse);
             AnswerFeedbackData feedbackData = objectMapper.readValue(cleanedJson, AnswerFeedbackData.class);
+
+            // Format the feedback and sample answer for better readability
+            if (feedbackData.getFeedback() != null) {
+                feedbackData.setFeedback(formatFeedbackContent(feedbackData.getFeedback()));
+            }
+            if (feedbackData.getSampleAnswer() != null) {
+                feedbackData.setSampleAnswer(formatFeedbackContent(feedbackData.getSampleAnswer()));
+            }
+
             return feedbackData;
         } catch (Exception e) {
             log.error("Error parsing answer feedback response", e);
@@ -775,32 +827,76 @@ public class GroqService {
 
         try {
             String jsonResponse = generateResponse(systemPrompt, userPrompt);
+
+            // Kiểm tra nếu response không phải JSON hợp lệ
             if (jsonResponse == null || jsonResponse.startsWith("Sorry")) {
-                return OverallFeedbackData.builder().overview("AVERAGE").assessment("Unable to generate report")
+                log.warn("Groq API returned error message for overall feedback: {}", jsonResponse);
+                return OverallFeedbackData.builder()
+                        .overview("AVERAGE")
+                        .assessment(
+                                "Unable to generate detailed assessment due to high demand. Please try again later.")
+                        .strengths(java.util.Arrays.asList("Interview completed"))
+                        .weaknesses(java.util.Arrays.asList("Detailed feedback temporarily unavailable"))
+                        .recommendations(
+                                "Please try viewing the feedback again later when the AI service is available.")
                         .build();
             }
+
             String cleanedJson = cleanJsonResponse(jsonResponse);
-            return objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
+            OverallFeedbackData feedbackData = objectMapper.readValue(cleanedJson, OverallFeedbackData.class);
+
+            if (feedbackData.getAssessment() != null) {
+                feedbackData.setAssessment(formatFeedbackContent(feedbackData.getAssessment()));
+            }
+
+            if (feedbackData.getRecommendations() != null) {
+                feedbackData.setRecommendations(formatFeedbackContent(feedbackData.getRecommendations()));
+            }
+
+            if (feedbackData.getStrengths() != null) {
+                List<String> formattedStrengths = feedbackData.getStrengths().stream()
+                        .map(this::formatFeedbackContent)
+                        .toList();
+                feedbackData.setStrengths(formattedStrengths);
+            }
+
+            if (feedbackData.getWeaknesses() != null) {
+                List<String> formattedWeaknesses = feedbackData.getWeaknesses().stream()
+                        .map(this::formatFeedbackContent)
+                        .toList();
+                feedbackData.setWeaknesses(formattedWeaknesses);
+            }
+
+            return feedbackData;
         } catch (Exception e) {
-            log.error("Error generating overall feedback", e);
-            return OverallFeedbackData.builder().overview("AVERAGE").assessment("Error generating report").build();
+            log.error("Error parsing overall feedback response", e);
+            return OverallFeedbackData.builder()
+                    .overview("AVERAGE")
+                    .assessment("Thank you for completing the interview. Your performance showed potential.")
+                    .strengths(java.util.Arrays.asList(
+                            "Participated in the interview",
+                            "Attempted to answer questions"))
+                    .weaknesses(java.util.Arrays.asList(
+                            "Could provide more detailed responses"))
+                    .recommendations(
+                            "Continue practicing technical interview questions and focus on providing detailed, structured answers.")
+                    .build();
         }
     }
 
+    // Hàm làm sạch phản hồi JSON từ Groq
     private String cleanJsonResponse(String jsonResponse) {
         if (jsonResponse == null)
             return "{}";
-        
+
         // Xóa các markdown code block nếu có
         String cleaned = jsonResponse
-                .replaceAll("```json\\s*", "")
-                .replaceAll("```\\s*", "")
+                .replaceAll("```json\\s*", "") // Remove ```json
+                .replaceAll("```\\s*", "") // Remove trailing ```
                 .trim();
-        
         // Tìm vị trí của dấu ngoặc nhọn đầu tiên và cuối cùng để trích xuất JSON hợp lệ
         int start = cleaned.indexOf("{");
         int end = cleaned.lastIndexOf("}");
-        
         // Nếu tìm thấy cả hai dấu ngoặc, trích xuất phần JSON
         if (start != -1 && end != -1 && end > start) {
             return cleaned.substring(start, end + 1);
@@ -830,11 +926,13 @@ public class GroqService {
         formatted = formatted.replaceAll("^#{1,6}\\s+(.+)", "$1\n");
         formatted = formatted.replaceAll("\\n#{1,6}\\s+(.+)", "\n\n$1\n");
 
-        // Add line break after sentences ending with period, question mark, or exclamation
+        // Add line break after sentences ending with period, question mark, or
+        // exclamation
         // Only if followed by capital letter (new sentence)
         formatted = formatted.replaceAll("([.!?])([A-Z])", "$1\n\n$2");
 
-        // Add line break after colons if followed by newline content (like lists or explanations)
+        // Add line break after colons if followed by newline content (like lists or
+        // explanations)
         formatted = formatted.replaceAll(":(\\s*)([A-Z•\\d])", ":\n\n$2");
 
         // Ensure proper paragraph spacing (max 2 line breaks)
@@ -849,7 +947,12 @@ public class GroqService {
         String[] lines = formatted.split("\n");
         StringBuilder result = new StringBuilder();
         for (String line : lines) {
-            result.append(line.trim()).append("\n");
+            String trimmedLine = line.trim();
+            if (!trimmedLine.isEmpty()) {
+                result.append(trimmedLine).append("\n");
+            } else {
+                result.append("\n");
+            }
         }
 
         return result.toString().trim();
