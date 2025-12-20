@@ -107,64 +107,77 @@ public class FeedbackService {
             }
         }
 
-        // Generate overall feedback
-        OverallFeedbackData overallData = aiService.generateOverallFeedback(
-                conversation,
-                session.getRole(),
-                session.getLevel(),
-                session.getSkill());
-
-        // Lưu overall feedback vào DB - FIX RACE CONDITION
-        // Use synchronized block and saveOrUpdate pattern
+        // Generate AND save overall feedback - SYNCHRONIZED to prevent race condition
+        // CRITICAL: Lock must cover BOTH generation AND save to prevent:
+        // Thread 1: generate → UNLOCK → save
+        // Thread 2: LOCK → check (no feedback yet) → generate → save → DUPLICATE!
         InterviewFeedback feedback = null;
         boolean feedbackSavedSuccessfully = false;
-        try {
-            // Check if feedback already exists for this session
-            feedback = feedbackRepository.findBySessionId(sessionId).orElse(null);
 
-            if (feedback != null) {
-                // UPDATE existing feedback
-                log.info("Updating existing feedback {} for session {}", feedback.getId(), sessionId);
-                feedback.setOverview(overallData.getOverview());
-                feedback.setOverallAssessment(overallData.getAssessment());
-                feedback.setStrengths(objectMapper.writeValueAsString(overallData.getStrengths()));
-                feedback.setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
-                feedback.setRecommendations(overallData.getRecommendations());
-                feedbackRepository.save(feedback);
+        synchronized (("feedback_" + sessionId).intern()) {
+            // Double-check if feedback already exists (another thread may have created it)
+            InterviewFeedback existingFeedback = feedbackRepository.findBySessionId(sessionId).orElse(null);
+
+            if (existingFeedback != null &&
+                    existingFeedback.getOverallAssessment() != null &&
+                    !existingFeedback.getOverallAssessment().contains("high demand") &&
+                    !existingFeedback.getOverallAssessment().contains("unavailable")) {
+                // Already has good feedback, skip generation and use existing
+                log.info("Feedback already exists for session {}, skipping generation and save", sessionId);
+                feedback = existingFeedback;
                 feedbackSavedSuccessfully = true;
             } else {
-                // CREATE new feedback - but handle race condition
-                log.info("Creating new feedback for session {}", sessionId);
-                feedback = new InterviewFeedback();
-                feedback.setSessionId(sessionId);
-                feedback.setOverview(overallData.getOverview());
-                feedback.setOverallAssessment(overallData.getAssessment());
-                feedback.setStrengths(objectMapper.writeValueAsString(overallData.getStrengths()));
-                feedback.setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
-                feedback.setRecommendations(overallData.getRecommendations());
-                feedback.setCreatedAt(LocalDateTime.now());
+                // Generate new feedback (NO existing good feedback)
+                log.info("Generating new overall feedback for session {}", sessionId);
+                OverallFeedbackData overallData = aiService.generateOverallFeedback(
+                        conversation,
+                        session.getRole(),
+                        session.getLevel(),
+                        session.getSkill());
 
+                // IMMEDIATELY save after generation (still within synchronized block!)
                 try {
-                    feedbackRepository.save(feedback);
-                    feedbackSavedSuccessfully = true;
-                } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                    // Race condition: another thread already created this feedback
-                    // Clear corrupted Hibernate session and re-fetch to update
-                    log.warn("Duplicate feedback detected for session {}, clearing session and updating existing",
-                            sessionId);
-                    entityManager.clear(); // Clear corrupted session
+                    // Double-check again after generation (another thread may have saved)
+                    existingFeedback = feedbackRepository.findBySessionId(sessionId).orElse(null);
 
-                    // Re-fetch existing feedback and update it with our better data
-                    try {
-                        InterviewFeedback existingFeedback = feedbackRepository.findBySessionId(sessionId).orElse(null);
-                        if (existingFeedback != null) {
-                            // Only update if our data is better (not a placeholder)
-                            boolean ourDataIsBetter = overallData.getAssessment() != null
-                                    && !overallData.getAssessment().contains("high demand")
-                                    && !overallData.getAssessment().contains("unavailable");
+                    if (existingFeedback != null) {
+                        // Another thread saved while we were generating, update it
+                        log.info("Feedback created by another thread during generation, updating {} for session {}",
+                                existingFeedback.getId(), sessionId);
+                        existingFeedback.setOverview(overallData.getOverview());
+                        existingFeedback.setOverallAssessment(overallData.getAssessment());
+                        existingFeedback.setStrengths(objectMapper.writeValueAsString(overallData.getStrengths()));
+                        existingFeedback.setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
+                        existingFeedback.setRecommendations(overallData.getRecommendations());
+                        feedback = feedbackRepository.save(existingFeedback);
+                        feedbackSavedSuccessfully = true;
+                    } else {
+                        // Create new feedback
+                        log.info("Creating new feedback for session {}", sessionId);
+                        feedback = new InterviewFeedback();
+                        feedback.setSessionId(sessionId);
+                        feedback.setOverview(overallData.getOverview());
+                        feedback.setOverallAssessment(overallData.getAssessment());
+                        feedback.setStrengths(objectMapper.writeValueAsString(overallData.getStrengths()));
+                        feedback.setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
+                        feedback.setRecommendations(overallData.getRecommendations());
+                        feedback.setCreatedAt(LocalDateTime.now());
 
-                            if (ourDataIsBetter) {
-                                log.info("Updating existing feedback {} with better data", existingFeedback.getId());
+                        try {
+                            feedback = feedbackRepository.save(feedback);
+                            feedbackSavedSuccessfully = true;
+                            log.info("Successfully saved new feedback {} for session {}", feedback.getId(), sessionId);
+                        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                            // Extremely rare: race condition despite synchronized block
+                            // This should NEVER happen if synchronized lock is working correctly
+                            log.error("CRITICAL: Duplicate key error INSIDE synchronized block for session {}, " +
+                                    "this indicates a serious concurrency issue!", sessionId);
+                            entityManager.clear();
+
+                            // Last resort: try to update existing
+                            existingFeedback = feedbackRepository.findBySessionId(sessionId).orElse(null);
+                            if (existingFeedback != null) {
+                                log.warn("Updating existing feedback {} as last resort", existingFeedback.getId());
                                 existingFeedback.setOverview(overallData.getOverview());
                                 existingFeedback.setOverallAssessment(overallData.getAssessment());
                                 existingFeedback
@@ -172,25 +185,23 @@ public class FeedbackService {
                                 existingFeedback
                                         .setWeaknesses(objectMapper.writeValueAsString(overallData.getWeaknesses()));
                                 existingFeedback.setRecommendations(overallData.getRecommendations());
-                                feedbackRepository.save(existingFeedback);
-                                feedback = existingFeedback;
+                                feedback = feedbackRepository.save(existingFeedback);
                                 feedbackSavedSuccessfully = true;
                             } else {
-                                log.info("Existing feedback has better data, keeping it");
-                                feedback = existingFeedback;
-                                feedbackSavedSuccessfully = true;
+                                log.error("Cannot save feedback for session {}, database state inconsistent!",
+                                        sessionId);
+                                feedback = null;
+                                feedbackSavedSuccessfully = false;
                             }
                         }
-                    } catch (Exception updateEx) {
-                        log.error("Failed to update existing feedback: {}", updateEx.getMessage());
-                        feedback = null;
-                        feedbackSavedSuccessfully = false;
                     }
+                } catch (Exception e) {
+                    log.error("Error saving overall feedback for session {}", sessionId, e);
+                    feedback = null;
+                    feedbackSavedSuccessfully = false;
                 }
             }
-        } catch (Exception e) {
-            log.error("Error saving overall feedback to database", e);
-        }
+        } // End of synchronized block - feedback is now saved!
 
         // Update session status - wrap in separate try-catch to avoid transaction
         // issues
@@ -205,11 +216,32 @@ public class FeedbackService {
             log.error("Error updating session status", e);
         }
 
-        // Build response
+        // Build response from saved feedback
+        OverallFeedback overallFeedback = null;
+        if (feedback != null && feedbackSavedSuccessfully) {
+            try {
+                overallFeedback = OverallFeedback.builder()
+                        .overview(feedback.getOverview())
+                        .assessment(feedback.getOverallAssessment())
+                        .strengths(objectMapper.readValue(
+                                feedback.getStrengths(),
+                                new TypeReference<List<String>>() {
+                                }))
+                        .weaknesses(objectMapper.readValue(
+                                feedback.getWeaknesses(),
+                                new TypeReference<List<String>>() {
+                                }))
+                        .recommendations(feedback.getRecommendations())
+                        .build();
+            } catch (Exception e) {
+                log.error("Error parsing feedback JSON for response", e);
+            }
+        }
+
         return InterviewFeedbackResponse.builder()
                 .sessionId(sessionId)
                 .sessionInfo(buildSessionInfo(session, conversation.size()))
-                .overallFeedback(buildOverallFeedback(overallData))
+                .overallFeedback(overallFeedback)
                 .conversationHistory(qaFeedbacks)
                 .build();
     }

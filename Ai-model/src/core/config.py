@@ -16,18 +16,16 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent.parent
 
 # ==================== MODEL PATHS ====================
-# Multitask Judge Model (GENERATE, EVALUATE, REPORT) - Custom Transformer 400K samples
 MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Multi_model")))
 
-# Qwen Model - Fine-tuned Qwen2.5-3B-Instruct 
 QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
 
-# ==================== MODEL SELECTION ====================
+
 # Available: "qwen-3B", "qwen-external", "multitask"
-# - qwen-3B: Qwen2.5-3B-Instruct local (default)
-# - qwen-external: Qwen-7B via external API (Colab/ngrok)
-# - multitask: Custom Transformer (legacy)
-AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen-3B")
+# - qwen-3B
+# - qwen-external
+# - multitask
+AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen-external")
 
 # Qwen-specific settings
 QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # Use 4-bit quantization (saves VRAM)

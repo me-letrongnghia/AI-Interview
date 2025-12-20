@@ -316,7 +316,7 @@ public class GeminiService {
         StringBuilder rules = new StringBuilder();
         rules.append("=== LEVEL-SPECIFIC RULES FOR " + level.toUpperCase() + " ===\n");
         if (level.equals("Intern") || level.equals("Fresher")) {
-            rules.append("⚠️ CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:\n");
+            rules.append("CRITICAL RULES FOR INTERN/FRESHER CANDIDATES:\n");
             rules.append("1. DO NOT ask about work experience or past projects - they likely have none\n");
             rules.append(
                     "2. DO NOT ask about frameworks like Hibernate, JPA, Spring Security unless they listed it in skills\n");

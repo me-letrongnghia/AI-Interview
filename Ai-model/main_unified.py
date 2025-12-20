@@ -1,21 +1,3 @@
-"""
-AI Interview - Unified Model Service
-====================================
-Supports multiple AI models with consistent API:
-- Qwen2.5-3B-Instruct (default, recommended)
-- MultitaskJudge (legacy custom transformer)
-
-Switch models using environment variable: AI_MODEL_TYPE=qwen|multitask
-
-API Endpoints:
-- /api/v3/health - Health check
-- /api/v3/generate-first - Generate first question
-- /api/v3/generate - Generate follow-up question
-- /api/v3/evaluate - Evaluate answer
-- /api/v3/report - Generate interview report
-- /api/v3/switch-model - Switch between models at runtime
-"""
-
 import time
 import logging
 from contextlib import asynccontextmanager

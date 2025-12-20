@@ -13,8 +13,8 @@ from .base import (
     ReportResult
 )
 
-# Import shared prompts and helpers from qwen_provider (IDENTICAL to Gemini)
-from .qwen_provider import (
+# Import shared prompts and helpers - SINGLE SOURCE OF TRUTH
+from src.prompts import (
     PROMPT_TEMPLATES,
     normalize_level,
     build_phase_guidance,
