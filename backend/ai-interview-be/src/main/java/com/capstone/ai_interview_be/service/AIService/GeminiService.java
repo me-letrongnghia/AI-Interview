@@ -42,6 +42,8 @@ public class GeminiService {
                 .build();
 
         log.info("Initialized GeminiService with model: {}", model);
+        PromptTemplates.logVersion();
+        log.info("Using centralized PromptTemplates v{}", PromptTemplates.VERSION);
     }
 
     // Phương thức gọi Gemini API để tạo phản hồi dựa trên systemPrompt và
@@ -142,36 +144,19 @@ public class GeminiService {
                 ? "general programming"
                 : String.join(", ", skills);
 
-        String systemPrompt = """
-                You are a friendly and professional interviewer conducting a job interview.
-                Output EXACTLY ONE warm-up opening question in %s.
-                This is the FIRST question of the interview - a warm-up question about the position and skills.
-
-                Rules:
-                - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
-                - Ask about their interest in the %s position OR their experience/interest with the required skills.
-                - Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.
-                - Keep it open-ended and conversational - this is a warm-up, not a deep technical question.
-                - DO NOT ask complex technical implementation questions yet.
-                - End with a question mark (?).
-                - Do NOT include preamble, explanations, numbering, or multiple questions.
-                - Return only the greeting and question.
-
-                Example good opening questions:
-                - "Hello! Welcome to the interview for the %s position. What attracted you to this role and these technologies?"
-                - "Hi there! I see you're interested in working with %s. What got you started with these technologies?"
-                - "Welcome! Before we dive deeper, I'd love to know - what excites you most about the %s role?"
-                """
-                .formatted(language == null ? "English" : language, role, role, skillsText, role);
-
-        String userPrompt = """
-                Role: %s
-                Level: %s
-                Skills: %s
-
-                Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.
-                """
-                .formatted(role, level, skillsText);
+        // Use centralized prompt templates
+        String normalizedLevel = PromptTemplates.normalizeLevel(level != null ? level : "Intern");
+        String lang = language != null ? language : "English";
+        
+        String systemPrompt = PromptTemplates.buildFirstQuestionSystemPrompt(
+            role, normalizedLevel, skillsText, lang
+        );
+        
+        String userPrompt = PromptTemplates.buildFirstQuestionUserPrompt(
+            role, normalizedLevel, skillsText, "" // No CV/JD context for now
+        );
+        
+        log.debug("[generateFirstQuestion] Using centralized prompts v{}", PromptTemplates.VERSION);
 
         return generateResponse(systemPrompt, userPrompt);
     }
@@ -341,6 +326,11 @@ public class GeminiService {
     }
 
     // Hàm chuẩn hóa level thành các mức cụ thể
+    /**
+     * Normalize level variations to standard names
+     * NOTE: Consider using PromptTemplates.normalizeLevel() for consistency
+     * This method is kept for backward compatibility with existing generateNextQuestion logic
+     */
     private String normalizeLevel(String level) {
         if (level == null)
             return "Intern";

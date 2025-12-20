@@ -4,8 +4,9 @@ Qwen Model Provider
 Provider for Qwen2.5-3B-Instruct and similar models.
 Uses HuggingFace Transformers with optional LoRA adapters.
 
-This provider uses prompts IDENTICAL to Gemini for consistency.
-Easy to modify prompts in PROMPT_TEMPLATES dictionary.
+IMPORTANT: This provider now uses CENTRALIZED prompts from prompt_templates.py
+All prompts are shared across AI Model, Gemini, and Groq for consistency.
+To modify prompts, edit: Ai-model/src/services/prompt_templates.py
 """
 
 import json
@@ -14,7 +15,6 @@ import time
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from enum import Enum
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -27,7 +27,21 @@ from .base import (
     ReportResult
 )
 
+# Import centralized prompt templates and helpers
+from ..prompt_templates import (
+    build_first_question_prompt,
+    build_followup_question_prompt,
+    build_evaluate_answer_prompt,
+    build_report_prompt,
+    InterviewPhase,
+    get_interview_length_type,
+    determine_phase,
+    normalize_level,
+    VERSION as PROMPT_VERSION
+)
+
 logger = logging.getLogger(__name__)
+logger.info(f"Using centralized prompts version: {PROMPT_VERSION}")
 
 # Device constants
 DEVICE_CUDA = "cuda"
@@ -36,21 +50,14 @@ DEVICE_CPU = "cpu"
 
 
 # =============================================================================
-# INTERVIEW PHASES (Same as Gemini)
+# LEGACY PROMPT TEMPLATES - NOW DEPRECATED
 # =============================================================================
-class InterviewPhase(Enum):
-    OPENING = "OPENING"              # Basic warm-up questions
-    CORE_TECHNICAL = "CORE_TECHNICAL"  # Practical skills
-    DEEP_DIVE = "DEEP_DIVE"          # Advanced understanding
-    CHALLENGING = "CHALLENGING"      # Problem solving & design
-    WRAP_UP = "WRAP_UP"              # Soft skills & growth
+# All prompts have been moved to prompt_templates.py for centralized management.
+# This PROMPT_TEMPLATES dict is kept temporarily for reference but is NO LONGER USED.
+# The code now uses builder functions: build_first_question_prompt(), etc.
+# TODO: Remove this entire section after confirming everything works.
 
-
-# =============================================================================
-# PROMPT TEMPLATES - IDENTICAL TO GEMINI
-# =============================================================================
-
-PROMPT_TEMPLATES = {
+_LEGACY_PROMPT_TEMPLATES = {
     # System prompt for generating first question
     "generate_first_system": """You are a friendly and professional interviewer conducting a job interview.
 Output EXACTLY ONE warm-up opening question in {language}.
@@ -907,20 +914,23 @@ class QwenModelProvider(BaseModelProvider):
         context: Optional[str] = None,
         **kwargs
     ) -> EvaluationResult:
-        """Evaluate candidate's answer"""
+        """Evaluate candidate's answer using centralized prompts"""
         if not self.is_loaded():
             raise RuntimeError(f"{self.model_name} not loaded")
         
-        system_prompt = PROMPT_TEMPLATES["evaluate_system"]
-        user_prompt = PROMPT_TEMPLATES["evaluate_user"].format(
-            role=role,
-            level=level,
+        # Build prompts using centralized builder
+        prompts = build_evaluate_answer_prompt(
             question=question,
-            answer=answer
+            answer=answer,
+            level=level
         )
         
+        system_prompt = prompts["system"]
+        user_prompt = prompts.get("user", "")  # May be empty if all in system
+        
+        # Add context if provided
         if context:
-            user_prompt = f"Context: {context}\n\n{user_prompt}"
+            system_prompt = f"Context: {context}\n\n{system_prompt}"
         
         response = self.generate(
             prompt=user_prompt,
@@ -986,42 +996,22 @@ class QwenModelProvider(BaseModelProvider):
         jd_context: Optional[str] = None,
         **kwargs
     ) -> GenerationResult:
-        """Generate first interview question (IDENTICAL to Gemini)"""
+        """Generate first interview question using centralized prompts"""
         if not self.is_loaded():
             raise RuntimeError(f"{self.model_name} not loaded")
         
-        # Format skills text (same as Gemini)
-        skills_text = ", ".join(skills) if skills else "general programming"
-        
-        # Prepare context guidance and information
-        context_guidance = ""
-        context_info = ""
-        
-        if cv_context or jd_context:
-            context_guidance = """CONTEXT INFORMATION AVAILABLE:
-You have access to the candidate's CV and/or job description. Use this information to tailor your question appropriately."""
-            
-            context_parts = []
-            if cv_context:
-                context_parts.append(f"CV Context: {cv_context[:1500]}...")  # Limit length
-            if jd_context:
-                context_parts.append(f"Job Description: {jd_context[:1500]}...")  # Limit length
-            context_info = "\n\n".join(context_parts)
-        else:
-            context_guidance = "No additional context available. Focus on general role and skills discussion."
-        
-        system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
-            language=language,
-            role=role,
-            skills=skills_text,
-            context_guidance=context_guidance
-        )
-        user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
+        # Build prompts using centralized builder
+        prompts = build_first_question_prompt(
             role=role,
             level=level if level else "Intern",
-            skills=skills_text,
-            context_info=context_info
+            skills=skills,
+            language=language,
+            cv_text=cv_context or "",
+            jd_text=jd_context or ""
         )
+        
+        system_prompt = prompts["system"]
+        user_prompt = prompts["user"]
         
         response = self.generate(
             prompt=user_prompt,
@@ -1063,57 +1053,34 @@ You have access to the candidate's CV and/or job description. Use this informati
         skills: Optional[List[str]] = None,
         **kwargs
     ) -> GenerationResult:
-        """Generate follow-up question (IDENTICAL to Gemini)"""
+        """Generate follow-up question using centralized prompts"""
         if not self.is_loaded():
             raise RuntimeError(f"{self.model_name} not loaded")
         
-        normalized_level = normalize_level(level)
-        skills_text = ", ".join(skills) if skills else "None"
-        
-        # Build history section
-        history_section = ""
+        # Build conversation history string
+        history_str = ""
         if interview_history:
-            history_section = "=== INTERVIEW HISTORY ===\n"
             for i, item in enumerate(interview_history, 1):
                 q = item.get('question', '')
                 a = item.get('answer', '')
-                history_section += f"Q{i}: {q}\n"
-                history_section += f"A{i}: {a}\n\n"
-            history_section += "=== END HISTORY ===\n\n"
+                history_str += f"Q{i}: {q}\nA{i}: {a}\n\n"
         
-        # Build phase guidance (IDENTICAL to Gemini)
-        phase_guidance = build_phase_guidance(current_question_number, total_questions, normalized_level)
-        
-        # Build level-specific rules (IDENTICAL to Gemini)
-        level_specific_rules = build_level_specific_rules(normalized_level)
-        
-        # Build progress info
-        progress_info = ""
-        if total_questions > 0 and current_question_number > 0:
-            progress_info = f"""=== INTERVIEW PROGRESS ===
-Question: {current_question_number} of {total_questions} ({current_question_number/total_questions*100:.0f}% complete)
-Phase guidance above is based on this progress.
-"""
-        
-        system_prompt = PROMPT_TEMPLATES["generate_followup_system"].format(
-            level=normalized_level,
-            language=language,
-            phase_guidance=phase_guidance,
-            level_specific_rules=level_specific_rules
-        )
-        
-        user_prompt = PROMPT_TEMPLATES["generate_followup_user"].format(
+        # Build prompts using centralized builder
+        prompts = build_followup_question_prompt(
             role=role if role else "Unknown Role",
-            level=normalized_level,
-            skills=skills_text,
-            progress_info=progress_info,
-            history_section=history_section,
-            previous_question=previous_question if previous_question else "N/A",
-            previous_answer=previous_answer if previous_answer else "N/A"
+            level=level,
+            skills=skills or [],
+            conversation_history=history_str,
+            current_question=current_question_number,
+            total_questions=total_questions,
+            language=language
         )
+        
+        system_prompt = prompts["system"]
+        # Note: followup doesn't use separate user prompt, it's all in system
         
         response = self.generate(
-            prompt=user_prompt,
+            prompt="",  # Empty user prompt, all context in system
             system_prompt=system_prompt,
             max_tokens=120,  # Increased for complete question
             temperature=0.5,  # Lower for more focused output
@@ -1173,11 +1140,10 @@ Phase guidance above is based on this progress.
         candidate_info: Optional[str] = None,
         **kwargs
     ) -> ReportResult:
-        """Generate interview report (IDENTICAL to Gemini)"""
+        """Generate interview report using centralized prompts"""
         if not self.is_loaded():
             raise RuntimeError(f"{self.model_name} not loaded")
         
-        skills_text = ", ".join(skills) if skills else "General"
         total_questions = len(interview_history)
         
         # Format interview history
@@ -1186,14 +1152,22 @@ Phase guidance above is based on this progress.
             history_text += f"Q{i}: {item.get('question', '')}\n"
             history_text += f"A{i}: {item.get('answer', '')}\n\n"
         
-        system_prompt = PROMPT_TEMPLATES["report_system"]
-        user_prompt = PROMPT_TEMPLATES["report_user"].format(
+        # Format evaluations summary if available
+        evaluations_text = ""
+        # Note: evaluations would need to be passed in kwargs if available
+        
+        # Build prompts using centralized builder
+        prompts = build_report_prompt(
             role=role,
             level=level,
-            skills=skills_text,
-            total_questions=total_questions,
-            interview_history=history_text
+            skills=skills or [],
+            conversation_history=history_text,
+            evaluations_summary=evaluations_text,
+            total_questions=total_questions
         )
+        
+        system_prompt = prompts["system"]
+        user_prompt = prompts.get("user", "")
         
         response = self.generate(
             prompt=user_prompt,
