@@ -252,29 +252,55 @@ class QwenExternalProvider(BaseModelProvider):
             
     def _parse_json_response(self, text: str) -> Dict[str, Any]:
         """Parse JSON from model response, handling common issues"""
+        import re
+        
+        original_text = text
         text = text.strip()
         
-        # Remove markdown code blocks if present
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        
+        # Remove ALL types of markdown code fences - more comprehensive patterns
+        # Pattern 1: ```json\n{...}\n``` or ```\n{...}\n```
+        # Pattern 2: Just ``` at start or end (partial fences)
+        # Pattern 3: Handle \r\n or \n
+        text = re.sub(r'^```(?:json)?[\s\r\n]*', '', text, flags=re.IGNORECASE | re.MULTILINE)
+        text = re.sub(r'[\s\r\n]*```\s*$', '', text, flags=re.MULTILINE)
         text = text.strip()
         
-        # Find JSON object
+        # Also remove any leading/trailing whitespace lines
+        text = text.strip('\r\n \t')
+        
+        # Find JSON object - look for outermost { }
         start = text.find("{")
         end = text.rfind("}") + 1
         
         if start != -1 and end > start:
             json_str = text[start:end]
+            
+            # Try to fix common JSON issues before parsing
+            # 1. Remove trailing commas before } or ]
+            json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+            # 2. Fix unquoted keys (simple cases)
+            json_str = re.sub(r'(\s)(\w+)(\s*:)', r'\1"\2"\3', json_str)
+            
             try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                pass
+                parsed = json.loads(json_str)
+                logger.info(f"[JSON Parse] Successfully parsed JSON with keys: {list(parsed.keys())}")
+                return parsed
+            except json.JSONDecodeError as e:
+                logger.error(f"[JSON Parse Error] Failed to parse: {e}")
+                logger.debug(f"[JSON Parse Error] Original text: {original_text[:500]}")
+                logger.debug(f"[JSON Parse Error] Extracted JSON: {json_str[:500]}")
+                
+                # Second attempt: try to extract just the JSON object using a stricter regex
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text, re.DOTALL)
+                if json_match:
+                    try:
+                        parsed = json.loads(json_match.group())
+                        logger.info(f"[JSON Parse] Second attempt succeeded with keys: {list(parsed.keys())}")
+                        return parsed
+                    except json.JSONDecodeError:
+                        pass
         
+        logger.warning(f"[JSON Parse] No valid JSON found in response: {original_text[:200]}")
         return {}
         
     def _parse_score_from_text(self, text: str) -> int:
@@ -328,7 +354,8 @@ class QwenExternalProvider(BaseModelProvider):
         # Build prompt using shared templates (IDENTICAL to Gemini)
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
-            role=role
+            role=role,
+            skills=skills_text
         )
         
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
@@ -587,13 +614,56 @@ Question: {current_question_number} of {total_questions} ({current_question_numb
                     score=min(100, max(0, int(result.get("score", 50))))
                 )
             else:
-                # Fallback: return raw text as assessment
+                # Fallback: Try to extract meaningful text from response, NOT raw JSON
+                logger.warning(f"[Report] JSON parse failed, attempting text extraction from response")
+                
+                # If response looks like JSON, try harder to extract the assessment
+                response_text = response.content.strip()
+                assessment_text = "Thank you for completing the interview. Your performance has been recorded."
+                score = 60
+                strengths = ["Completed the interview session"]
+                weaknesses = ["Detailed parsing unavailable"]
+                recommendations = ["Review your answers for improvement"]
+                
+                # Check if response contains JSON-like structure - extract values manually
+                if '"overall_assessment"' in response_text or '"score"' in response_text:
+                    import re
+                    # Try to extract assessment text
+                    assessment_match = re.search(r'"overall_assessment"\s*:\s*"([^"]+)"', response_text)
+                    if assessment_match:
+                        assessment_text = assessment_match.group(1)
+                    
+                    # Try to extract score
+                    score_match = re.search(r'"score"\s*:\s*(\d+)', response_text)
+                    if score_match:
+                        score = min(100, max(0, int(score_match.group(1))))
+                    
+                    # Try to extract strengths array
+                    strengths_match = re.search(r'"strengths"\s*:\s*\[([^\]]+)\]', response_text)
+                    if strengths_match:
+                        raw_strengths = strengths_match.group(1)
+                        strengths = [s.strip(' "') for s in raw_strengths.split(',') if s.strip(' "')]
+                    
+                    # Try to extract weaknesses array
+                    weaknesses_match = re.search(r'"weaknesses"\s*:\s*\[([^\]]+)\]', response_text)
+                    if weaknesses_match:
+                        raw_weaknesses = weaknesses_match.group(1)
+                        weaknesses = [w.strip(' "') for w in raw_weaknesses.split(',') if w.strip(' "')]
+                    
+                    # Try to extract recommendations array
+                    recommendations_match = re.search(r'"recommendations"\s*:\s*\[([^\]]+)\]', response_text)
+                    if recommendations_match:
+                        raw_recs = recommendations_match.group(1)
+                        recommendations = [r.strip(' "') for r in raw_recs.split(',') if r.strip(' "')]
+                    
+                    logger.info(f"[Report] Extracted via regex - Score: {score}, Assessment: {assessment_text[:50]}...")
+                
                 return ReportResult(
-                    overall_assessment=response.content,
-                    strengths=["Completed the interview session"],
-                    weaknesses=["Detailed parsing unavailable"],
-                    recommendations=["Review your answers for improvement"],
-                    score=60
+                    overall_assessment=assessment_text,
+                    strengths=strengths if strengths else ["Completed the interview session"],
+                    weaknesses=weaknesses if weaknesses else ["Detailed parsing unavailable"],
+                    recommendations=recommendations if recommendations else ["Review your answers for improvement"],
+                    score=score
                 )
             
         except Exception as e:

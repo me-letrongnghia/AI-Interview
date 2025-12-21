@@ -138,7 +138,8 @@ public class GroqService {
 
     // --- Methods adapted from GeminiService ---
 
-    public String generateFirstQuestion(String role, List<String> skills, String language, String level,String cvtext, String jdtext) {
+    public String generateFirstQuestion(String role, List<String> skills, String language, String level, String cvtext,
+            String jdtext) {
         String skillsText = (skills == null || skills.isEmpty())
                 ? "general programming"
                 : String.join(", ", skills);
@@ -150,27 +151,27 @@ public class GroqService {
 
                 === QUESTION OPTIONS - CHOOSE ONE RANDOMLY ===
                 Select ONE of these warm-up questions (vary your choice each time):
-                
+
                 SELF-INTRODUCTION QUESTIONS:
                 1. "Can you tell me a bit about yourself and your background?"
                 2. "Could you introduce yourself and share what brought you here today?"
                 3. "I'd like to start by getting to know you better - can you tell me about yourself?"
                 4. "Let's begin with a brief introduction - could you tell me about your background?"
                 5. "Could you walk me through your background and what you're currently doing?"
-                
+
                 ROLE & MOTIVATION QUESTIONS:
                 6. "What interests you most about this %s role?"
                 7. "What drew you to apply for this %s position?"
                 8. "Can you share what excites you about working as a %s?"
                 9. "What aspects of being a %s appeal to you the most?"
-                
+
                 SKILLS & EXPERIENCE QUESTIONS:
                 10. "Can you tell me about your experience with %s?"
                 11. "How did you get started with %s?"
                 12. "I see you have experience with %s - could you tell me more about that?"
                 13. "What has been your journey working with %s?"
                 14. "Could you share how you've been using %s in your work or projects?"
-                
+
                 COMBINED QUESTIONS (Role + Skills):
                 15. "Can you tell me about yourself and your experience with %s?"
                 16. "I'd love to hear about your background and what interests you about %s development."
@@ -190,7 +191,8 @@ public class GroqService {
                 - VARY your selection each time to avoid repetition
                 - Make the question natural and conversational
                 """
-                .formatted(language == null ? "English" : language, role, role, role, role, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, role, skillsText);
+                .formatted(language == null ? "English" : language, role, role, role, role, skillsText, skillsText,
+                        skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, role, skillsText);
 
         String userPrompt = """
                 === CANDIDATE PROFILE ===
@@ -213,17 +215,21 @@ public class GroqService {
         return generateResponse(systemPrompt, userPrompt, 0.8);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo không có lịch sử hội thoại và tiến trình phỏng vấn
+    // Phương thức tạo câu hỏi tiếp theo không có lịch sử hội thoại và tiến trình
+    // phỏng vấn
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer) {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null, 0, 0);
     }
-    // Phương thức tạo câu hỏi tiếp theo có lịch sử hội thoại nhưng không có tiến trình phỏng vấn
+
+    // Phương thức tạo câu hỏi tiếp theo có lịch sử hội thoại nhưng không có tiến
+    // trình phỏng vấn
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory) {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer,
                 conversationHistory, 0, 0);
     }
+
     // Phương thức tạo câu hỏi tiếp theo đủ thông tin
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory,

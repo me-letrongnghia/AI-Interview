@@ -202,60 +202,8 @@ const InterviewUI = memo(
     userProfile,
     pandaImage,
     interviewConfig,
-    evaluationCountdown,
   }) => (
     <div className='h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden'>
-      {/* Evaluation Countdown Overlay */}
-      {evaluationCountdown !== null && (
-        <div className='absolute inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center'>
-          <div className='bg-white rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4'>
-            <div className='mb-6'>
-              <div className='w-20 h-20 mx-auto mb-4 relative'>
-                <svg className='w-20 h-20 transform -rotate-90'>
-                  <circle
-                    cx='40'
-                    cy='40'
-                    r='36'
-                    stroke='#e5e7eb'
-                    strokeWidth='6'
-                    fill='none'
-                  />
-                  <circle
-                    cx='40'
-                    cy='40'
-                    r='36'
-                    stroke='#10b981'
-                    strokeWidth='6'
-                    fill='none'
-                    strokeDasharray={36 * 2 * Math.PI}
-                    strokeDashoffset={36 * 2 * Math.PI * (1 - evaluationCountdown / 30)}
-                    strokeLinecap='round'
-                    className='transition-all duration-1000'
-                  />
-                </svg>
-                <span className='absolute inset-0 flex items-center justify-center text-2xl font-bold text-emerald-600'>
-                  {evaluationCountdown}
-                </span>
-              </div>
-              <h2 className='text-xl font-bold text-gray-800 mb-2'>
-                Evaluating Your Answers
-              </h2>
-              <p className='text-gray-600'>
-                Please wait while our AI analyzes your responses...
-              </p>
-            </div>
-            <div className='w-full bg-gray-200 rounded-full h-2'>
-              <div
-                className='bg-emerald-500 h-2 rounded-full transition-all duration-1000'
-                style={{ width: `${((30 - evaluationCountdown) / 30) * 100}%` }}
-              />
-            </div>
-            <p className='mt-3 text-sm text-gray-500'>
-              Redirecting to feedback page in {evaluationCountdown}s
-            </p>
-          </div>
-        </div>
-      )}
       <div className='relative flex-1 flex gap-6 p-6 overflow-hidden'>
         {/* Main Video Area */}
         <div className='flex-1 relative rounded-2xl overflow-hidden shadow-xl border border-green-100 bg-white'>
@@ -1575,7 +1523,7 @@ export default function InterviewInterface() {
       (m) => m.type === "user"
     ).length;
     const willBeLastAnswer = interviewConfig
-      ? currentAnsweredCount + 1 >= interviewConfig.maxQuestions
+      ? currentAnsweredCount + 1 === interviewConfig.maxQuestions
       : false;
 
     setChatHistory((prev) => {

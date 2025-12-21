@@ -41,9 +41,14 @@ public class InterviewService {
         // Phương thức để xử lý câu trả lời và tạo câu hỏi tiếp theo
         @Transactional
         public ProcessAnswerResponse processAnswerAndGenerateNext(Long sessionId, AnswerMessage answerMessage) {
+                log.info("=== [ANSWER PROCESSING] Start for session {} ===", sessionId);
+
                 // Kiểm tra session có tồn tại không
                 InterviewSession session = sessionRepository.findById(sessionId)
                                 .orElseThrow(() -> new RuntimeException("Session not found with id: " + sessionId));
+
+                log.info("[ANSWER] Session found - isPractice: {}, questionCount: {}",
+                                session.getIsPractice(), session.getQuestionCount());
 
                 // Kiểm tra question có thuộc về session này không
                 InterviewQuestion question = questionRepository.findById(answerMessage.getQuestionId())
@@ -269,10 +274,17 @@ public class InterviewService {
                         String level,
                         List<String> skills) {
 
+                // Log immediately to confirm async is being started
+                log.info("Starting async evaluation for answer {} in background thread", savedAnswer.getId());
+
                 CompletableFuture.runAsync(() -> {
                         try {
-                                log.info("Generating feedback for answer {} in background (after question generated)",
-                                                savedAnswer.getId());
+                                log.info("[ASYNC] Now generating feedback for answer {} (role: {}, level: {})",
+                                                savedAnswer.getId(), role, level);
+
+                                log.info("[ASYNC] About to call answerEvaluationService.evaluateAnswer()");
+                                log.info("[ASYNC] Service instance: {}",
+                                                answerEvaluationService != null ? "NOT NULL" : "NULL");
 
                                 // Gọi dịch vụ đánh giá câu trả lời
                                 AnswerFeedback answerFeedback = answerEvaluationService.evaluateAnswer(
@@ -287,11 +299,17 @@ public class InterviewService {
                                 answerFeedback.setCreatedAt(LocalDateTime.now());
                                 answerFeedbackRepository.save(answerFeedback);
 
-                                log.info("Feedback generated and saved for answer {} with final score: {}",
+                                log.info("[ASYNC] Feedback saved for answer {} with final score: {}",
                                                 savedAnswer.getId(), answerFeedback.getScoreFinal());
 
                         } catch (Exception e) {
-                                log.error("Error generating feedback for answer {}", savedAnswer.getId(), e);
+                                log.error("[ASYNC ERROR] Failed generating feedback for answer {}",
+                                                savedAnswer.getId(), e);
+                                log.error("[ASYNC ERROR] Exception type: {}", e.getClass().getName());
+                                log.error("[ASYNC ERROR] Message: {}", e.getMessage());
+                                if (e.getCause() != null) {
+                                        log.error("[ASYNC ERROR] Cause: {}", e.getCause().getMessage());
+                                }
                         }
                 });
         }

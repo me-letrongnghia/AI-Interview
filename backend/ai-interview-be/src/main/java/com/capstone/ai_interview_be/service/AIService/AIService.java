@@ -190,8 +190,13 @@ public class AIService {
 
     // Phương thức tạo phản hồi đánh giá câu trả lời
     public AnswerFeedbackData generateAnswerFeedback(String question, String answer, String role, String level) {
+        log.info("[EVALUATE] Starting feedback generation - Role: {}, Level: {}", role, level);
+
+        boolean isHealthy = unifiedModelService.isServiceHealthy();
+        log.info("[EVALUATE] AI Model Service health check: {}", isHealthy);
+
         // Primary: Try Unified Model Service (v3 API) with level param like Gemini
-        if (unifiedModelService.isServiceHealthy()) {
+        if (isHealthy) {
             log.info("Using Unified Model Service (v3 API) for EVALUATE - Level: {}", level);
             try {
                 MultitaskEvaluateResponse response = unifiedModelService.evaluateAnswer(
@@ -217,6 +222,11 @@ public class AIService {
                     return AnswerFeedbackData.builder()
                             .feedback(feedback)
                             .sampleAnswer(sampleAnswer)
+                            .relevance(response.getRelevance())
+                            .completeness(response.getCompleteness())
+                            .accuracy(response.getAccuracy())
+                            .clarity(response.getClarity())
+                            .overall(response.getOverall())
                             .build();
                 }
             } catch (Exception e) {

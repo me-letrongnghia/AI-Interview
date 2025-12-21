@@ -272,30 +272,32 @@ class QwenModelProvider(BaseModelProvider):
     
     def _parse_json_response(self, text: str) -> Dict[str, Any]:
         """Parse JSON from model response, handling common issues"""
-        # Try to find JSON in the response
+        import re
+        
+        original_text = text
         text = text.strip()
         
-        # Remove markdown code blocks if present
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        
+        # Remove ALL types of markdown code fences
+        # Pattern 1: ```json\n{...}\n``` or ```\n{...}\n```
+        text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\s*```$', '', text)
         text = text.strip()
         
-        # Find JSON object
+        # Find JSON object - look for outermost { }
         start = text.find("{")
         end = text.rfind("}") + 1
         
         if start != -1 and end > start:
             json_str = text[start:end]
             try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                pass
+                parsed = json.loads(json_str)
+                return parsed
+            except json.JSONDecodeError as e:
+                logger.error(f"[JSON Parse Error] Failed to parse: {e}")
+                logger.debug(f"[JSON Parse Error] Original text: {original_text[:500]}")
+                logger.debug(f"[JSON Parse Error] Extracted JSON: {json_str[:500]}")
         
+        logger.warning(f"[JSON Parse] No valid JSON found in response: {original_text[:200]}")
         return {}
     
     def _clean_question_response(self, text: str) -> str:
@@ -496,7 +498,8 @@ class QwenModelProvider(BaseModelProvider):
         
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
-            role=role   
+            role=role,
+            skills=skills_text
         )
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,
