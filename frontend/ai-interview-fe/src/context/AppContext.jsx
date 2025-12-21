@@ -1,7 +1,19 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { auth } from "../fireconfig/FireBaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import { clearAllAuthData, isTokenExpired, getTimeUntilExpiration } from "../utils/authUtils";
+import {
+  clearAllAuthData,
+  isTokenExpired,
+  getTimeUntilExpiration,
+} from "../utils/authUtils";
+import Https from "../access/Https";
 
 const AppContext = createContext();
 export const UseAppContext = () => useContext(AppContext);
@@ -69,7 +81,7 @@ export const AppProvider = ({ children }) => {
     }
 
     // Function to check token expiration
-    const checkTokenExpiration = () => {
+    const checkTokenExpiration = async () => {
       const token = localStorage.getItem("access_token");
 
       if (!token) {
@@ -79,14 +91,24 @@ export const AppProvider = ({ children }) => {
       }
 
       if (isTokenExpired(token)) {
-        console.log("Token expired, logging out");
-        logout();
-        // Redirect to login page with session expired message
-        window.location.href = "/auth/login?reason=token_expired";
+        try {
+          const res = await Https.post("/api/auth/refresh-token");
+          console.log("Refresh token successful.");
+          const newToken = res.data.access_token;
+          // Lưu token mới vào localStorage
+          localStorage.setItem("access_token", newToken);
+        } catch {
+          console.log("Token expired, logging out");
+          logout();
+          // Redirect to login with session expired message
+          window.location.href = "/auth/login?reason=session_expired";
+        }
       } else {
         // Log time remaining (optional, for debugging)
         const timeRemaining = getTimeUntilExpiration(token);
-        console.log(`Token valid for ${Math.floor(timeRemaining / 1000)} more seconds`);
+        console.log(
+          `Token valid for ${Math.floor(timeRemaining / 1000)} more seconds`
+        );
       }
     };
 
@@ -133,7 +155,10 @@ export const AppProvider = ({ children }) => {
             const user = JSON.parse(storedUser);
             // Only clear if this was a Firebase/OAuth login (has picture from OAuth)
             // Regular email/password login won't be affected
-            if (user.picture && user.picture.includes("googleusercontent.com")) {
+            if (
+              user.picture &&
+              user.picture.includes("googleusercontent.com")
+            ) {
               clearAllAuthData();
               setUserProfile(null);
               setIsLogin(false);
@@ -156,7 +181,7 @@ export const AppProvider = ({ children }) => {
         isLogin,
         setIsLogin,
         logout,
-        isAuthChecking
+        isAuthChecking,
       }}
     >
       {children}

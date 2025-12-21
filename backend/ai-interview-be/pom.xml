@@ -11,6 +11,10 @@
 	<groupId>com.capstone</groupId>
 	<artifactId>ai-interview-be</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>demo</module>
+	</modules>
 	<name>ai-interview-be</name>
 	<description>AI Interview</description>
 	<url/>

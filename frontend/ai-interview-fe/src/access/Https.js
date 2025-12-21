@@ -55,7 +55,7 @@ Http.instance.interceptors.response.use(
         clearAllAuthData();
         
         // Redirect to login with session expired message
-        window.location.href = "/auth/login?reason=session_expired";
+        // window.location.href = "/auth/login?reason=session_expired";
         return Promise.reject(refreshError);
       }
     }

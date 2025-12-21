@@ -136,8 +136,9 @@ public class GroqService {
         return null;
     }
 
-   // Phương thức tạo câu hỏi mở đầu
-    public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
+    // --- Methods adapted from GeminiService ---
+
+    public String generateFirstQuestion(String role, List<String> skills, String language, String level,String cvtext, String jdtext) {
         String skillsText = (skills == null || skills.isEmpty())
                 ? "general programming"
                 : String.join(", ", skills);
@@ -207,7 +208,7 @@ public class GroqService {
 
                 Remember: This is just a warm-up to help them feel comfortable.
                 """
-                .formatted(role, level, skillsText);
+                .formatted(role, level, skillsText, cvtext, jdtext);
 
         return generateResponse(systemPrompt, userPrompt, 0.8);
     }

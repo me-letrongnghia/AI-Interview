@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Auth } from "../../api/AuthApi";
 import { UseAppContext } from "../../context/AppContext";
 import GgAuth from "../../components/Header/GgAuth";
 import { toast } from "react-toastify";
 export default function LoginPage() {
   const { setUserProfile, setIsLogin } = UseAppContext();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,30 +16,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const Navigate = useNavigate();
-
-  // Check for session expiration message
-  useEffect(() => {
-    const reason = searchParams.get("reason");
-
-    if (reason === "session_expired") {
-      toast.warning("Your session has expired. Please login again.", {
-        position: "top-right",
-        autoClose: 5000,
-      });
-      // Remove query parameter after showing message
-      setSearchParams({});
-    } else if (reason === "token_expired") {
-      toast.info(
-        "Your session has expired due to inactivity. Please login again.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-        }
-      );
-      // Remove query parameter after showing message
-      setSearchParams({});
-    }
-  }, [searchParams, setSearchParams]);
 
   const validateEmail = (value) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -192,10 +167,11 @@ export default function LoginPage() {
             value={email}
             onChange={handleEmailChange}
             placeholder="username@gmail.com"
-            className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${emailError
+            className={`w-full h-10 px-4 border-2 rounded-lg focus:outline-none ${
+              emailError
                 ? "border-red-500"
                 : "border-green-300 focus:border-green-500"
-              }`}
+            }`}
           />
           {emailError && (
             <p className="text-red-500 text-xs mt-1">{emailError}</p>
@@ -212,8 +188,9 @@ export default function LoginPage() {
                 value={password}
                 onChange={handlePasswordChange}
                 placeholder="Password"
-                className={`w-full h-10 px-4 border-2 rounded-lg pr-12 ${passwordError ? "border-red-500" : "border-green-300"
-                  }`}
+                className={`w-full h-10 px-4 border-2 rounded-lg pr-12 ${
+                  passwordError ? "border-red-500" : "border-green-300"
+                }`}
               />
               <button
                 type="button"
@@ -237,10 +214,11 @@ export default function LoginPage() {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${isLoading
+            className={`w-full h-10 text-white rounded-lg flex items-center justify-center ${
+              isLoading
                 ? "bg-green-600 cursor-not-allowed"
                 : "bg-green-500 hover:bg-green-700"
-              }`}
+            }`}
           >
             {isLoading ? (
               <div className="flex space-x-1">

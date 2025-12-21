@@ -142,7 +142,7 @@ public class GeminiService {
     }
 
     // Phương thức tạo câu hỏi mở đầu - Warm-up về vị trí và skills
-    public String generateFirstQuestion(String role, List<String> skills, String language, String level) {
+    public String generateFirstQuestion(String role, List<String> skills, String language, String level,String cvtext, String jdtext) {
         String skillsText = (skills == null || skills.isEmpty())
                 ? "general programming"
                 : String.join(", ", skills);
@@ -194,7 +194,7 @@ public class GeminiService {
                 - VARY your selection each time to avoid repetition
                 - Make the question natural and conversational
                 """
-                .formatted(language == null ? "English" : language, role, role, role, role, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, role, skillsText);
+                .formatted(language == null ? "English" : language, role, role, skillsText, role, cvtext, jdtext);
 
         String userPrompt = """
                 === CANDIDATE PROFILE ===
