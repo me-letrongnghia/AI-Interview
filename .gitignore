@@ -13,7 +13,7 @@ backend/ai-interview-be/src/main/resources/firebase-service-accoun.json
 
 # AI Model (large files)
 Ai-model/dataset/
-Ai-model/notebook/
+Ai-model/Notebook/
 Ai-model/model/
 Ai-model/cache/
 Ai-model/temp/
@@ -47,3 +47,7 @@ logs/
 
 Tesseract-OCR
 doc
+
+dataset.rar
+
+notebook.rar

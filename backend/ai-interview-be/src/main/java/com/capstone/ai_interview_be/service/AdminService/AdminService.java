@@ -19,7 +19,6 @@ import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -33,16 +32,16 @@ public class AdminService {
     public AdminDashboardStatsResponse getDashboardStats() {
         Long totalUsers = userRepository.count();
         Long totalInterviews = interviewSessionRepository.count();
-        
-        //Đếm số buổi phỏng vấn trong tuần hiện tại
+
+        // Đếm số buổi phỏng vấn trong tuần hiện tại
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDateTime startOfWeekDateTime = startOfWeek.atStartOfDay();
         LocalDateTime endOfWeekDateTime = startOfWeekDateTime.plusWeeks(1);
-        
+
         Long interviewsThisWeek = interviewSessionRepository.findAll().stream()
-                .filter(s -> s.getCreatedAt() != null 
-                        && s.getCreatedAt().isAfter(startOfWeekDateTime) 
+                .filter(s -> s.getCreatedAt() != null
+                        && s.getCreatedAt().isAfter(startOfWeekDateTime)
                         && s.getCreatedAt().isBefore(endOfWeekDateTime))
                 .count();
 
@@ -50,8 +49,8 @@ public class AdminService {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         Long activeToday = interviewSessionRepository.findAll().stream()
-                .filter(s -> s.getCreatedAt() != null 
-                        && s.getCreatedAt().isAfter(startOfDay) 
+                .filter(s -> s.getCreatedAt() != null
+                        && s.getCreatedAt().isAfter(startOfDay)
                         && s.getCreatedAt().isBefore(endOfDay))
                 .map(InterviewSession::getUserId)
                 .distinct()
@@ -59,53 +58,54 @@ public class AdminService {
 
         return new AdminDashboardStatsResponse(totalUsers, totalInterviews, interviewsThisWeek, activeToday);
     }
-    
+
     // Phương thức lấy hoạt động hàng tuần cho dashboard admin
     public WeeklyActivityResponse getWeeklyActivity() {
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        
+
         List<WeeklyActivityResponse.DailyActivity> activities = new ArrayList<>();
-        
+
         for (int i = 0; i < 7; i++) {
             LocalDate date = startOfWeek.plusDays(i);
             LocalDateTime start = date.atStartOfDay();
             LocalDateTime end = start.plusDays(1);
-            
+
             String dayName = date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-            
+
             Long interviews = interviewSessionRepository.findAll().stream()
-                    .filter(s -> s.getCreatedAt() != null 
-                            && s.getCreatedAt().isAfter(start) 
+                    .filter(s -> s.getCreatedAt() != null
+                            && s.getCreatedAt().isAfter(start)
                             && s.getCreatedAt().isBefore(end))
                     .count();
-            
+
             Long users = interviewSessionRepository.findAll().stream()
-                    .filter(s -> s.getCreatedAt() != null 
-                            && s.getCreatedAt().isAfter(start) 
+                    .filter(s -> s.getCreatedAt() != null
+                            && s.getCreatedAt().isAfter(start)
                             && s.getCreatedAt().isBefore(end))
                     .map(InterviewSession::getUserId)
                     .distinct()
                     .count();
-            
+
             activities.add(new WeeklyActivityResponse.DailyActivity(dayName, interviews, users));
         }
-        
+
         WeeklyActivityResponse response = new WeeklyActivityResponse();
         response.setActivities(activities);
         return response;
     }
-    
+
     // Phương thức lấy các buổi phỏng vấn gần đây cho dashboard admin
     public List<AdminInterviewResponse> getRecentInterviews(Integer limit) {
-        if (limit == null || limit <= 0) limit = 10;
-        
+        if (limit == null || limit <= 0)
+            limit = 10;
+
         return interviewSessionRepository.findAll().stream()
                 .sorted((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()))
                 .limit(limit)
                 .map(session -> {
                     UserEntity user = userRepository.findById(session.getUserId()).orElse(null);
-                    
+
                     AdminInterviewResponse response = new AdminInterviewResponse();
                     response.setId(session.getId());
                     response.setUserName(user != null ? user.getFullName() : "Unknown");
@@ -115,52 +115,52 @@ public class AdminService {
                     response.setScore(calculateScore(session.getId()));
                     response.setStatus(session.getStatus() != null ? session.getStatus().toLowerCase() : "unknown");
                     response.setDate(session.getCreatedAt());
-                    
+
                     return response;
                 })
                 .collect(Collectors.toList());
     }
-    
+
     // Phương thức lấy các nhà phỏng vấn hàng đầu cho dashboard admin
     public List<TopInterviewerResponse> getTopInterviewers(Integer limit) {
-        if (limit == null || limit <= 0) limit = 10;
-        
+        if (limit == null || limit <= 0)
+            limit = 10;
+
         // Nhóm các buổi phỏng vấn theo userId
         Map<Long, List<InterviewSession>> userSessions = interviewSessionRepository.findAll().stream()
                 .collect(Collectors.groupingBy(InterviewSession::getUserId));
-        
+
         return userSessions.entrySet().stream()
                 .map(entry -> {
                     Long userId = entry.getKey();
                     List<InterviewSession> sessions = entry.getValue();
-                    
+
                     UserEntity user = userRepository.findById(userId).orElse(null);
                     if (user == null || "ADMIN".equals(user.getRole())) {
                         return null; // Skip admin users or deleted users
                     }
-                    
+
                     // Tính toán các thông tin cần thiết
                     Long interviewCount = (long) sessions.size();
                     Long totalDurationSeconds = sessions.stream()
                             .mapToLong(s -> s.getDuration() != null ? s.getDuration() : 0L)
                             .sum();
-                    
+
                     // Lấy buổi phỏng vấn gần đây nhất
                     InterviewSession latestSession = sessions.stream()
                             .max(Comparator.comparing(InterviewSession::getCreatedAt))
                             .orElse(null);
-                    
+
                     // Xác định vị trí/chức danh phổ biến nhất
                     String mostCommonPosition = sessions.stream()
                             .collect(Collectors.groupingBy(
                                     s -> s.getRole() != null ? s.getRole() : "Unknown",
-                                    Collectors.counting()
-                            ))
+                                    Collectors.counting()))
                             .entrySet().stream()
                             .max(Map.Entry.comparingByValue())
                             .map(Map.Entry::getKey)
                             .orElse("Unknown");
-                    
+
                     TopInterviewerResponse response = new TopInterviewerResponse();
                     response.setUserId(userId);
                     response.setUserName(user.getFullName());
@@ -170,15 +170,16 @@ public class AdminService {
                     response.setTotalDuration(formatDuration(totalDurationSeconds));
                     response.setStatus(user.isEnabled() ? "active" : "banned");
                     response.setLastInterviewDate(latestSession != null ? latestSession.getCreatedAt() : null);
-                    
+
                     return response;
                 })
                 .filter(Objects::nonNull)
-                .sorted((r1, r2) -> Long.compare(r2.getInterviews(), r1.getInterviews())) // Sort by interview count descending
+                .sorted((r1, r2) -> Long.compare(r2.getInterviews(), r1.getInterviews())) // Sort by interview count
+                                                                                          // descending
                 .limit(limit)
                 .collect(Collectors.toList());
     }
-    
+
     // Phương thức lấy tất cả người dùng cho admin
     public List<AdminUserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -187,13 +188,13 @@ public class AdminService {
                     Long interviewCount = interviewSessionRepository.findAll().stream()
                             .filter(s -> s.getUserId().equals(user.getId()))
                             .count();
-                    
+
                     Double avgScore = interviewSessionRepository.findAll().stream()
                             .filter(s -> s.getUserId().equals(user.getId()))
                             .mapToDouble(s -> calculateScore(s.getId()))
                             .average()
                             .orElse(0.0);
-                    
+
                     return new AdminUserResponse(
                             user.getId(),
                             user.getFullName(),
@@ -202,19 +203,18 @@ public class AdminService {
                             user.isEnabled() ? "active" : "banned",
                             interviewCount,
                             avgScore,
-                            LocalDateTime.now()
-                    );
+                            LocalDateTime.now());
                 })
                 .collect(Collectors.toList());
     }
-    
+
     // Phương thức lấy tất cả buổi phỏng vấn cho admin
     public List<AdminInterviewResponse> getAllInterviews() {
         return interviewSessionRepository.findAll().stream()
                 .sorted((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()))
                 .map(session -> {
                     UserEntity user = userRepository.findById(session.getUserId()).orElse(null);
-                    
+
                     AdminInterviewResponse response = new AdminInterviewResponse();
                     response.setId(session.getId());
                     response.setUserName(user != null ? user.getFullName() : "Unknown");
@@ -224,12 +224,12 @@ public class AdminService {
                     response.setScore(calculateScore(session.getId()));
                     response.setStatus(session.getStatus() != null ? session.getStatus().toLowerCase() : "unknown");
                     response.setDate(session.getCreatedAt());
-                    
+
                     return response;
                 })
                 .collect(Collectors.toList());
     }
-    
+
     // Phương thức ban người dùng
     public boolean banUser(Long userId) {
         Optional<UserEntity> userOpt = userRepository.findById(userId);
@@ -241,7 +241,7 @@ public class AdminService {
         }
         return false;
     }
-    
+
     // Phương thức unban người dùng
     public boolean unbanUser(Long userId) {
         Optional<UserEntity> userOpt = userRepository.findById(userId);
@@ -253,7 +253,7 @@ public class AdminService {
         }
         return false;
     }
-    
+
     // Phương thức xóa người dùng
     public boolean deleteUser(Long userId) {
         if (userRepository.existsById(userId)) {
@@ -262,13 +262,13 @@ public class AdminService {
                     .filter(s -> s.getUserId().equals(userId))
                     .collect(Collectors.toList());
             interviewSessionRepository.deleteAll(sessions);
-            
+
             userRepository.deleteById(userId);
             return true;
         }
         return false;
     }
-    
+
     // Phương thức xóa buổi phỏng vấn
     public boolean deleteInterview(Long sessionId) {
         if (interviewSessionRepository.existsById(sessionId)) {
@@ -277,7 +277,7 @@ public class AdminService {
         }
         return false;
     }
-    
+
     // Hàm tính toán thời lượng buổi phỏng vấn
     private String calculateDuration(InterviewSession session) {
         if (session.getDuration() != null) {
@@ -286,28 +286,32 @@ public class AdminService {
         }
         return "0 mins";
     }
-    
+
     // Hàm định dạng thời lượng từ giây sang định dạng giờ và phút
-    private String formatDuration(Long totalSeconds) {
-        if (totalSeconds == null || totalSeconds == 0) {
+    private String formatDuration(Long totalMinutes) {
+        if (totalMinutes == null || totalMinutes <= 0) {
             return "0 mins";
         }
-        
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        
-        if (hours > 0) {
+
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+
+        if (hours > 0 && minutes > 0) {
             return hours + "h " + minutes + "m";
-        } else {
-            return minutes + " mins";
         }
+
+        if (hours > 0) {
+            return hours + "h";
+        }
+
+        return minutes + " mins";
     }
-    
+
     // Hàm tính toán điểm số buổi phỏng vấn
     private Double calculateScore(Long sessionId) {
-        return 75.0; 
+        return 75.0;
     }
-    
+
     // Phương thức gửi email đến người dùng
     public void sendEmailToUser(Long userId, String subject, String body) throws MessagingException {
         UserEntity user = userRepository.findById(userId)
@@ -322,7 +326,7 @@ public class AdminService {
 
         mailSender.send(message);
     }
-    
+
     // Phương thức cập nhật thông tin người dùng
     public void updateUser(Long userId, com.capstone.ai_interview_be.dto.request.UserUpdateRequest updateRequest) {
         UserEntity user = userRepository.findById(userId)
