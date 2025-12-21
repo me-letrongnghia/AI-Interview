@@ -15,7 +15,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    // Phương thức gửi email xác thực
+    // Method to send verification email
     public void sendVerificationEmail(String to, String name,String code, String resetLink) throws jakarta.mail.MessagingException {
         try {
             // 1. Tạo Context và đưa dữ liệu vào
@@ -24,14 +24,14 @@ public class EmailService {
             context.setVariable("code", code);
             context.setVariable("resetLink", resetLink);
 
-            // 2. Xử lý template với dữ liệu đã cung cấp
+            // 2. Process template with provided data
             String htmlContent = templateEngine.process("email-service", context);
 
-            // 3. Tạo MimeMessage để gửi email HTML
+            // 3. Create MimeMessage to send HTML email
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
             helper.setTo(to);
-            helper.setSubject("Yêu cầu đặt lại mật khẩu");
+            helper.setSubject("Confirm your email");
             helper.setText(htmlContent, true);
 
             mailSender.send(mimeMessage);
@@ -41,7 +41,7 @@ public class EmailService {
         }
     }
     
-    // Phương thức gửi email xác thực cho quên mật khẩu
+    // Method to send verification email for forgot password
     public void sendVerificationEmailForgotPassword(String to, String name,String code, String resetLink) throws jakarta.mail.MessagingException {
         try {
             // 1. Tạo Context và đưa dữ liệu vào
@@ -57,7 +57,7 @@ public class EmailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
             helper.setTo(to);
-            helper.setSubject("Yêu cầu đặt lại mật khẩu");
+            helper.setSubject("Password reset request");
             helper.setText(htmlContent, true);
 
             mailSender.send(mimeMessage);

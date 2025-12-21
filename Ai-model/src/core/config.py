@@ -16,7 +16,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent.parent
 
 # ==================== MODEL PATHS ====================
-MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Multi_model")))
+MULTITASK_JUDGE_MODEL_PATH = Path(os.getenv("MULTITASK_JUDGE_MODEL_PATH", str(BASE_DIR / "model" / "Model-ngu"/"JudgeAI_Multitask_20251209_0924")))
 
 QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qwen-3B")))
 
@@ -25,7 +25,7 @@ QWEN_MODEL_PATH = Path(os.getenv("QWEN_MODEL_PATH", str(BASE_DIR / "model" / "Qw
 # - qwen-3B
 # - qwen-external
 # - multitask
-AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "qwen-external")
+AI_MODEL_TYPE = os.getenv("AI_MODEL_TYPE", "multitask")
 
 # Qwen-specific settings
 QWEN_USE_4BIT = os.getenv("QWEN_USE_4BIT", "true").lower() == "true"  # Use 4-bit quantization (saves VRAM)

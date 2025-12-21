@@ -46,7 +46,7 @@ public class AuthController {
                     .httpOnly(true)
                     .secure(false)
                     .path("/api/auth/refresh-token")
-                    .sameSite("Lax")
+                    .sameSite("Strict")
                     .maxAge(7 * 24 * 60 * 60).build();
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             profileResponse.setRefresh_token(null);
@@ -82,7 +82,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(isCookieSecure)
                 .path("/api/auth/refresh-token")
-                .sameSite("Lax")
+                .sameSite("Strict")
                 .maxAge(7 * 24 * 60 * 60).build();
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             profileResponse.setRefresh_token(null);
@@ -111,7 +111,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(isCookieSecure)
                 .path("/api/auth/refresh-token")
-                .sameSite("Lax")
+                .sameSite("Strict")
                 .maxAge(0).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok("Logged out successfully");

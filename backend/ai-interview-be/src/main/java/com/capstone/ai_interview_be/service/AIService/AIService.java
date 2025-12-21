@@ -57,7 +57,7 @@ public class AIService {
         // Fallback: Gemini
         log.warn("AI Model Service unavailable, using Gemini for first question");
         try {
-            return groqService.generateFirstQuestion(role, skills, "English", level);
+            return groqService.generateFirstQuestion(role, skills, "English", level, cvText, jdText);
         } catch (Exception e) {
             log.error("Gemini failed");
             return "Sorry, AI is currently unavailable to generate questions.";
