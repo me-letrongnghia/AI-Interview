@@ -1,15 +1,3 @@
-"""
-Qwen Interview Prompts - IDENTICAL to Gemini
-===========================================
-Shared prompt templates and helper functions for Qwen-based interview models.
-These prompts are EXACTLY THE SAME as used in GeminiService and GroqService.
-
-This module can be imported by:
-- qwen_provider.py (local model)
-- qwen_external_provider.py (external API)
-- Colab notebooks (via upload or wget)
-"""
-
 from enum import Enum
 import math
 from typing import TYPE_CHECKING
@@ -18,7 +6,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
 # =============================================================================
-# INTERVIEW PHASES (Same as Gemini)
+# INTERVIEW PHASE
 # =============================================================================
 class InterviewPhase(Enum):
     OPENING = "OPENING"              # Basic warm-up questions
@@ -29,40 +17,51 @@ class InterviewPhase(Enum):
 
 
 # =============================================================================
-# PROMPT TEMPLATES - IDENTICAL TO GEMINI
+# PROMPT TEMPLATES
 # =============================================================================
 
 PROMPT_TEMPLATES = {
     # System prompt for generating first question
     "generate_first_system": """You are a friendly and professional interviewer conducting a job interview.
 Output EXACTLY ONE warm-up opening question in {language}.
-This is the FIRST question of the interview - a warm-up question about the position and skills.
+This is the FIRST question of the interview - a warm-up question to help the candidate feel comfortable.
 
 CRITICAL OUTPUT FORMAT:
-- Return ONLY the greeting and question text - nothing else
+- Return ONLY the question text - nothing else
 - DO NOT use formats like "| Q: question" or "Question: text"
 - DO NOT add metadata like (Type: ...) or [Category: ...]
 - Just output the plain question text directly
 
-Rules:
-- Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
-- Ask about their interest in the {role} position OR their experience/interest with the required skills.
-- Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.
-- Keep it open-ended and conversational - this is a warm-up, not a deep technical question.
-- DO NOT ask complex technical implementation questions yet.
-- End with a question mark (?).
-- Do NOT include preamble, explanations, numbering, or multiple questions.
-- Return only the greeting and question.
+Rules for Question Variety:
+- PRIORITY 1: IF `Candidate CV` is provided, you MUST ask about a specific project, timeframe, or experience mentioned in the CV.
+- PRIORITY 2: IF `Job Description` is provided (and no CV), ask how their experience relates to a specific JD requirement.
+- PRIORITY 3 (Fallback): ONLY if neither CV nor JD is provided, choose ONE of these generic approaches:
+  1. Ask about their background and journey with the technologies
+  2. Ask about their motivation for applying to this role
+  3. Ask about a recent project or experience related to the skills
+  4. Ask them to introduce themselves and their experience
+  5. Ask about what they enjoy most about the field/technologies
+  6. Ask about their learning journey or how they got started
+  7. Start with ice-breaker about their interests in the domain
+  
+- You MAY include a greeting (Hello, Hi, Welcome, etc.) but it's OPTIONAL
+- Keep it open-ended and conversational - this is a warm-up, not a deep technical question
+- DO NOT ask complex technical implementation questions yet
+- End with a question mark (?)
+- Do NOT include preamble, explanations, numbering, or multiple questions
+- VARY the sentence structure and wording each time""",
 
-Example good opening questions:
-- "Hello! Welcome to the interview for the {role} position. What attracted you to this role and these technologies?"
-- "Hi there! I see you're interested in working with {skills}. What got you started with these technologies?"
-- "Welcome! Before we dive deeper, I'd love to know - what excites you most about the {role} role?" """,
+
 
     "generate_first_user": """Role: {role}
 Level: {level}
 Skills: {skills}
 
+Job Description:
+{jd_context}
+
+Candidate CV:
+{cv_context}
 
 Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.""",
 
@@ -328,6 +327,24 @@ def build_level_specific_rules(level: str) -> str:
 3. Test understanding of core concepts with some practical application
 4. Avoid complex system design or advanced architectural questions
 
+"""
+    
+    elif level == "Mid-level":
+        rules += """GUIDELINES FOR MID-LEVEL CANDIDATES:
+1. Expect deep understanding of how things work under the hood
+2. Ask about design patterns, trade-offs, and best practices
+3. Challenge them on optimization and scalability
+4. Do not accept surface-level answers; ask 'Why?' and 'How would you improve this?'
+5. Focus on real-world scenarios and production issues
+"""
+    elif level in ("Senior", "Lead", "Principal"):
+        rules += """GUIDELINES FOR SENIOR/LEAD CANDIDATES:
+1. FOCUS on system design, architecture, and high-level decision making
+2. Expect them to lead the conversation and provide comprehensive solutions
+3. Ask about handling failure, scaling, and team leadership aspects
+4. Evaluate their ability to mentor and drive technical vision
+5. NO basic syntax questions - assume they know the basics
+6. Challenge their design decisions and ask for alternatives
 """
     
     return rules

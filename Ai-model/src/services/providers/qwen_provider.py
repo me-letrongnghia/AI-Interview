@@ -1,13 +1,3 @@
-"""
-Qwen Model Provider
-===================
-Provider for Qwen2.5-3B-Instruct and similar models.
-Uses HuggingFace Transformers with optional LoRA adapters.
-
-This provider uses prompts IDENTICAL to Gemini for consistency.
-Easy to modify prompts in PROMPT_TEMPLATES dictionary.
-"""
-
 import json
 import re
 import time
@@ -482,17 +472,22 @@ You have access to the candidate's CV and/or job description. Use this informati
         else:
             context_guidance = "No additional context available. Focus on general role and skills discussion."
         
+        # Generate a simple session identifier based on role and timestamp
+        import hashlib
+        import time
+        session_id = hashlib.md5(f"{role}_{level}_{time.time()}".encode()).hexdigest()[:8]
+        
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
             role=role,
+            level=level if level else "Intern",
             skills=skills_text,
-            context_guidance=context_guidance
+            session_id=session_id
         )
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,
             level=level if level else "Intern",
-            skills=skills_text,
-            context_info=context_info
+            skills=skills_text
         )
         
         response = self.generate(

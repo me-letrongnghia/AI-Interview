@@ -285,10 +285,17 @@ class QwenExternalProvider(BaseModelProvider):
         # Build prompt using shared templates (IDENTICAL to Gemini)
         skills_text = ", ".join(skills) if skills else "general programming"
         
+        # Generate a simple session identifier based on role and timestamp
+        import hashlib
+        import time
+        session_id = hashlib.md5(f"{role}_{level}_{time.time()}".encode()).hexdigest()[:8]
+        
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
             role=role,
-            skills=skills_text
+            level=level if level else "Intern",
+            skills=skills_text,
+            session_id=session_id
         )
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,

@@ -1,14 +1,3 @@
-"""
-Base Model Provider - Abstract interface for all AI models
-============================================================
-Provides a consistent interface to swap between different models easily.
-
-To add a new model:
-1. Create a new class that inherits from BaseModelProvider
-2. Implement all abstract methods
-3. Register it in model_factory.py
-"""
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
