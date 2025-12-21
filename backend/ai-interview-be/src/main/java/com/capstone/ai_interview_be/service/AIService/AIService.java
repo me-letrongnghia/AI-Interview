@@ -103,6 +103,8 @@ public class AIService {
                         sessionSkill,
                         currentQuestionNumber,
                         totalQuestions,
+                        cvText,
+                        jdText,
                         0.7);
 
                 if (response != null && response.getQuestion() != null && !response.getQuestion().isEmpty()) {
@@ -335,31 +337,31 @@ public class AIService {
             } catch (Exception e) {
                 log.error("Unified Model Service REPORT failed: {}", e.getMessage());
             }
+        } else {
+            log.info("Using Groq fallback for overall feedback");
+            try {
+                return groqService.generateOverallFeedback(conversation, role, level, skills);
+            } catch (Exception e) {
+                log.error("Groq failed, using hardcoded fallback: {}", e.getMessage());
+                return OverallFeedbackData.builder()
+                        .overview("AVERAGE")
+                        .assessment("Thank you for completing the interview. Your performance showed potential. "
+                                + "Due to technical difficulties, we could not generate detailed automated feedback. "
+                                + "A human reviewer will evaluate your responses shortly.")
+                        .strengths(Arrays.asList(
+                                "Participated in the complete interview session",
+                                "Attempted to answer all questions",
+                                "Maintained professional communication"))
+                        .weaknesses(Arrays.asList(
+                                "Detailed automated evaluation unavailable",
+                                "Manual review required for comprehensive feedback"))
+                        .recommendations(
+                                "Continue practicing technical interview questions and focus on providing detailed, structured answers. "
+                                        + "A human reviewer will provide more specific feedback based on your responses.")
+                        .build();
+            }
         }
-
-        // Fallback: Gemini
-        log.info("Using Groq fallback for overall feedback");
-        try {
-            return groqService.generateOverallFeedback(conversation, role, level, skills);
-        } catch (Exception e) {
-            log.error("Groq failed, using hardcoded fallback: {}", e.getMessage());
-            return OverallFeedbackData.builder()
-                    .overview("AVERAGE")
-                    .assessment("Thank you for completing the interview. Your performance showed potential. "
-                            + "Due to technical difficulties, we could not generate detailed automated feedback. "
-                            + "A human reviewer will evaluate your responses shortly.")
-                    .strengths(Arrays.asList(
-                            "Participated in the complete interview session",
-                            "Attempted to answer all questions",
-                            "Maintained professional communication"))
-                    .weaknesses(Arrays.asList(
-                            "Detailed automated evaluation unavailable",
-                            "Manual review required for comprehensive feedback"))
-                    .recommendations(
-                            "Continue practicing technical interview questions and focus on providing detailed, structured answers. "
-                                    + "A human reviewer will provide more specific feedback based on your responses.")
-                    .build();
-        }
+        return null;
     }
 
     // Hàm chuyển đổi điểm số thành đánh giá tổng quan

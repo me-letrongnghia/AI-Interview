@@ -156,16 +156,33 @@ class QwenExternalProvider(BaseModelProvider):
         """Evaluate candidate's answer via external API using IDENTICAL prompts to Gemini"""
         logger.info(f"[{self.model_name}] Evaluating answer via external API")
         
+        # Build CV/JD context sections
+        cv_context_section = ""
+        jd_context_section = ""
+        
+        # Extract CV/JD from kwargs if available
+        cv_text = kwargs.get("cv_context", None)
+        jd_text = kwargs.get("jd_context", None)
+        
+        if cv_text and len(cv_text.strip()) > 20:
+            cv_context_section = f"\nCANDIDATE CV EXCERPT:\n{cv_text[:1000]}...\n"
+        
+        if jd_text and len(jd_text.strip()) > 20:
+            jd_context_section = f"\nJOB REQUIREMENTS:\n{jd_text[:1000]}...\n"
+        
         # Build prompt using shared templates (IDENTICAL to Gemini)
         system_prompt = PROMPT_TEMPLATES["evaluate_system"]
         user_prompt = PROMPT_TEMPLATES["evaluate_user"].format(
             role=role,
             level=level,
             question=question,
-            answer=answer
+            answer=answer,
+            cv_context=cv_context_section,
+            jd_context=jd_context_section
         )
         
-        if context:
+        # Keep backward compatible context handling
+        if context and not cv_text and not jd_text:
             user_prompt = f"Context: {context}\n\n{user_prompt}"
         
         try:
@@ -186,12 +203,25 @@ class QwenExternalProvider(BaseModelProvider):
                 if isinstance(feedback, list):
                     feedback = "\n".join(feedback)
                 
+                def safe_get_score(key, default=5):
+                    val = result.get(key, default)
+                    try:
+                        # Handle strings like "8/10", "8 (Good)", etc.
+                        if isinstance(val, str):
+                            import re
+                            match = re.search(r'(\d+)', val)
+                            if match:
+                                return int(match.group(1))
+                        return int(float(val))
+                    except (ValueError, TypeError):
+                        return default
+
                 return EvaluationResult(
-                    relevance=min(10, max(0, int(result.get("relevance", 5)))),
-                    completeness=min(10, max(0, int(result.get("completeness", 5)))),
-                    accuracy=min(10, max(0, int(result.get("accuracy", 5)))),
-                    clarity=min(10, max(0, int(result.get("clarity", 5)))),
-                    overall=min(10, max(0, int(result.get("overall", 5)))),
+                    relevance=min(10, max(0, safe_get_score("relevance"))),
+                    completeness=min(10, max(0, safe_get_score("completeness"))),
+                    accuracy=min(10, max(0, safe_get_score("accuracy"))),
+                    clarity=min(10, max(0, safe_get_score("clarity"))),
+                    overall=min(10, max(0, safe_get_score("overall"))),
                     feedback=feedback,
                     improved_answer=result.get("improved_answer")
                 )
@@ -282,25 +312,31 @@ class QwenExternalProvider(BaseModelProvider):
         """Generate first interview question using IDENTICAL prompts to Gemini"""
         logger.info(f"[{self.model_name}] Generating first question via external API")
         
-        # Build prompt using shared templates (IDENTICAL to Gemini)
+        # Format skills (IDENTICAL to Gemini)
         skills_text = ", ".join(skills) if skills else "general programming"
         
-        # Generate a simple session identifier based on role and timestamp
-        import hashlib
-        import time
-        session_id = hashlib.md5(f"{role}_{level}_{time.time()}".encode()).hexdigest()[:8]
+        # Build CV/JD context sections (similar to evaluate_answer)
+        cv_context_section = ""
+        jd_context_section = ""
         
+        if cv_context and len(cv_context.strip()) > 20:
+            cv_context_section = f"\nCANDIDATE CV EXCERPT:\n{cv_context[:1000]}...\n"
+        
+        if jd_context and len(jd_context.strip()) > 20:
+            jd_context_section = f"\nJOB REQUIREMENTS:\n{jd_context[:1000]}...\n"
+        
+        # Build prompt using shared templates (IDENTICAL to Gemini)
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
-            role=role,
-            level=level if level else "Intern",
-            skills=skills_text,
-            session_id=session_id
+            role=role
         )
+        
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,
             level=level if level else "Intern",
-            skills=skills_text
+            skills=skills_text,
+            cv_context=cv_context_section,
+            jd_context=jd_context_section
         )
         
         try:
@@ -418,6 +454,9 @@ class QwenExternalProvider(BaseModelProvider):
             for i, item in enumerate(interview_history, 1):
                 q = item.get('question', '')
                 a = item.get('answer', '')
+                # Truncate long answers to save tokens
+                if len(a) > 150:
+                    a = a[:147] + "..."
                 history_section += f"Q{i}: {q}\n"
                 history_section += f"A{i}: {a}\n\n"
             history_section += "=== END HISTORY ===\n\n"
@@ -434,20 +473,30 @@ Question: {current_question_number} of {total_questions} ({current_question_numb
 """
         
         system_prompt = PROMPT_TEMPLATES["generate_followup_system"].format(
+            role=role if role else "Unknown Role",
             level=normalized_level,
             language=language,
             phase_guidance=phase_guidance,
-            level_specific_rules=level_specific_rules
         )
         
+        # Build CV/JD context sections
+        cv_context = kwargs.get("cv_context", None)
+        jd_context = kwargs.get("jd_context", None)
+        cv_context_section = ""
+        jd_context_section = ""
+        
+        if cv_context and len(cv_context.strip()) > 20:
+            cv_context_section = f"\nCANDIDATE CV EXCERPT:\n{cv_context[:1000]}...\n"
+            
+        if jd_context and len(jd_context.strip()) > 20:
+            jd_context_section = f"\nJOB REQUIREMENTS:\n{jd_context[:1000]}...\n"
+
         user_prompt = PROMPT_TEMPLATES["generate_followup_user"].format(
-            role=role if role else "Unknown Role",
+            history_text=history_section,
             level=normalized_level,
             skills=skills_text,
-            progress_info=progress_info,
-            history_section=history_section,
-            previous_question=previous_question if previous_question else "N/A",
-            previous_answer=previous_answer if previous_answer else "N/A"
+            job_domain=role if role else "Developer",
+            answer=previous_answer if previous_answer else "N/A"
         )
         
         try:
@@ -489,23 +538,33 @@ Question: {current_question_number} of {total_questions} ({current_question_numb
         """Generate interview report using IDENTICAL prompts to Gemini"""
         logger.info(f"[{self.model_name}] Generating report via external API")
         
-        # Format interview history (IDENTICAL to Gemini)
+        # Format interview history with scores (IDENTICAL to Gemini)
         history_text = ""
         for i, item in enumerate(interview_history, 1):
             q = item.get('question', '')
             a = item.get('answer', '')
-            history_text += f"Q{i}: {q}\nA{i}: {a}\n\n"
+            history_text += f"Q{i}: {q}\nA{i}: {a}\n"
+            
+            # Add score if available
+            if 'score' in item:
+                score_val = item.get('score')
+                # Handle both float (0.0-1.0) and int (0-10) scores
+                if isinstance(score_val, float) and score_val <= 1.0:
+                    score_val = int(score_val * 10)  # Convert 0.8 -> 8
+                history_text += f"Score{i}: {score_val}/10\n"
+            elif 'overall' in item:
+                history_text += f"Score{i}: {item.get('overall')}/10\n"
+            
+            history_text += "\n"
         
         skills_text = ", ".join(skills) if skills else "Not specified"
         normalized_level = normalize_level(level)
         
         system_prompt = PROMPT_TEMPLATES["report_system"]
         user_prompt = PROMPT_TEMPLATES["report_user"].format(
-            role=role if role else "Developer",
-            level=normalized_level,
-            skills=skills_text,
-            total_questions=len(interview_history),
-            interview_history=history_text
+            history_text=history_text,
+            candidate_info=f"Role: {role}, Level: {normalized_level}, Skills: {skills_text}",
+            job_domain=role if role else "Developer"
         )
         
         try:

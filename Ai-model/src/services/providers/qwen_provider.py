@@ -373,15 +373,32 @@ class QwenModelProvider(BaseModelProvider):
         if not self.is_loaded():
             raise RuntimeError(f"{self.model_name} not loaded")
         
+        # Build CV/JD context sections
+        cv_context_section = ""
+        jd_context_section = ""
+        
+        # Extract CV/JD from kwargs if available
+        cv_text = kwargs.get("cv_context", None)
+        jd_text = kwargs.get("jd_context", None)
+        
+        if cv_text and len(cv_text.strip()) > 20:
+            cv_context_section = f"\nCANDIDATE CV EXCERPT:\n{cv_text[:1000]}...\n"
+        
+        if jd_text and len(jd_text.strip()) > 20:
+            jd_context_section = f"\nJOB REQUIREMENTS:\n{jd_text[:1000]}...\n"
+        
         system_prompt = PROMPT_TEMPLATES["evaluate_system"]
         user_prompt = PROMPT_TEMPLATES["evaluate_user"].format(
             role=role,
             level=level,
             question=question,
-            answer=answer
+            answer=answer,
+            cv_context=cv_context_section,
+            jd_context=jd_context_section
         )
         
-        if context:
+        # Keep backward compatible context handling
+        if context and not cv_text and not jd_text:
             user_prompt = f"Context: {context}\n\n{user_prompt}"
         
         response = self.generate(
@@ -413,12 +430,24 @@ class QwenModelProvider(BaseModelProvider):
         else:
             feedback = str(feedback_raw)
         
-        # Get base scores
-        relevance = min(10, max(0, int(result.get("relevance", 5))))
-        completeness = min(10, max(0, int(result.get("completeness", 5))))
-        accuracy = min(10, max(0, int(result.get("accuracy", 5))))
-        clarity = min(10, max(0, int(result.get("clarity", 5))))
-        overall = min(10, max(0, int(result.get("overall", 5))))
+        # Get base scores safely
+        def safe_get_score(key, default=5):
+            val = result.get(key, default)
+            try:
+                if isinstance(val, str):
+                    import re
+                    match = re.search(r'(\d+)', val)
+                    if match:
+                        return int(match.group(1))
+                return int(float(val))
+            except (ValueError, TypeError):
+                return default
+
+        relevance = min(10, max(0, safe_get_score("relevance")))
+        completeness = min(10, max(0, safe_get_score("completeness")))
+        accuracy = min(10, max(0, safe_get_score("accuracy")))
+        clarity = min(10, max(0, safe_get_score("clarity")))
+        overall = min(10, max(0, safe_get_score("overall")))
         
         # Enforce strict scoring for poor answers
         if is_poor_answer:
@@ -455,39 +484,26 @@ class QwenModelProvider(BaseModelProvider):
         # Format skills text (same as Gemini)
         skills_text = ", ".join(skills) if skills else "general programming"
         
-        # Prepare context guidance and information
-        context_guidance = ""
-        context_info = ""
+        # Build CV/JD context sections (similar to evaluate_answer)
+        cv_context_section = ""
+        jd_context_section = ""
         
-        if cv_context or jd_context:
-            context_guidance = """CONTEXT INFORMATION AVAILABLE:
-You have access to the candidate's CV and/or job description. Use this information to tailor your question appropriately."""
-            
-            context_parts = []
-            if cv_context:
-                context_parts.append(f"CV Context: {cv_context[:1500]}...")  # Limit length
-            if jd_context:
-                context_parts.append(f"Job Description: {jd_context[:1500]}...")  # Limit length
-            context_info = "\n\n".join(context_parts)
-        else:
-            context_guidance = "No additional context available. Focus on general role and skills discussion."
+        if cv_context and len(cv_context.strip()) > 20:
+            cv_context_section = f"\nCANDIDATE CV EXCERPT:\n{cv_context[:1000]}...\n"
         
-        # Generate a simple session identifier based on role and timestamp
-        import hashlib
-        import time
-        session_id = hashlib.md5(f"{role}_{level}_{time.time()}".encode()).hexdigest()[:8]
+        if jd_context and len(jd_context.strip()) > 20:
+            jd_context_section = f"\nJOB REQUIREMENTS:\n{jd_context[:1000]}...\n"
         
         system_prompt = PROMPT_TEMPLATES["generate_first_system"].format(
             language=language,
-            role=role,
-            level=level if level else "Intern",
-            skills=skills_text,
-            session_id=session_id
+            role=role   
         )
         user_prompt = PROMPT_TEMPLATES["generate_first_user"].format(
             role=role,
             level=level if level else "Intern",
-            skills=skills_text
+            skills=skills_text,
+            cv_context=cv_context_section,
+            jd_context=jd_context_section
         )
         
         response = self.generate(
@@ -563,20 +579,33 @@ Phase guidance above is based on this progress.
 """
         
         system_prompt = PROMPT_TEMPLATES["generate_followup_system"].format(
+            role=role if role else "Unknown Role", # Added role
             level=normalized_level,
             language=language,
             phase_guidance=phase_guidance,
-            level_specific_rules=level_specific_rules
         )
         
+        # Build CV/JD context sections
+        cv_context = kwargs.get("cv_context", None)
+        jd_context = kwargs.get("jd_context", None)
+        
+        # NOTE: The new prompt "generate_followup_user" expects:
+        # {history_text}
+        # {level}
+        # {skills}
+        # {job_domain}
+        # {answer}
+        # It does NOT expect cv_context/jd_context in the user prompt anymore (it relies on system prompt or implicit understanding, OR I need to check prompts.py again).
+        # WAIT: The new prompts.py "generate_followup_user" is:
+        # [INTERVIEW HISTORY START] {history_text} ... [CURRENT STATE] ... {job_domain} ... [CANDIDATE'S LAST ANSWER] "{answer}"
+        # It does NOT have cv_context/jd_context placeholders. It assumes the AI remembers or simply focuses on the history.
+        
         user_prompt = PROMPT_TEMPLATES["generate_followup_user"].format(
-            role=role if role else "Unknown Role",
+            history_text=history_section, # Renamed from history_section
             level=normalized_level,
             skills=skills_text,
-            progress_info=progress_info,
-            history_section=history_section,
-            previous_question=previous_question if previous_question else "N/A",
-            previous_answer=previous_answer if previous_answer else "N/A"
+            job_domain=role if role else "Developer",
+            answer=previous_answer if previous_answer else "N/A"
         )
         
         response = self.generate(
@@ -647,19 +676,29 @@ Phase guidance above is based on this progress.
         skills_text = ", ".join(skills) if skills else "General"
         total_questions = len(interview_history)
         
-        # Format interview history
+        # Format interview history with scores
         history_text = ""
         for i, item in enumerate(interview_history, 1):
             history_text += f"Q{i}: {item.get('question', '')}\n"
-            history_text += f"A{i}: {item.get('answer', '')}\n\n"
+            history_text += f"A{i}: {item.get('answer', '')}\n"
+            
+            # Add score if available
+            if 'score' in item:
+                score_val = item.get('score')
+                # Handle both float (0.0-1.0) and int (0-10) scores
+                if isinstance(score_val, float) and score_val <= 1.0:
+                    score_val = int(score_val * 10)  # Convert 0.8 -> 8
+                history_text += f"Score{i}: {score_val}/10\n"
+            elif 'overall' in item:
+                history_text += f"Score{i}: {item.get('overall')}/10\n"
+            
+            history_text += "\n"
         
         system_prompt = PROMPT_TEMPLATES["report_system"]
         user_prompt = PROMPT_TEMPLATES["report_user"].format(
-            role=role,
-            level=level,
-            skills=skills_text,
-            total_questions=total_questions,
-            interview_history=history_text
+            history_text=history_text,
+            candidate_info=f"Role: {role}, Level: {level}, Skills: {skills_text}",
+            job_domain=role if role else "Developer"
         )
         
         response = self.generate(

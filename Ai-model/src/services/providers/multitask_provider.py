@@ -1,10 +1,3 @@
-"""
-Multitask Model Provider (Legacy Wrapper)
-=========================================
-Wrapper for the existing MultitaskJudge model to work with the new provider interface.
-This allows gradual migration to the new architecture.
-"""
-
 import logging
 from typing import Optional, List, Dict, Any
 

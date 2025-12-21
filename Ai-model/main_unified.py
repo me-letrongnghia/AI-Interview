@@ -35,17 +35,6 @@ class GenerateFirstRequest(BaseModel):
     cv_context: Optional[str] = Field(default=None, description="CV summary")
     jd_context: Optional[str] = Field(default=None, description="Job description")
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "role": "Backend Developer",
-                "skills": ["Java", "Spring Boot", "REST API"],
-                "level": "mid-level",
-                "language": "English",
-                "temperature": 0.7
-            }
-        }
 
 
 class GenerateFollowupRequest(BaseModel):
@@ -62,6 +51,8 @@ class GenerateFollowupRequest(BaseModel):
     current_question_number: int = Field(default=0, description="Current question number")
     total_questions: int = Field(default=0, description="Total questions in interview")
     language: str = Field(default="English", description="Interview language")
+    cv_context: Optional[str] = Field(default=None, description="CV context for project questions")
+    jd_context: Optional[str] = Field(default=None, description="JD context")
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
@@ -134,11 +125,6 @@ class HealthResponse(BaseModel):
     
     model_config = {"protected_namespaces": ()}
 
-
-# =============================================================================
-# APPLICATION LIFECYCLE
-# =============================================================================
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load model on startup, cleanup on shutdown"""
@@ -188,10 +174,6 @@ def create_app() -> FastAPI:
     
     # Metrics
     app.add_middleware(MetricsMiddleware)
-    
-    # ========================================================================
-    # ROOT & HEALTH ENDPOINTS
-    # ========================================================================
     
     @app.get("/")
     async def root():
@@ -309,10 +291,6 @@ def create_app() -> FastAPI:
             logger.error(f"Failed to switch model: {e}")
             raise HTTPException(status_code=503, detail=str(e))
     
-    # ========================================================================
-    # GENERATE FIRST QUESTION
-    # ========================================================================
-    
     @app.post("/api/v3/generate-first", response_model=GenerateResponse)
     async def generate_first_question(request: GenerateFirstRequest):
         """Generate the first interview question"""
@@ -350,10 +328,6 @@ def create_app() -> FastAPI:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
     
-    # ========================================================================
-    # GENERATE FOLLOW-UP QUESTION
-    # ========================================================================
-    
     @app.post("/api/v3/generate", response_model=GenerateResponse)
     async def generate_followup(request: GenerateFollowupRequest):
         """Generate a follow-up question"""
@@ -376,6 +350,8 @@ def create_app() -> FastAPI:
                 total_questions=request.total_questions,
                 language=request.language,
                 skills=request.skills,
+                cv_context=request.cv_context,
+                jd_context=request.jd_context,
                 temperature=request.temperature
             )
             
@@ -394,10 +370,6 @@ def create_app() -> FastAPI:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
     
-    # ========================================================================
-    # EVALUATE ANSWER
-    # ========================================================================
-    
     @app.post("/api/v3/evaluate", response_model=EvaluateResponse)
     async def evaluate_answer(request: EvaluateRequest):
         """Evaluate a candidate's answer"""
@@ -413,7 +385,7 @@ def create_app() -> FastAPI:
             result = _active_provider.evaluate_answer(
                 question=request.question,
                 answer=request.answer,
-                role=request.job_domain or "Developer",
+                role=request.job_domain,
                 level=request.level,
                 context=request.context,
                 temperature=request.temperature
@@ -438,10 +410,6 @@ def create_app() -> FastAPI:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
     
-    # ========================================================================
-    # GENERATE REPORT
-    # ========================================================================
-    
     @app.post("/api/v3/report", response_model=ReportResponse)
     async def generate_report(request: ReportRequest):
         """Generate interview report"""
@@ -459,7 +427,7 @@ def create_app() -> FastAPI:
             
             result = _active_provider.generate_report(
                 interview_history=request.interview_history,
-                role=request.job_domain or "Developer",
+                role=request.job_domain,
                 level=request.level,
                 skills=request.skills,
                 candidate_info=request.candidate_info,
@@ -482,10 +450,6 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
-    
-    # ========================================================================
-    # BACKWARD COMPATIBILITY: V2 ENDPOINTS (redirect to v3)
-    # ========================================================================
     
     from src.models.schemas import (
         MultitaskGenerateFirstRequest,

@@ -1,19 +1,15 @@
-# FastAPI service
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 pydantic==2.9.2
 
-# ML/AI - PyTorch
 torch>=2.0.0
 
-# Tokenizers
-sentencepiece>=0.1.99          # Tokenizer for MultitaskJudge model
-transformers>=4.40.0           # HuggingFace Transformers for Qwen
+sentencepiece>=0.1.99        
+transformers>=4.40.0           
 
-# Quantization (optional, for 4-bit Qwen)
-bitsandbytes>=0.43.0           # For 4-bit quantization on CUDA
-accelerate>=0.30.0             # For device_map="auto"
 
-# Utilities
+bitsandbytes>=0.43.0          
+accelerate>=0.30.0             
+
 python-multipart>=0.0.6
-python-dotenv>=1.0.0          # For .env file support
+python-dotenv>=1.0.0          

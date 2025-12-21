@@ -78,6 +78,13 @@ class MultitaskGenerateRequest(BaseModel):
     )
     job_domain: Optional[str] = Field(default=None, description="Lĩnh vực công việc")
     difficulty: str = Field(default="medium", description="Độ khó (easy/medium/hard)")
+    level: str = Field(default="mid-level", description="Cấp độ kinh nghiệm")
+    skills: Optional[List[str]] = Field(default=None, description="Danh sách kỹ năng")
+    current_question_number: int = Field(default=0, description="Thứ tự câu hỏi hiện tại")
+    total_questions: int = Field(default=0, description="Tổng số câu hỏi")
+    language: str = Field(default="English", description="Ngôn ngữ")
+    cv_context: Optional[str] = Field(default=None, description="Thông tin CV")
+    jd_context: Optional[str] = Field(default=None, description="Thông tin JD")
     temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="Độ đa dạng output")
     
     class Config:

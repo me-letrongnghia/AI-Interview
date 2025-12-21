@@ -107,10 +107,6 @@ public class FeedbackService {
             }
         }
 
-        // Generate AND save overall feedback - SYNCHRONIZED to prevent race condition
-        // CRITICAL: Lock must cover BOTH generation AND save to prevent:
-        // Thread 1: generate → UNLOCK → save
-        // Thread 2: LOCK → check (no feedback yet) → generate → save → DUPLICATE!
         InterviewFeedback feedback = null;
         boolean feedbackSavedSuccessfully = false;
 

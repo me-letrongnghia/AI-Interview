@@ -250,6 +250,8 @@ public class UnifiedModelService {
             List<String> skills,
             int currentQuestionNumber,
             int totalQuestions,
+            String cvContext,
+            String jdContext,
             Double temperature) {
 
         String endpoint = getEndpoint(V3_GENERATE_ENDPOINT, V2_GENERATE_ENDPOINT);
@@ -268,6 +270,8 @@ public class UnifiedModelService {
                     .currentQuestionNumber(currentQuestionNumber)
                     .totalQuestions(totalQuestions)
                     .language("English")
+                    .cvContext(cvContext)
+                    .jdContext(jdContext)
                     .temperature(temperature != null ? temperature : 0.7)
                     .build();
 
@@ -308,7 +312,7 @@ public class UnifiedModelService {
         // Call full version with defaults
         return generateFollowUp(
                 question, answer, interviewHistory,
-                jobDomain, "mid-level", null, 0, 0, temperature);
+                jobDomain, difficulty, null, 0, 0, null, null, temperature);
     }
 
     // Phương thức tạo báo cáo phỏng vấn (với đầy đủ tham số như Gemini)
