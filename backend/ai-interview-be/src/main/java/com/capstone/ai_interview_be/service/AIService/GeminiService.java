@@ -45,8 +45,8 @@ public class GeminiService {
     }
 
     // Phương thức gọi Gemini API để tạo phản hồi dựa trên systemPrompt và
-    // userPrompt
-    public String generateResponse(String systemPrompt, String userPrompt) {
+    // userPrompt với temperature tùy chỉnh
+    public String generateResponse(String systemPrompt, String userPrompt, double temperature) {
         try {
             long startTime = System.currentTimeMillis();
 
@@ -56,7 +56,7 @@ public class GeminiService {
                     "contents", List.of(
                             Map.of("parts", List.of(Map.of("text", combinedPrompt)))),
                     "generationConfig", Map.of(
-                            "temperature", 0.1,
+                            "temperature", temperature,
                             "maxOutputTokens", 4000,
                             "topP", 0.95,
                             "topK", 40));
@@ -114,6 +114,11 @@ public class GeminiService {
         }
     }
 
+    // Phương thức gọi Gemini API (mặc định temperature = 0.1)
+    public String generateResponse(String systemPrompt, String userPrompt) {
+        return generateResponse(systemPrompt, userPrompt, 0.1);
+    }
+
     // Hàm trích xuất text từ phản hồi của Gemini
     @SuppressWarnings("unchecked")
     private String extractTextFromResponse(Map<String, Object> response) {
@@ -145,53 +150,87 @@ public class GeminiService {
         String systemPrompt = """
                 You are a friendly and professional interviewer conducting a job interview.
                 Output EXACTLY ONE warm-up opening question in %s.
-                This is the FIRST question of the interview - a warm-up question about the position and skills.
+                This is the FIRST question of the interview - a warm-up question to help the candidate feel comfortable.
 
-                Rules:
-                - Start with a warm, friendly greeting (Hello, Hi, Welcome, etc.).
-                - Ask about their interest in the %s position OR their experience/interest with the required skills.
-                - Focus on: why they chose this role, what attracted them to these technologies, or their journey with these skills.
-                - Keep it open-ended and conversational - this is a warm-up, not a deep technical question.
-                - DO NOT ask complex technical implementation questions yet.
-                - End with a question mark (?).
-                - Do NOT include preamble, explanations, numbering, or multiple questions.
-                - Return only the greeting and question.
+                === QUESTION OPTIONS - CHOOSE ONE RANDOMLY ===
+                Select ONE of these warm-up questions (vary your choice each time):
+                
+                SELF-INTRODUCTION QUESTIONS:
+                1. "Can you tell me a bit about yourself and your background?"
+                2. "Could you introduce yourself and share what brought you here today?"
+                3. "I'd like to start by getting to know you better - can you tell me about yourself?"
+                4. "Let's begin with a brief introduction - could you tell me about your background?"
+                5. "Could you walk me through your background and what you're currently doing?"
+                
+                ROLE & MOTIVATION QUESTIONS:
+                6. "What interests you most about this %s role?"
+                7. "What drew you to apply for this %s position?"
+                8. "Can you share what excites you about working as a %s?"
+                9. "What aspects of being a %s appeal to you the most?"
+                
+                SKILLS & EXPERIENCE QUESTIONS:
+                10. "Can you tell me about your experience with %s?"
+                11. "How did you get started with %s?"
+                12. "I see you have experience with %s - could you tell me more about that?"
+                13. "What has been your journey working with %s?"
+                14. "Could you share how you've been using %s in your work or projects?"
+                
+                COMBINED QUESTIONS (Role + Skills):
+                15. "Can you tell me about yourself and your experience with %s?"
+                16. "I'd love to hear about your background and what interests you about %s development."
+                17. "Could you introduce yourself and share what drew you to working with technologies like %s?"
 
-                Example good opening questions:
-                - "Hello! Welcome to the interview for the %s position. What attracted you to this role and these technologies?"
-                - "Hi there! I see you're interested in working with %s. What got you started with these technologies?"
-                - "Welcome! Before we dive deeper, I'd love to know - what excites you most about the %s role?"
+                === FORMATTING RULES ===
+                - Start with a warm greeting: "Hi", "Hello", "Welcome", "Good to meet you", or "Thanks for joining"
+                - Make it conversational and natural
+                - Keep it simple and welcoming - NOT technical
+                - End with a question mark (?)
+                - Return ONLY the greeting and question
+                - DO NOT add numbering or extra text
+
+                === IMPORTANT ===
+                - Choose ONE question from the list above
+                - Substitute role/skills placeholders with actual values: Role=%s, Skills=%s
+                - VARY your selection each time to avoid repetition
+                - Make the question natural and conversational
                 """
-                .formatted(language == null ? "English" : language, role, role, skillsText, role);
+                .formatted(language == null ? "English" : language, role, role, role, role, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, skillsText, role, skillsText);
 
         String userPrompt = """
+                === CANDIDATE PROFILE ===
                 Role: %s
                 Level: %s
                 Skills: %s
 
-                Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.
+                === YOUR TASK ===
+                Select ONE question from the list above and adapt it naturally:
+                - Choose a different question each time to avoid repetition
+                - Add a warm greeting at the start
+                - Replace placeholders (role/skills) with actual values
+                - Keep it conversational and welcoming
+                - Make it specific to their profile
+
+                Remember: This is just a warm-up to help them feel comfortable.
                 """
                 .formatted(role, level, skillsText);
 
-        return generateResponse(systemPrompt, userPrompt);
+        return generateResponse(systemPrompt, userPrompt, 0.8);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo mà không có lịch sử hội thoại
+    // Phương thức tạo câu hỏi tiếp theo không có lịch sử hội thoại và tiến trình phỏng vấn
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer) {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer, null, 0, 0);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại mà không có thông tin
-    // tiến trình
+    // Phương thức tạo câu hỏi tiếp theo có lịch sử hội thoại nhưng không có tiến trình phỏng vấn
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory) {
         return generateNextQuestion(role, skills, language, level, previousQuestion, previousAnswer,
                 conversationHistory, 0, 0);
     }
 
-    // Phương thức tạo câu hỏi tiếp theo với lịch sử hội thoại và thông tin tiến
-    // trình
+    // Phương thức tạo câu hỏi tiếp theo đủ thông tin
     public String generateNextQuestion(String role, List<String> skills, String language, String level,
             String previousQuestion, String previousAnswer, List<ConversationEntry> conversationHistory,
             int currentQuestionNumber, int totalQuestions) {

@@ -32,28 +32,62 @@ CRITICAL OUTPUT FORMAT:
 - DO NOT add metadata like (Type: ...) or [Category: ...]
 - Just output the plain question text directly
 
-Rules for Question Variety:
-- PRIORITY 1: IF `Candidate CV` is provided, you MUST ask about a specific project, timeframe, or experience mentioned in the CV.
-- PRIORITY 2: IF `Job Description` is provided (and no CV), ask how their experience relates to a specific JD requirement.
-- PRIORITY 3 (Fallback): ONLY if neither CV nor JD is provided, choose ONE of these generic approaches:
-  1. Ask about their background and journey with the technologies
-  2. Ask about their motivation for applying to this role
-  3. Ask about a recent project or experience related to the skills
-  4. Ask them to introduce themselves and their experience
-  5. Ask about what they enjoy most about the field/technologies
-  6. Ask about their learning journey or how they got started
-  7. Start with ice-breaker about their interests in the domain
-  
-- You MAY include a greeting (Hello, Hi, Welcome, etc.) but it's OPTIONAL
-- Keep it open-ended and conversational - this is a warm-up, not a deep technical question
-- DO NOT ask complex technical implementation questions yet
+=== QUESTION OPTIONS - CHOOSE ONE RANDOMLY ===
+Select ONE of these warm-up questions (vary your choice each time):
+
+SELF-INTRODUCTION QUESTIONS:
+1. "Can you tell me a bit about yourself and your background?"
+2. "Could you introduce yourself and share what brought you here today?"
+3. "I'd like to start by getting to know you better - can you tell me about yourself?"
+4. "Let's begin with a brief introduction - could you tell me about your background?"
+5. "Could you walk me through your background and what you're currently doing?"
+
+ROLE & MOTIVATION QUESTIONS:
+6. "What interests you most about this {role} role?"
+7. "What drew you to apply for this {role} position?"
+8. "Can you share what excites you about working as a {role}?"
+9. "What aspects of being a {role} appeal to you the most?"
+
+SKILLS & EXPERIENCE QUESTIONS:
+10. "Can you tell me about your experience with {skills}?"
+11. "How did you get started with {skills}?"
+12. "I see you have experience with {skills} - could you tell me more about that?"
+13. "What has been your journey working with {skills}?"
+14. "Could you share how you've been using {skills} in your work or projects?"
+
+COMBINED QUESTIONS (Role + Skills):
+15. "Can you tell me about yourself and your experience with {skills}?"
+16. "I'd love to hear about your background and what interests you about {role} development."
+17. "Could you introduce yourself and share what drew you to working with technologies like {skills}?"
+
+CV-SPECIFIC (if CV provided):
+18. Ask about a specific project, timeframe, or experience from their CV
+
+JD-SPECIFIC (if JD provided):
+19. Ask how their experience relates to a specific JD requirement
+
+=== FORMATTING RULES ===
+- Start with a warm greeting: "Hi", "Hello", "Welcome", "Good to meet you", or "Thanks for joining"
+- Make it conversational and natural
+- Keep it simple and welcoming - NOT technical
 - End with a question mark (?)
-- Do NOT include preamble, explanations, numbering, or multiple questions
-- VARY the sentence structure and wording each time""",
+- Return ONLY the greeting and question
+- DO NOT add numbering or extra text
+
+=== IMPORTANT ===
+- Choose ONE question from the list above
+- Substitute role/skills placeholders with actual values
+- VARY your selection each time to avoid repetition
+- Make the question natural and conversational
+- If CV is provided, prioritize CV-specific questions
+- If JD is provided (and no CV), prioritize JD-specific questions
+
+Make it natural, unique, and tailored to the candidate's profile.""",
 
 
 
-    "generate_first_user": """Role: {role}
+    "generate_first_user": """=== CANDIDATE PROFILE ===
+Role: {role}
 Level: {level}
 Skills: {skills}
 
@@ -63,7 +97,17 @@ Job Description:
 Candidate CV:
 {cv_context}
 
-Generate a warm-up opening question that asks about their interest in this position or their experience/passion for the listed skills. This should be conversational and help them ease into the interview.""",
+=== YOUR TASK ===
+Select ONE question from the list above and adapt it naturally:
+- Choose a different question each time to avoid repetition
+- Add a warm greeting at the start
+- Replace placeholders (role/skills) with actual values
+- Keep it conversational and welcoming
+- Make it specific to their profile
+- If CV is provided, prioritize asking about specific experiences from their CV
+- If JD is provided (and no CV), ask how their experience relates to JD requirements
+
+Remember: This is just a warm-up to help them feel comfortable.""",
 
     # System prompt for generating follow-up question
     "generate_followup_system": """You are GenQ, an expert TECHNICAL interviewer conducting a structured interview.
